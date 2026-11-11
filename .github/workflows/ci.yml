@@ -76,3 +76,7 @@ jobs:
 
       - name: deny
         run: cargo deny check
+
+      # WP0.4: doctor must find the real git and clj-kondo (clj-kondo.exe on Windows).
+      - name: doctor
+        run: cargo run -q -p aldente-cli -- doctor

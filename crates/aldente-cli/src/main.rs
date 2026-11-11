@@ -19,6 +19,8 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Check that git, clj-kondo and the cache directory are usable.
+    Doctor(commands::doctor::DoctorArgs),
     /// Print JSON Schemas for the envelope and data shapes.
     Schema(commands::schema::SchemaArgs),
 }
@@ -30,6 +32,7 @@ enum Command {
 fn main() -> std::process::ExitCode {
     let cli = Cli::parse();
     let result = match &cli.command {
+        Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),
     };
     match result {

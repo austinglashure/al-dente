@@ -53,12 +53,15 @@ fn schema_envelope_json_wraps_the_schema_in_a_valid_envelope() {
 fn schema_without_name_lists_names() {
     let output = run(&["schema"]);
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), "envelope\n");
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "doctor\nenvelope\n"
+    );
 
     let output = run(&["schema", "--json"]);
     assert_eq!(
         stdout_json(&output)["data"],
-        serde_json::json!(["envelope"])
+        serde_json::json!(["doctor", "envelope"])
     );
 }
 

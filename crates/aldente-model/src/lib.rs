@@ -3,6 +3,7 @@
 //! `docs/plan/03-graph-model.md` and `docs/plan/05-cli.md`.
 
 pub mod certainty;
+pub mod doctor;
 pub mod envelope;
 pub mod graph;
 pub mod id;

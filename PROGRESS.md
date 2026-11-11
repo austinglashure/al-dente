@@ -2,13 +2,13 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 0, WP0.4 (not started). WP0.1–WP0.3 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 0, WP0.5 (not started). WP0.1–WP0.4 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
 - [x] WP0.2 Model crate
 - [x] WP0.3 Fixture corpus and golden harness
-- [ ] WP0.4 Doctor
+- [x] WP0.4 Doctor
 
 ## Phase 1. First proof
 - [ ] WP1.1 Local target, walk, units
@@ -120,6 +120,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
 
+- 2026-11-11 WP0.4: `aldente doctor` in `aldente-cli`; logic in `aldente-acquire` (`process::run_captured` with timeout and temp-dir cwd, `tools`, `cache`); report types in `aldente-model::doctor`, schema `doctor`. New deps `which` 8 and `dirs` 7, both named in `02-architecture.md`. Choices where the plan was silent: (a) a too-old tool, an unrecognized `--version` output and an unwritable cache also exit 5, since none of the other codes fit; (b) with `--json`, a failing doctor still carries the full report in `data` next to the `tool-missing` error; (c) doctor's `data` holds absolute paths (tool and cache locations), an exception to the no-absolute-paths rule, which is about snapshot data; (d) tools are looked up only in `PATH`'s directories, never the current directory, and run with the temp dir as cwd, so a `git.exe` inside an analyzed repo is never picked up on Windows. `clj-kondo` minimum is `tools::CLJ_KONDO` (2026.10.26, latest release today); bump it with the CI pin. Not verified locally: the Windows `.cmd` stubs in `tests/doctor.rs` and the new CI `doctor` step (accept criterion "on Windows CI, doctor finds clj-kondo.exe"). The process timeout test is Unix-only.
 - 2026-11-11 (Austin's answers, between WP0.3 and WP0.4): (1) `dispatches` edges start at the calling scope with per-caller certainty; no global multimethod/protocol-method → impl edge. A value usage of a multimethod gives `possible` dispatches to every impl; `:default` is `possible` when a literal selected another impl (my choice, the plan was silent). (2) New reasons `macro-body` (possible) and `dynamic` (certain, edges into holes) in `aldente-model`. Updated `03-graph-model.md`, `04-clojure-analysis.md` R4/R5/R6/R8 and `fixtures/clj-mini/EXPECTED.md`.
 - 2026-11-11 WP0.3: `fixtures/clj-mini/` has 13 source files plus `deps.edn` and `EXPECTED.md`, covering every item WP0.3 lists. `clj-kondo --lint` gives 0 errors and 0 warnings with the local 2023.09.07; CI lints it with 2026.10.26 and fails only on errors (exit ≥ 3).
 - 2026-11-11 WP0.3: `EXPECTED.md` conventions WP1.5 must honor or amend: definition-form usages (`defn`, `defmethod`, …) are not edges; `let`/`fn` usages are certain calls if clj-kondo reports them; protocol impl discriminators are the type as written (`charge@Card`, `charge@String`) and `reify:L<line>`; re-frame registrations are `<top>@L<n>` in Phase 1 and get renamed by WP2.8. Rows marked **verify** need WP1.3's clj-kondo probe (record constructor vars, `@x` deref usage, type-hinted interop).

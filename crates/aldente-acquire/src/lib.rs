@@ -1,3 +1,9 @@
 //! Hardened git acquisition, the file walker, unit discovery and snapshot keys.
 //!
-//! Empty until a later work package fills it; see `docs/plan/02-architecture.md`.
+//! So far: running external tools ([`process`]), finding and version-checking
+//! them ([`tools`]) and the cache directory ([`cache`]). See
+//! `docs/plan/02-architecture.md`.
+
+pub mod cache;
+pub mod process;
+pub mod tools;

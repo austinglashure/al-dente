@@ -4,10 +4,11 @@
 use schemars::Schema;
 use serde_json::Value;
 
+use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
 
 /// Names `schema_by_name` understands, sorted.
-pub const SCHEMA_NAMES: &[&str] = &["envelope"];
+pub const SCHEMA_NAMES: &[&str] = &["doctor", "envelope"];
 
 /// The JSON Schema (draft 2020-12) for the envelope with `data` of any shape.
 ///
@@ -32,9 +33,12 @@ pub(crate) fn all_keys_required(schema: &mut Schema) {
 
 /// The schema called `name`, or `None` if there is no such schema.
 ///
+/// The `data` shapes are schemas of `data` alone, not of the whole envelope.
+///
 /// Example: `schema_by_name("envelope")` is `Some(..)`; `schema_by_name("x")` is `None`.
 pub fn schema_by_name(name: &str) -> Option<Value> {
     match name {
+        "doctor" => Some(schemars::schema_for!(DoctorReport).to_value()),
         "envelope" => Some(envelope_schema()),
         _ => None,
     }
@@ -43,6 +47,7 @@ pub fn schema_by_name(name: &str) -> Option<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::doctor::{CacheCheck, DoctorReport, Platform, ToolCheck, ToolStatus};
     use crate::envelope::{ErrorCode, SnapshotInfo, Warning, WarningCode};
     use crate::graph::GraphPayload;
     use crate::strategies::arb_payload;
@@ -84,6 +89,56 @@ mod tests {
             "schema": "aldente/x/v1", "ok": true, "snapshot": null, "data": {}, "warnings": []
         });
         assert!(!validator.is_valid(&missing_error));
+    }
+
+    fn sample_report() -> DoctorReport {
+        DoctorReport {
+            tools: vec![ToolCheck {
+                name: "git".into(),
+                status: ToolStatus::TooOld,
+                path: Some("/usr/bin/git".into()),
+                version: Some("2.20.0".into()),
+                minimum: "2.30.0".into(),
+                detail: None,
+                hint: Some("upgrade git".into()),
+            }],
+            cache: CacheCheck {
+                path: None,
+                writable: false,
+                detail: Some("no cache directory".into()),
+            },
+            platform: Platform {
+                os: "linux".into(),
+                arch: "x86_64".into(),
+            },
+        }
+    }
+
+    #[test]
+    fn doctor_schema_is_valid_and_matches_a_report() {
+        let schema = schema_by_name("doctor").unwrap();
+        assert!(jsonschema::meta::is_valid(&schema), "{schema:#}");
+        let validator = jsonschema::validator_for(&schema).unwrap();
+        let value = serde_json::to_value(sample_report()).unwrap();
+        assert!(validator.is_valid(&value), "{value:#}");
+        assert_eq!(value["tools"][0]["status"], "too-old");
+
+        let mut missing_hint = value.clone();
+        missing_hint["tools"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("hint");
+        assert!(!validator.is_valid(&missing_hint));
+    }
+
+    #[test]
+    fn all_ok_needs_every_tool_ok_and_a_writable_cache() {
+        let mut report = sample_report();
+        assert!(!report.all_ok());
+        report.tools[0].status = ToolStatus::Ok;
+        assert!(!report.all_ok());
+        report.cache.writable = true;
+        assert!(report.all_ok());
     }
 
     fn arb_envelope() -> impl Strategy<Value = Envelope<GraphPayload>> {
