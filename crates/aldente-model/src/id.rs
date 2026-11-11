@@ -57,12 +57,13 @@ pub struct ImplId {
     discriminator: String,
 }
 
-/// `ext:<lang>//<ns>/<name>`, e.g. `ext:clj//clojure.core/map`.
+/// `ext:<lang>//<ns>/<name>`, e.g. `ext:clj//clojure.core/map`, or
+/// `ext:<lang>//<ns>` for a whole external namespace (rule R2).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ExternalId {
     lang: Lang,
     ns: String,
-    name: String,
+    name: Option<String>,
 }
 
 /// `lib:<ecosystem>:<coordinate>`, e.g. `lib:maven:reagent/reagent`.
@@ -235,7 +236,21 @@ impl ExternalId {
         Ok(ExternalId {
             lang,
             ns: ns.to_owned(),
-            name: name.to_owned(),
+            name: Some(name.to_owned()),
+        })
+    }
+
+    /// Builds a namespace-level external ID, for a required namespace that is
+    /// defined outside the repository.
+    ///
+    /// Example: `ExternalId::namespace(Lang::Clj, "re-frame.core")` formats as
+    /// `ext:clj//re-frame.core`.
+    pub fn namespace(lang: Lang, ns: &str) -> Result<ExternalId, IdError> {
+        plain_part("namespace", ns, '/')?;
+        Ok(ExternalId {
+            lang,
+            ns: ns.to_owned(),
+            name: None,
         })
     }
 
@@ -249,9 +264,9 @@ impl ExternalId {
         &self.ns
     }
 
-    /// The unescaped name, e.g. `map`.
-    pub fn name(&self) -> &str {
-        &self.name
+    /// The unescaped name, e.g. `Some("map")`; `None` for a namespace-level external.
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
     }
 }
 
@@ -451,13 +466,11 @@ impl fmt::Display for NodeId {
             NodeId::Symbol(sym) => write!(f, "{sym}"),
             NodeId::Impl(i) => write!(f, "{}@{}", i.symbol, i.discriminator),
             NodeId::External(e) => {
-                write!(
-                    f,
-                    "ext:{}//{}/{}",
-                    e.lang.as_str(),
-                    e.ns,
-                    escape_name(&e.name)
-                )
+                write!(f, "ext:{}//{}", e.lang.as_str(), e.ns)?;
+                match &e.name {
+                    Some(name) => write!(f, "/{}", escape_name(name)),
+                    None => Ok(()),
+                }
             }
             NodeId::Library(l) => write!(f, "lib:{}:{}", l.ecosystem, l.coordinate),
             NodeId::Platform(PlatformId::Java {
@@ -530,14 +543,11 @@ fn parse_external(id: &str, rest: &str) -> Result<NodeId, IdError> {
         .ok_or_else(|| malformed("external", id, "missing `//` after the language"))?;
     let lang =
         Lang::from_token(lang).ok_or_else(|| malformed("external", id, "unknown language"))?;
-    let (ns, name) = tail
-        .split_once('/')
-        .ok_or_else(|| malformed("external", id, "missing `/<name>`"))?;
-    Ok(NodeId::External(ExternalId::new(
-        lang,
-        ns,
-        &unescape_name(name)?,
-    )?))
+    let external = match tail.split_once('/') {
+        Some((ns, name)) => ExternalId::new(lang, ns, &unescape_name(name)?)?,
+        None => ExternalId::namespace(lang, tail)?,
+    };
+    Ok(NodeId::External(external))
 }
 
 /// Parses the part after `hole:`: category up to the first `@`, then line and
@@ -808,6 +818,18 @@ mod tests {
     }
 
     #[test]
+    fn namespace_level_externals_round_trip() {
+        let id = NodeId::External(ExternalId::namespace(Lang::Clj, "re-frame.core").unwrap());
+        assert_eq!(id.to_string(), "ext:clj//re-frame.core");
+        assert_eq!("ext:clj//re-frame.core".parse::<NodeId>().unwrap(), id);
+        let NodeId::External(e) = &id else {
+            unreachable!()
+        };
+        assert_eq!(e.name(), None);
+        assert!("ext:clj//".parse::<NodeId>().is_err());
+    }
+
+    #[test]
     fn unit_named_ext_does_not_collide_with_externals() {
         let local = NodeId::Symbol(sym("ext", "clojure.core", "map"));
         let external = NodeId::External(ExternalId::new(Lang::Clj, "clojure.core", "map").unwrap());
@@ -842,7 +864,6 @@ mod tests {
             "clj:.//a/b@",
             "clj:.//a/b%41",
             "clj:a///b",
-            "ext:clj//a",
             "ext:clj//a/x@y",
             "ext:java//a/b",
             "lib:npm",

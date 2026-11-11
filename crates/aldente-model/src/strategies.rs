@@ -61,6 +61,8 @@ pub(crate) fn arb_node_id() -> impl Strategy<Value = NodeId> {
         (arb_symbol(), arb_text()).prop_map(|(s, d)| NodeId::Impl(ImplId::new(s, &d).unwrap())),
         (arb_lang(), arb_ns(), arb_name())
             .prop_map(|(l, n, name)| NodeId::External(ExternalId::new(l, &n, &name).unwrap())),
+        (arb_lang(), arb_ns())
+            .prop_map(|(l, n)| NodeId::External(ExternalId::namespace(l, &n).unwrap())),
         ("[a-z]{1,6}", arb_text())
             .prop_map(|(e, c)| NodeId::Library(LibraryId::new(&e, &c).unwrap())),
         ("[a-zA-Z.$]{1,12}", proptest::option::of(arb_text()))

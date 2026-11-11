@@ -92,6 +92,7 @@ symbol:      <lang>:<unit>//<ns>/<name>               clj:services/billing//bill
 impl:        <symbol id>@<discriminator>              ...//billing.core/handle@:order/paid
                                                       ...//billing.core/<top>@L42
 external:    ext:<lang>//<ns>/<name>                  ext:clj//clojure.core/map
+             ext:<lang>//<ns>  (namespace-level, R2)   ext:clj//re-frame.core
 library:     lib:<ecosystem>:<coordinate>             lib:maven:reagent/reagent   lib:npm:react
 platform:    java:<class>[#member]  |  js:<path>      java:java.net.Socket#connect   js:fetch
 hole:        hole:<category>@<file>:<line>:<col>
