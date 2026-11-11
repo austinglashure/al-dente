@@ -1,0 +1,27 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "AGPL-3.0-only"
+publish = false
+
+[workspace.dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+# Allowed inside tests via clippy.toml.
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
+[profile.release]
+lto = "thin"
+strip = true
+# panic = "unwind" is the default and is kept on purpose: the server must
+# survive a panic inside one request.

@@ -1,0 +1,3 @@
+# The workspace denies unwrap_used and expect_used; tests may use both.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

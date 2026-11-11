@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  CLJ_KONDO_VERSION: "2026.10.26"
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install clj-kondo (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -sSfL -o kondo.zip "https://github.com/clj-kondo/clj-kondo/releases/download/v${CLJ_KONDO_VERSION}/clj-kondo-${CLJ_KONDO_VERSION}-linux-amd64.zip"
+          mkdir -p "$HOME/.local/bin" && unzip -o kondo.zip -d "$HOME/.local/bin" && rm kondo.zip
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install clj-kondo (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -sSfL -o kondo.zip "https://github.com/clj-kondo/clj-kondo/releases/download/v${CLJ_KONDO_VERSION}/clj-kondo-${CLJ_KONDO_VERSION}-macos-aarch64.zip"
+          mkdir -p "$HOME/.local/bin" && unzip -o kondo.zip -d "$HOME/.local/bin" && rm kondo.zip
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install clj-kondo (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:USERPROFILE "clj-kondo"
+          Invoke-WebRequest -Uri "https://github.com/clj-kondo/clj-kondo/releases/download/v$env:CLJ_KONDO_VERSION/clj-kondo-$env:CLJ_KONDO_VERSION-windows-amd64.zip" -OutFile kondo.zip
+          Expand-Archive -Path kondo.zip -DestinationPath $dir -Force
+          Remove-Item kondo.zip
+          Add-Content -Path $env:GITHUB_PATH -Value $dir
+
+      - name: clj-kondo version
+        run: clj-kondo --version
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: fmt
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test --workspace
+
+      - name: deny
+        run: cargo deny check
