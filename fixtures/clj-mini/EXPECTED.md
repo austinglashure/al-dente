@@ -184,25 +184,23 @@ Below, `events@L5`, `events@L9`, `events@L14` and `subs@L5` stand for these impl
 
 #### Macro bodies (Phase 1, R4)
 
-`shop.util/with-timing` has `references`, certainty possible, to the vars named in its syntax-quoted body: `shop.interop/now-ms`, `shop.util/log-timing`, `ext:clojure.core/let`, `ext:clojure.core/-`. The plan gives these edges no reason value (see Questions in `PROGRESS.md`). There is also one `macro-generated` blind spot.
+`shop.util/with-timing` has `references`, certainty possible, reason `macro-body`, to the vars named in its syntax-quoted body: `shop.interop/now-ms`, `shop.util/log-timing`, `ext:clojure.core/let`, `ext:clojure.core/-`. There is also one `macro-generated` blind spot.
 
 ### Phase 2 edges
 
 | From | Kind | To | C | Reason | WP | Note |
 |---|---|---|---|---|---|---|
 | each `shop.pricing/price@…` | implements | `shop.pricing/price` | | | 2.2 | four edges |
-| `shop.pricing/price` | dispatches | each of the four `price@…` impls | P | multimethod-dispatch | 2.2 | the global edge |
-| site `test/shop/pricing_test.clj:6:15` | dispatch | `price@:food` L, `price@:default` included; `:book`, `:gift` not linked from this site | | multimethod-dispatch | 2.2 | literal map with `:kind :food` |
-| site `test/shop/pricing_test.clj:9:12` | dispatch | `price@:book` L, `price@:default` included; others not linked | | multimethod-dispatch | 2.2 | |
-| site `src/shop/core.clj:16:17` | dispatch | all four `price@…` impls P | | multimethod-dispatch | 2.2 | non-literal argument |
+| `shop.pricing-test/food-is-taxed` | dispatches | `price@:food` L, `price@:default` P; `:book`, `:gift` not linked | | multimethod-dispatch | 2.2 | literal `:kind :food`; site `test/shop/pricing_test.clj:6:15` |
+| `shop.pricing-test/book-is-half-off` | dispatches | `price@:book` L, `price@:default` P; others not linked | | multimethod-dispatch | 2.2 | site `test/shop/pricing_test.clj:9:12` |
+| `shop.core/checkout` | dispatches | all four `price@…` impls P | | multimethod-dispatch | 2.2 | non-literal argument; site `src/shop/core.clj:16:17` |
 | each `shop.payment/charge@…` (4) | implements | `shop.payment/Chargeable` | | | 2.3 | records and the `reify` too |
-| `shop.payment/charge` | dispatches | each of the four `charge@…` impls | P | protocol-dispatch | 2.3 | |
-| site `src/shop/core.clj:24:5` | dispatch | `charge@Card` L; others not linked from this site | | protocol-dispatch | 2.3 | local bound to `->Card` |
-| site `src/shop/core.clj:18:7` | dispatch | all four `charge@…` impls P | | protocol-dispatch | 2.3 | |
+| `shop.core/-main` | dispatches | `charge@Card` L; others not linked | | protocol-dispatch | 2.3 | local bound to `->Card`; site `src/shop/core.clj:24:5` |
+| `shop.core/checkout` | dispatches | all four `charge@…` impls P | | protocol-dispatch | 2.3 | site `src/shop/core.clj:18:7` |
 | `shop.util/apply-discount` | calls | `shop.pricing/half-off` | P | param-flow | 2.4 | the argument at `price@:book` |
 | `shop.plugins/audit-hook` | calls | `shop.audit/record!` | L | quoted-resolve | 2.5 | |
-| `shop.plugins/load-plugin` | calls | `hole:dynamic-resolve@src/shop/plugins.clj:8:11` | | | 2.5 | certainty and reason for edges into holes not defined by the plan |
-| `shop.plugins/run-script` | calls | `hole:dynamic-eval@src/shop/plugins.clj:12:3` | | | 2.5 | same |
+| `shop.plugins/load-plugin` | calls | `hole:dynamic-resolve@src/shop/plugins.clj:8:11` | C | dynamic | 2.5 | |
+| `shop.plugins/run-script` | calls | `hole:dynamic-eval@src/shop/plugins.clj:12:3` | C | dynamic | 2.5 | |
 | `shop.interop/now-ms` | calls | `java:java.lang.System#currentTimeMillis` | C | interop | 2.6 | |
 | `shop.interop/new-id` | calls | `java:java.util.UUID#randomUUID` | C | interop | 2.6 | |
 | `shop.interop/shout` | calls | `java:java.lang.String#toUpperCase` | C | interop | 2.6 | |
@@ -225,6 +223,7 @@ Below, `events@L5`, `events@L9`, `events@L14` and `subs@L5` stand for these impl
 | any `certain` edge from a caller to a `price@…` or `charge@…` impl | dispatch is never certain |
 | any edge from `shop.core/checkout` to `shop.interop/now-ms` or `shop.util/log-timing` | macro expansion is invisible; only `with-timing`'s possible references exist |
 | a `certain` edge to `shop.audit/record!` | reached only by `quoted-resolve` |
-| an edge from the `:food` call site to `price@:book` or `price@:gift` | literal dispatch value selects one impl |
+| an edge from `shop.pricing-test/food-is-taxed` to `price@:book` or `price@:gift` | literal dispatch value selects one impl |
+| any `dispatches` edge from `shop.pricing/price` or `shop.payment/charge` | dispatch edges start at the caller |
 | a second `shop.model/format-money` node | `.cljc` definitions merge |
 | any edge from `shop.util/apply-discount` to a local (`rule`) | locals are not nodes |

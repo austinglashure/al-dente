@@ -78,19 +78,20 @@ Nothing is dropped. This is the main fix over Leña.
 
 A usage whose position is the head of a list is a `calls` edge, reason `direct`, certainty `certain`. Any other usage is a `references` edge, reason `value-ref`, certainty `likely`. clj-kondo reports the position for calls as the opening parenthesis; confirm with the form index.
 
-Macros: a usage of a macro is a `calls` edge to the macro symbol. Usages that appear in the macro's expansion are not visible; record one `macro-generated` blind spot per macro defined in the repository whose body syntax-quotes calls, and emit `references` edges from the macro to the vars named inside its syntax-quoted body with certainty `possible`.
+Macros: a usage of a macro is a `calls` edge to the macro symbol. Usages that appear in the macro's expansion are not visible; record one `macro-generated` blind spot per macro defined in the repository whose body syntax-quotes calls, and emit `references` edges from the macro to the vars named inside its syntax-quoted body, reason `macro-body`, certainty `possible`.
 
 ### R5. Multimethods
 
 - `defmulti` → `multimethod` symbol.
-- each `defmethod` → `impl` node, an `implements` edge to the multimethod, and a `dispatches` edge from the multimethod to the impl.
-- certainty of `dispatches`: if the dispatch function is a keyword or a literal `(fn [x] (:k x))` shape and a call site passes a literal map containing that key, the matching impl is `likely` and others are not linked from that site. In every other case each impl is `possible`. The `:default` impl is always included.
-- callers keep a single `calls` edge to the multimethod. Traversals follow `dispatches`.
+- each `defmethod` → `impl` node and an `implements` edge to the multimethod.
+- each call of the multimethod → `dispatches` edges from the calling scope to the impls that call may run, with that call's certainty and the call as a site. A usage as a value (R4 `references`) gives `possible` `dispatches` to every impl from the referencing scope.
+- certainty of `dispatches`: if the dispatch function is a keyword or a literal `(fn [x] (:k x))` shape and a call site passes a literal map containing that key, the matching impl is `likely` and others are not linked from that site. In every other case each impl is `possible`. The `:default` impl is always included, at `possible` when a literal selected another impl.
+- callers also keep a single `calls` edge to the multimethod. There is no multimethod → impl `dispatches` edge (see `03-graph-model.md`).
 
 ### R6. Protocols, records, types, reify
 
 - protocol methods are `protocol-method` symbols.
-- each implementation (from clj-kondo's protocol-impls bucket, joined with the form index for body ranges) → `impl` node, `implements` edge, `dispatches` edge from the protocol method.
+- each implementation (from clj-kondo's protocol-impls bucket, joined with the form index for body ranges) → `impl` node and `implements` edge. Calls of the protocol method give `dispatches` edges from the calling scope, as in R5.
 - certainty: `likely` when the call's first argument is, in the same function, a local bound directly to a constructor call (`->Rec`, `map->Rec`, `Rec.`, `reify`) or carries a type hint naming the type; otherwise `possible` for every impl.
 - `proxy` and `gen-class` bodies are scoped as impls; their targets are `platform` nodes.
 
@@ -112,6 +113,8 @@ Core functions that invoke their argument (`map`, `filter`, `reduce`, `apply`, `
 | `eval`, `load-string`, `load-file`, `load-reader`, `read-string` followed by eval, `clojure.core/load` | `hole`, category `dynamic-eval` |
 | `(apply f args)` | covered by R4/R7 |
 | `intern`, `alter-var-root`, `with-redefs` | flag the target symbol `dynamic`; no hole |
+
+Every `hole` gets a `calls` edge from the enclosing scope, reason `dynamic`, certainty `certain` (the call happens; its target is unknown). This also covers R11's non-literal re-frame dispatch.
 
 ### R9. Interop
 

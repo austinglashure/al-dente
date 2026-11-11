@@ -10,7 +10,7 @@ Read first: `08-crater-and-traces.md`.
 - The three-pass search with `distance`, `path_certainty`, `via`; forward, reverse, both; dispatch handling in both directions; depth, stop conditions, hub damping; boundary and truncation reporting.
 
 **Accept**
-- Unit tests on small synthetic graphs: cycles terminate; a node reachable by a certain long path and a possible short path is labeled certain; reverse through an impl reaches callers of its multimethod; hub damping stops at the hub and lists it.
+- Unit tests on small synthetic graphs: cycles terminate; a node reachable by a certain long path and a possible short path is labeled certain; reverse from an impl reaches exactly the callers with a `dispatches` edge to it; hub damping stops at the hub and lists it.
 - Property test: the forward crater of A contains B if and only if the reverse crater of B contains A, for equal settings without depth limits.
 - A crater on a 500,000-edge synthetic graph completes in under one second.
 

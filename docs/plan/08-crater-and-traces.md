@@ -23,7 +23,7 @@ Breadth-first search over the in-memory graph in the chosen direction. Track for
 - `path_certainty`: the weakest certainty on the strongest path to it. Compute with a three-pass search (certain-only, then adding likely, then adding possible) so a node reachable by a certain path is labeled certain even if a possible path is shorter;
 - `via`: one predecessor on that best path, so the UI can explain "why is this here".
 
-Dispatch handling: reaching a multimethod or protocol method continues into its impls through `dispatches`. In reverse, reaching an impl continues to its multimethod or protocol method and then to their callers.
+Dispatch handling: `dispatches` edges run from each caller straight to the impls its call may run (see `03-graph-model.md`), so traversals follow them like calls. A crater seeded at a multimethod or protocol method itself continues forward into its impls through `implements` in reverse. In reverse, reaching an impl follows its incoming `dispatches` to the callers whose calls may run it.
 
 Result: nodes with those three fields, the induced edges, counts by certainty and by unit, the boundary (externals, platform nodes and holes reached, which are the crater's blind spots), and a `truncated` flag when depth or the node cap cut it.
 

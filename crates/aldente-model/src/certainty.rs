@@ -48,6 +48,10 @@ pub enum Reason {
     NameMatch,
     Interop,
     TraceObserved,
+    /// A macro to a var named in its syntax-quoted body; always `Possible`.
+    MacroBody,
+    /// A call into a `hole`: the call surely happens, the target is unknown.
+    Dynamic,
 }
 
 impl Reason {
@@ -63,6 +67,8 @@ impl Reason {
         Reason::NameMatch,
         Reason::Interop,
         Reason::TraceObserved,
+        Reason::MacroBody,
+        Reason::Dynamic,
     ];
 }
 
@@ -93,6 +99,17 @@ mod tests {
             serde_json::to_string(&Reason::ValueRef).unwrap(),
             "\"value-ref\""
         );
+    }
+
+    #[test]
+    fn macro_body_and_dynamic_reasons_exist() {
+        for (reason, json) in [
+            (Reason::MacroBody, "\"macro-body\""),
+            (Reason::Dynamic, "\"dynamic\""),
+        ] {
+            assert_eq!(serde_json::to_string(&reason).unwrap(), json);
+            assert!(Reason::ALL.contains(&reason));
+        }
     }
 
     proptest! {

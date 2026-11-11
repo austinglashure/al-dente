@@ -34,7 +34,7 @@ Every node from source has a location: file, start and end line and column.
 | `requires` | namespace → namespace | from `ns` forms and imports |
 | `calls` | symbol or impl → symbol, impl, external, platform, hole | the target is in call position |
 | `references` | symbol or impl → symbol or external | the target is used as a value: passed, stored, returned |
-| `dispatches` | multimethod or protocol-method → impl | "calling this may run that" |
+| `dispatches` | symbol or impl → impl | drawn from the scope that calls a multimethod or protocol method, to each impl that call may run; certainty is per caller. The caller also keeps its `calls` edge to the multimethod or protocol method |
 | `implements` | impl or record/type → protocol or multimethod | structural, for navigation |
 | `registers` | symbol or impl → symbol | keyword-keyed registration, for example a re-frame handler |
 | `tests` | test symbol → symbol | derived in Phase 4 |
@@ -44,7 +44,7 @@ Every node from source has a location: file, start and end line and column.
 | `talks-to` | symbol → host, datastore or endpoint | Phase 6 |
 | `transitions` | state → state | Phase 8 |
 
-"Invocation graph" in the handoff means `calls`, `references` and `dispatches` together. Traversals treat `A calls M` followed by `M dispatches I` as reaching `I`.
+"Invocation graph" in the handoff means `calls`, `references` and `dispatches` together. There is no global multimethod → impl edge: `A dispatches I` already says that `A`'s call may run `I`, so traversals reach `I` from `A` directly. (Decided 2026-11-11; it lets a literal dispatch value select one impl per call site.)
 
 ## Certainty and reason
 
@@ -68,6 +68,8 @@ Every `calls`, `references`, `dispatches`, `registers`, `talks-to`, `provides` a
 | `name-match` (resolved by name only) | possible |
 | `interop` | certain that it leaves the graph; target is a `platform` node |
 | `trace-observed` (seen in a supplied stack trace) | certain, overlay only, never stored in the base snapshot |
+| `macro-body` (a macro to a var named in its syntax-quoted body) | possible |
+| `dynamic` (a call into a `hole`) | certain: the call happens; only the target is unknown |
 
 Weights are configurable. Every traversal and measure takes `min_certainty`.
 
