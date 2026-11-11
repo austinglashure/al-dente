@@ -12,6 +12,7 @@ publish = false
 [workspace.dependencies]
 aldente-model = { path = "crates/aldente-model" }
 anyhow = "1"
+insta = "1"
 clap = { version = "4", features = ["derive"] }
 schemars = "1"
 serde = { version = "1", features = ["derive"] }

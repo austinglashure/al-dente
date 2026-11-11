@@ -52,6 +52,15 @@ jobs:
       - name: clj-kondo version
         run: clj-kondo --version
 
+      # WP0.3: the fixture must stay valid Clojure. Exit 2 = warnings (fine), 3 = errors.
+      - name: lint clj-mini fixture
+        shell: bash
+        run: |
+          set +e
+          clj-kondo --lint fixtures/clj-mini
+          code=$?
+          if [ "$code" -ge 3 ]; then exit "$code"; fi
+
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny

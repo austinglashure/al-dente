@@ -28,6 +28,8 @@ cargo test --workspace
 cargo deny check        # needs cargo-deny; CI runs it on Linux, macOS and Windows
 ```
 
+Golden files live under `fixtures/<name>/golden/`. After an intended change, review and accept them with `cargo insta review` (needs `cargo-insta`) or `INSTA_UPDATE=always cargo test`, then read the diff before committing.
+
 ## Structure
 
 | Path | What |
@@ -41,7 +43,9 @@ cargo deny check        # needs cargo-deny; CI runs it on Linux, macOS and Windo
 | `crates/aldente-analysis` | crater, measures, coverage, vetting and more |
 | `crates/aldente-rules` | loader for detection catalogs in `rules/` |
 | `crates/aldente-server` | local HTTP API and embedded UI |
+| `crates/aldente-testkit` | test support: fixture paths, golden graph harness |
 | `crates/acceptance` | runner for real-repository acceptance checks (needs network) |
+| `fixtures/` | crafted repositories and golden graphs (`clj-mini/EXPECTED.md` is the ground truth); `hostile/` safety cases |
 | `docs/plan/` | the full design and phase plan |
 
 Most crates are empty until their work package lands.

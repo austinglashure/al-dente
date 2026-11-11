@@ -12,7 +12,6 @@ version = 2
 allow = [
     "AGPL-3.0-only", # this workspace's own crates
     "MIT",
-    "MIT-0", # borrow-or-share (via jsonschema, dev-only)
     "Apache-2.0",
     "BSD-2-Clause",
     "BSD-3-Clause",
@@ -23,6 +22,8 @@ allow = [
     "MPL-2.0",
 ]
 confidence-threshold = 0.93
+# The list is the plan's, allowed ahead of need; don't warn about unused entries.
+unused-allowed-license = "allow"
 
 [licenses.private]
 ignore = false
