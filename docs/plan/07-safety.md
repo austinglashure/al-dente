@@ -24,7 +24,7 @@ Remote targets are cloned into `<cache>/aldente/repos/<host>/<owner>/<name>/`, n
 
 URL validation before any process starts: accept `https://`, `ssh://` and `git@host:path` forms only; reject anything beginning with `-`; reject embedded credentials in output and logs.
 
-After clone, never run another git command with the clone as the working directory without the same environment, because a repository's own `.git/config` is only safe when written by a hardened clone. For **local** targets, read files directly and call git only for `rev-parse`, `ls-files`, `diff` and `log`, each with `-c core.fsmonitor=false -c core.hooksPath=<empty dir>` and never any command that runs filters, hooks or aliases.
+After clone, never run another git command with the clone as the working directory without the same environment, because a repository's own `.git/config` is only safe when written by a hardened clone. For **local** targets, read files directly and call git only for `rev-parse`, `ls-files`, `diff` and `log`, each with `-c core.fsmonitor=false -c core.hooksPath=<empty dir>`, `--no-pager` and `GIT_PAGER=cat`, and never any command that runs filters, hooks or aliases. `diff` and `log` always also get `--no-ext-diff --no-textconv`, because a hostile local `.git/config` can define `diff.external`, `diff.<driver>.textconv` or `core.pager`.
 
 ## Reading files
 
@@ -83,6 +83,7 @@ Under `fixtures/hostile/`, each asserting nothing was executed or escaped:
 4. a docstring containing `<script>` and an `onerror` attribute, checked in a browser test;
 5. a `project.clj` with `#=(...)` read-eval and unquote forms;
 6. a `.gitattributes` declaring a filter, and a `.gitmodules` with a `file://` URL (clone test against a local bare repository);
+6a. a local repository whose `.git/config` sets `diff.external`, a textconv driver (named in `.gitattributes`) and `core.pager`, each pointing at a marker-writing program; `diff` and `log` must not run any of them;
 7. a symbol name crafted as a SQL fragment and as a regex;
 8. a 50 MB single-line file and a deeply nested form;
 9. a request to the server with a wrong `Host` header, a missing token, and a foreign `Origin`.

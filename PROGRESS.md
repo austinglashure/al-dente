@@ -116,11 +116,12 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Add here when a decision in `docs/plan/decisions.md` looks wrong or the plan is silent on something that matters. Do not work around it.)
 
-- **Local-target git hardening gap (`07-safety.md`, Acquisition).** For local targets the plan adds only `core.fsmonitor=false` and `core.hooksPath`. `git diff`/`git log` still honor a hostile repo's `.git/config`: `diff.external`, `diff.<driver>.textconv`, `core.pager`. Proposal: always pass `--no-ext-diff --no-textconv`, set `GIT_PAGER=cat` / `--no-pager`, and add a hostile fixture for it. Needs Austin's OK before WP1.1.
 
 ## Notes
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
+
+- 2026-11-11 plan: Austin approved the local-target git hardening fix. `07-safety.md` now requires `--no-ext-diff --no-textconv` on `diff`/`log`, `--no-pager` + `GIT_PAGER=cat` on every local git call, and hostile test 6a. Implement in WP1.1.
 
 - 2026-11-11 WP0.1: Repo root is `al-dente/` (plan moved up from `al-dente-plan/`; the plan package README is now `docs/plan/README.md`). Toolchain is stable 1.99.1 via rustup; `rust-version = 1.85` (edition 2024 minimum).
 - 2026-11-11 WP0.1: Crates created: the nine in `02-architecture.md` plus `crates/acceptance` (empty lib; becomes a binary when acceptance lands). `aldente-py`, `aldente-ts`, `bench` deliberately not created yet (Phases 5 and 10). `acceptance/` at the root holds `repos.toml` later.
