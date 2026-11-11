@@ -91,11 +91,17 @@ namespace:   <lang>:<unit>//<ns>                      clj:services/billing//bill
 symbol:      <lang>:<unit>//<ns>/<name>               clj:services/billing//billing.core/charge!
 impl:        <symbol id>@<discriminator>              ...//billing.core/handle@:order/paid
                                                       ...//billing.core/<top>@L42
-external:    <lang>:ext//<ns>/<name>                  clj:ext//clojure.core/map
+external:    ext:<lang>//<ns>/<name>                  ext:clj//clojure.core/map
 library:     lib:<ecosystem>:<coordinate>             lib:maven:reagent/reagent   lib:npm:react
 platform:    java:<class>[#member]  |  js:<path>      java:java.net.Socket#connect   js:fetch
 hole:        hole:<category>@<file>:<line>:<col>
+repo:        repo:.
+endpoint, datastore, host, state:  <kind>:<text>      opaque until Phases 6 and 8 define them
 ```
+
+- Top-level prefixes `unit`, `lib`, `hole`, `ext`, `repo`, `java`, `js`, `endpoint`, `datastore`, `host` and `state` are reserved: no language may use them as its `<lang>`. (Externals were once `<lang>:ext//…`, which collided with a unit in a directory named `ext`.)
+- In `<name>`, `%` is written `%25` and `@` is written `%40`, so the first bare `@` always starts an impl discriminator. Discriminators are written as-is.
+- Hole IDs parse the category up to the first `@` and `line`/`col` from the right, so file names may contain `:` and `@`.
 
 - `<lang>` is `clj` for Clojure-family code. A definition from a `.cljc` file is one node with a `langs` attribute (`["clj","cljs"]`); edges carry the language they were resolved in when it differs. `.cljs`-only code sets `langs` to `["cljs"]`.
 - The root unit's directory is written `.`.

@@ -1,3 +1,27 @@
 //! Node, edge, certainty and ID types, the JSON envelope and its schemas.
-//!
-//! Empty until a later work package fills it; see `docs/plan/02-architecture.md`.
+//! The Rust types here are the source of truth for every JSON shape; see
+//! `docs/plan/03-graph-model.md` and `docs/plan/05-cli.md`.
+
+pub mod certainty;
+pub mod envelope;
+pub mod graph;
+pub mod id;
+pub mod kinds;
+pub mod path;
+pub mod schema;
+
+#[cfg(test)]
+mod strategies;
+
+pub use certainty::{Certainty, Reason};
+pub use envelope::{
+    Envelope, ErrorBody, ErrorCode, ExitCode, SnapshotInfo, Warning, WarningCode, schema_tag,
+};
+pub use graph::{
+    Aggregation, AggregationLevel, Edge, EdgeError, GraphPayload, Location, Node, Site,
+};
+pub use id::{
+    ExternalId, HoleId, IdError, ImplId, LibraryId, NamespaceId, NodeId, PlatformId, SymbolId,
+};
+pub use kinds::{BlindSpotCategory, EdgeKind, Lang, NodeKind, SymbolFlag, SymbolSubkind};
+pub use path::{PathError, PathStyle, RepoPath};

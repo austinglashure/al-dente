@@ -4,7 +4,7 @@ Al Dente is a static analyzer that turns a git repository into an explorable gra
 
 ## Status
 
-Pre-alpha. Phase 0 (foundations) is in progress: the workspace builds, and the `aldente` binary only answers `--version`. See `PROGRESS.md` for what is done and `docs/plan/roadmap.md` for the plan.
+Pre-alpha. Phase 0 (foundations) is in progress: the graph model and JSON envelope exist, and the `aldente` binary answers `--version` and `schema`. See `PROGRESS.md` for what is done and `docs/plan/roadmap.md` for the plan.
 
 ## Run
 
@@ -12,7 +12,10 @@ One-time setup: install Rust with [rustup](https://rustup.rs). The pinned toolch
 
 ```sh
 cargo run -- --version
+cargo run -- schema envelope     # JSON Schema of the output envelope
 ```
+
+Command reference: `docs/cli.md`.
 
 Later phases also need `git` and `clj-kondo` on `PATH`.
 

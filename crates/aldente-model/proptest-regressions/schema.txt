@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 6de83d624559d01fd7ebbf85004e36af24efeed1055ea4b0a8739f94701c07a9 # shrinks to env = Envelope { schema: "aldente/graph/v1", ok: false, snapshot: None, data: None, warnings: [Warning { code: Truncated, message: "" }], error: Some(ErrorBody { code: Internal, message: "", candidates: None }) }

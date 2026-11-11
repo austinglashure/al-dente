@@ -1,15 +1,44 @@
 //! The `aldente` command-line binary.
 
-use clap::Parser;
+mod commands;
+mod output;
+
+use clap::{Parser, Subcommand};
 
 /// Al Dente: turn a git repository into an explorable graph.
 #[derive(Debug, Parser)]
-#[command(name = "aldente", version, about)]
-struct Cli {}
+#[command(name = "aldente", version, about, arg_required_else_help = true)]
+struct Cli {
+    /// Print the result as a JSON envelope (see `aldente schema envelope`).
+    #[arg(long, global = true)]
+    json: bool,
 
-/// Parses arguments; clap handles `--version` and `--help` and exits.
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Print JSON Schemas for the envelope and data shapes.
+    Schema(commands::schema::SchemaArgs),
+}
+
+/// Parses arguments, runs the command and exits with its exit code.
+/// clap handles `--version` and `--help` itself.
 ///
 /// Example: `aldente --version` prints `aldente 0.1.0` and exits 0.
-fn main() {
-    let _cli = Cli::parse();
+fn main() -> std::process::ExitCode {
+    let cli = Cli::parse();
+    let result = match &cli.command {
+        Command::Schema(args) => commands::schema::run(args, cli.json),
+    };
+    match result {
+        Ok(code) => std::process::ExitCode::from(code.code()),
+        // The reader closed early (e.g. `| head`); nothing more to say.
+        Err(err) if output::is_broken_pipe(&err) => std::process::ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("aldente: internal error: {err:#}");
+            std::process::ExitCode::from(aldente_model::ExitCode::Internal.code())
+        }
+    }
 }

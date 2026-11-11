@@ -2,11 +2,11 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 0, WP0.2 (not started). WP0.1 is done locally; its "CI green on all three systems" criterion is unverified until the repo is pushed to GitHub.
+**Current:** Phase 0, WP0.3 (not started). WP0.1 and WP0.2 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
-- [ ] WP0.2 Model crate
+- [x] WP0.2 Model crate
 - [ ] WP0.3 Fixture corpus and golden harness
 - [ ] WP0.4 Doctor
 
@@ -120,6 +120,14 @@ Update at the end of every session: tick finished work packages, add a dated not
 ## Notes
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
+
+- 2026-11-11 WP0.2: **External IDs changed to `ext:<lang>//<ns>/<name>`** (Austin's call): the old `<lang>:ext//…` collided with a unit in a directory named `ext`. `03-graph-model.md` updated, including the reserved-prefix rule: no language may be called `unit`, `lib`, `hole`, `ext`, `repo`, `java`, `js`, `endpoint`, `datastore`, `host`, `state`. Phase 10 must not name a lang `js`.
+- 2026-11-11 WP0.2: Plan was silent, chose: `repo:.` for the repo node; `endpoint:`/`datastore:`/`host:`/`state:` + opaque text until Phases 6/8; `%`→`%25` and `@`→`%40` in symbol names so the first bare `@` starts an impl discriminator; hole line/col parsed from the right; leading zeros rejected so every ID has one written form. A symbol may be named `/c` (`clj:a//b//c` is valid).
+- 2026-11-11 WP0.2: `RepoPath` is strict when parsing IDs/JSON (rejects `./`, `//`, `..`, absolute, trailing `/`). OS paths go through `RepoPath::from_native(_str)`: on Windows `\` is a separator and drive letters are rejected; on Unix `\` is a literal filename character. WP1.1's walker should use `from_native`.
+- 2026-11-11 WP0.2: Envelope keys are always present (nullable but `required` in the schema, via `schema::all_keys_required`; field-level `#[schemars(required)]` strips `null`, don't use it). Node/Edge optional fields are omitted when absent to keep payloads small. Flags and langs are `BTreeSet`s, so they serialize sorted.
+- 2026-11-11 WP0.2: `--json` is a global flag on the CLI. `aldente schema` with no name lists names. A broken stdout pipe (`| head`) exits 0 silently. Started `docs/cli.md` (Definition of done item 4).
+- 2026-11-11 WP0.2: New deps: `serde`, `serde_json`, `schemars` 1.x, `thiserror`, `anyhow` (all in the plan); dev-only `proptest` (property tests) and `jsonschema` (validates output against the JSON Schema meta-schema). `deny.toml` now allows `MIT-0` (from `borrow-or-share`, dev-only via `jsonschema`).
+- 2026-11-11 WP0.2: Debt to watch: each enum keeps a hand-written `ALL` list (and `Lang`/`BlindSpotCategory` an `as_str` match); tests catch serde/`as_str` drift but not a missing `ALL` entry. A `strum`-style derive could replace them if more enums appear.
 
 - 2026-11-11 plan: Austin approved the local-target git hardening fix. `07-safety.md` now requires `--no-ext-diff --no-textconv` on `diff`/`log`, `--no-pager` + `GIT_PAGER=cat` on every local git call, and hostile test 6a. Implement in WP1.1.
 
