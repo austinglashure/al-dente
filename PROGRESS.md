@@ -120,6 +120,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
 
+- 2026-11-11 WP1.1 follow-up: tried on metosin/reitit (37 units, 0.06 s; all 170 Clojure files accounted for: 131 analyzed, 37 `project.clj`, 2 `scripts/` outside roots). Fixed, test first: lein-cljsbuild `:cljsbuild :builds … :source-paths` are now roots (alias `cljsbuild`); shadow-cljs test targets (`:node-test`, `:browser-test`, `:karma`) no longer mark a service; a root is `test` when any path component is `test`/`tests`. Leiningen `checkouts/` symlinks are reported and skipped, as intended. Not handled yet: figwheel-main `*.cljs.edn` build files.
 - 2026-11-11 WP1.1: `aldente units [TARGET]`. In `aldente-acquire`: `target` (nearest `.git`, else the directory, `git: false`), `walk` (ignore crate), `edn` (in-crate reader; `#=` kept as `ReadEval`, metadata dropped, nesting capped at 256), `manifest`, `units`, `key`. Model: `Diagnostic`/`DiagnosticCode`, `UnitsReport` (schema `units`), `RepoPath::{join_relative, starts_with, parent, components}`. New deps `ignore` 0.4 and `blake3` 1, both in `02-architecture.md`. New fixtures `mono-mini/` and `hostile/read-eval/`. Choices where the plan was silent:
   - Only the four Clojure manifests make units; `package.json`/`pyproject.toml` wait for Phase 10.
   - An implicit root unit `unit:.` (no manifest) exists only when some source file has no enclosing unit, so `mono-mini` stays at three.

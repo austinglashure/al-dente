@@ -72,7 +72,11 @@ fn render(report: &UnitsReport) -> Vec<String> {
     let mut lines = Vec::new();
     for unit in &report.units {
         let langs: Vec<&str> = unit.langs.iter().map(|l| l.as_str()).collect();
-        let mut head = format!("{}  {}  {} files", unit.id, langs.join(" "), unit.files);
+        let mut head = unit.id.to_string();
+        if !langs.is_empty() {
+            head.push_str(&format!("  {}", langs.join(" ")));
+        }
+        head.push_str(&format!("  {} files", unit.files));
         if !unit.manifests.is_empty() {
             head.push_str(&format!("  {}", unit.manifests.join(" ")));
         }
@@ -112,6 +116,24 @@ fn render(report: &UnitsReport) -> Vec<String> {
 mod tests {
     use super::*;
     use aldente_model::{Diagnostic, DiagnosticCode, Lang, NodeId, RepoPath, SourceRoot, UnitInfo};
+
+    #[test]
+    fn a_unit_without_languages_has_no_double_space() {
+        let report = UnitsReport {
+            git: true,
+            units: vec![UnitInfo {
+                id: NodeId::Unit(RepoPath::parse("modules/meta").unwrap()),
+                dir: RepoPath::parse("modules/meta").unwrap(),
+                manifests: vec!["project.clj".into()],
+                langs: Default::default(),
+                roots: vec![],
+                service: false,
+                files: 0,
+            }],
+            diagnostics: vec![],
+        };
+        assert_eq!(render(&report), ["unit:modules/meta  0 files  project.clj"]);
+    }
 
     #[test]
     fn renders_units_roots_and_diagnostics() {

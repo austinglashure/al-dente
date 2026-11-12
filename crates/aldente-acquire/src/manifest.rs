@@ -120,6 +120,7 @@ fn parse_project(forms: &[Edn]) -> Result<ManifestInfo, String> {
             }
         }
     }
+    roots.extend(cljsbuild_paths(&options));
     Ok(ManifestInfo {
         roots,
         declares_roots: true,
@@ -146,14 +147,48 @@ fn lein_paths(options: &Edn, profile: Option<&str>, defaults: bool) -> Vec<Decla
     roots
 }
 
-/// shadow-cljs.edn: `:source-paths`; any build with a `:target` marks a service.
+/// lein-cljsbuild `:source-paths` from every build under `:cljsbuild :builds`
+/// (a vector of build maps or a map of id to build), deduplicated, alias
+/// `cljsbuild`. Build ids do not decide test-ness, since test builds also
+/// list `src`; the directory name does.
+///
+/// Example: `{:cljsbuild {:builds [{:source-paths ["src"]}]}}` gives root
+/// `src` (alias `cljsbuild`).
+fn cljsbuild_paths(options: &Edn) -> Vec<DeclaredRoot> {
+    let builds: Vec<&Edn> = match options.get_kw("cljsbuild").and_then(|c| c.get_kw("builds")) {
+        Some(Edn::Map(by_id)) => by_id.iter().map(|(_, b)| b).collect(),
+        Some(list) => list.items().unwrap_or_default().iter().collect(),
+        None => Vec::new(),
+    };
+    let mut roots: Vec<DeclaredRoot> = Vec::new();
+    for build in builds {
+        if let Some(paths) = build.get_kw("source-paths") {
+            for r in strings(paths, Some("cljsbuild"), RootKind::Source) {
+                if !roots.contains(&r) {
+                    roots.push(r);
+                }
+            }
+        }
+    }
+    roots
+}
+
+/// shadow-cljs build targets that only run tests; they do not make a service.
+const SHADOW_TEST_TARGETS: &[&str] = &["node-test", "browser-test", "karma"];
+
+/// shadow-cljs.edn: `:source-paths`; any build with a non-test `:target`
+/// marks a service.
 ///
 /// Example: `{:source-paths ["src"] :builds {:app {:target :browser}}}` gives
 /// root `src` and `service: true`.
 fn parse_shadow(map: &Edn) -> ManifestInfo {
     let paths = map.get_kw("source-paths");
     let service = match map.get_kw("builds") {
-        Some(Edn::Map(builds)) => builds.iter().any(|(_, b)| b.get_kw("target").is_some()),
+        Some(Edn::Map(builds)) => builds.iter().any(|(_, b)| match b.get_kw("target") {
+            Some(Edn::Keyword(t)) => !SHADOW_TEST_TARGETS.contains(&t.as_str()),
+            Some(_) => true,
+            None => false,
+        }),
         _ => false,
     };
     ManifestInfo {
@@ -195,13 +230,13 @@ fn strings(paths: &Edn, alias: Option<&str>, kind: RootKind) -> Vec<DeclaredRoot
 }
 
 /// One declared root, upgrading `kind` to `Test` when the alias name contains
-/// `test` or the last directory is `test` or `tests`.
+/// `test` or any directory in the path is `test` or `tests`.
 ///
-/// Example: `root("src/test", None, Source)` has kind `Test`.
+/// Example: `root("test/cljs", None, Source)` and `root("src/test/clojure",
+/// None, Source)` have kind `Test`; `root("src", None, Source)` stays `Source`.
 fn root(rel: &str, alias: Option<&str>, kind: RootKind) -> DeclaredRoot {
-    let last = rel.trim_end_matches('/').rsplit('/').next().unwrap_or(rel);
-    let looks_like_test =
-        alias.is_some_and(|a| a.contains("test")) || matches!(last, "test" | "tests");
+    let looks_like_test = alias.is_some_and(|a| a.contains("test"))
+        || rel.split('/').any(|c| matches!(c, "test" | "tests"));
     DeclaredRoot {
         rel: rel.to_owned(),
         kind: if looks_like_test {
@@ -343,6 +378,51 @@ mod tests {
         .unwrap();
         assert_eq!(info.roots, [root("src", Source, None)]);
         assert!(info.service);
+    }
+
+    #[test]
+    fn project_clj_cljsbuild_source_paths() {
+        // Seen in metosin/reitit's examples: `:source-paths []` at the top and
+        // the ClojureScript roots only under lein-cljsbuild.
+        let info = parse(
+            Manifest::ProjectClj,
+            r#"(defproject frontend "0.1.0"
+                 :source-paths []
+                 :cljsbuild {:builds [{:id "app" :source-paths ["src"]}
+                                      {:id "test" :source-paths ["src" "test/cljs"]}]})"#,
+        )
+        .unwrap();
+        assert_eq!(
+            info.roots,
+            [
+                dflt("test", Test),
+                root("src", Source, Some("cljsbuild")),
+                root("test/cljs", Test, Some("cljsbuild")),
+            ]
+        );
+        // The map form of :builds works too.
+        let map_form = parse(
+            Manifest::ProjectClj,
+            r#"(defproject a "1" :source-paths [] :test-paths []
+                 :cljsbuild {:builds {:dev {:source-paths ["src-cljs"]}}})"#,
+        )
+        .unwrap();
+        assert_eq!(
+            map_form.roots,
+            [root("src-cljs", Source, Some("cljsbuild"))]
+        );
+    }
+
+    #[test]
+    fn shadow_cljs_test_builds_are_not_services() {
+        let info = parse(
+            Manifest::ShadowCljs,
+            r#"{:builds {:node-test {:target :node-test}
+                         :browser-test {:target :browser-test}
+                         :karma {:target :karma}}}"#,
+        )
+        .unwrap();
+        assert!(!info.service);
     }
 
     #[test]
