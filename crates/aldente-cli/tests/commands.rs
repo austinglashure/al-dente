@@ -127,6 +127,11 @@ fn show_text_and_json() {
         "show_half_off",
         env.text(&["show", "shop.pricing/half-off"])
     );
+    insta::assert_snapshot!(
+        "show_namespace_pricing",
+        env.text(&["show", "clj:.//shop.pricing"])
+    );
+    insta::assert_snapshot!("show_unit", env.text(&["show", "unit:."]));
     let j = env.json(&["show", "checkout"]);
     assert!(env.valid("show", &j["data"]), "{j:#}");
     assert_eq!(j["data"]["node"]["id"], "clj:.//shop.core/checkout");

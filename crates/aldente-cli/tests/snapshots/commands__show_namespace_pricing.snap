@@ -1,0 +1,21 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 130
+expression: "env.text(&[\"show\", \"clj:.//shop.pricing\"])"
+---
+clj:.//shop.pricing  namespace
+  langs clj
+  at src/shop/pricing.clj:1:1
+  doc A multimethod with three methods and a default.
+callers (4)
+  certain  calls direct  clj:.//shop.core x1
+  certain  calls direct  clj:.//shop.pricing-test x2
+  -  requires -  clj:.//shop.core  src/shop/core.clj:7:14
+  -  requires -  clj:.//shop.pricing-test  test/shop/pricing_test.clj:3:14
+callees (3)
+  certain  calls direct  clj:.//shop.util x1
+  certain  calls direct  ext:clj//clojure.core x2
+  -  requires -  clj:.//shop.util  src/shop/pricing.clj:3:14
+contains (2)
+  clj:.//shop.pricing/half-off  symbol/fn
+  clj:.//shop.pricing/price  symbol/multimethod

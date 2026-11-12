@@ -17,7 +17,7 @@ const bin = process.env.ALDENTE_BIN ?? join(root, 'target', 'release', 'aldente'
 const out = join(root, 'docs', 'milestones', 'm1');
 mkdirSync(out, { recursive: true });
 
-// Which aggregates to expand and which symbol to select, per repository.
+// Which unit and namespace to open, and which symbol to select, per repository.
 const repos = [
   {
     name: 'ring',
@@ -68,8 +68,9 @@ for (const repo of repos) {
   await page.waitForTimeout(2500);
   await page.screenshot({ path: join(out, `${repo.name}-1-overview.png`) });
   for (const id of repo.expand) {
-    await page.locator(`[data-expand="${id}"]`).click();
-    await page.locator(`[data-expand="${id}"]`).filter({ hasText: 'collapse' }).waitFor();
+    await page.locator(`[data-open="${id}"]`).click();
+    await page.locator('[data-testid="breadcrumb"] strong').filter({ hasNotText: 'Repository' }).waitFor();
+    await page.waitForTimeout(500);
   }
   await page.locator(`[data-testid="node-list"] [data-node-id="${repo.select}"]`).click();
   await page.getByTestId('source').waitFor();

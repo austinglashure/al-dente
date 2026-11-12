@@ -47,10 +47,12 @@ pub fn run(args: &ShowArgs, json: bool) -> anyhow::Result<ExitCode> {
         );
     };
     let (callers, callees) = neighbors(graph, &id);
+    let children = aldente_graph::query::children(graph, &id);
     let result = ShowResult {
         node,
         callers,
         callees,
+        children,
     };
     if json {
         print_json(&Envelope::success(TAG, Some(loaded.info()), &result))?;
@@ -95,6 +97,13 @@ fn render(r: &ShowResult) -> Vec<String> {
         lines.push(format!("{title} ({})", list.len()));
         lines.extend(list.iter().map(neighbor_line));
     }
+    if !r.children.is_empty() {
+        lines.push(format!("contains ({})", r.children.len()));
+        lines.extend(r.children.iter().map(|c| match &c.subkind {
+            Some(sub) => format!("  {}  {}/{}", c.id, token(&c.kind), token(sub)),
+            None => format!("  {}  {}", c.id, token(&c.kind)),
+        }));
+    }
     lines.iter().map(|l| printable(l)).collect()
 }
 
@@ -113,5 +122,10 @@ fn neighbor_line(n: &Neighbor) -> String {
         Some((s, rest)) => format!("  {}:{}:{} (+{})", s.file, s.line, s.col, rest.len()),
         None => String::new(),
     };
-    format!("  {cert}  {} {reason}  {}{site}", token(&n.kind), n.id)
+    let count = n.count.map(|c| format!(" x{c}")).unwrap_or_default();
+    format!(
+        "  {cert}  {} {reason}  {}{count}{site}",
+        token(&n.kind),
+        n.id
+    )
 }

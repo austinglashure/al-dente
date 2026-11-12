@@ -54,12 +54,21 @@ export interface Neighbor {
   certainty: string | null;
   reason: string | null;
   sites: Site[];
+  count: number | null;
+}
+
+export interface Child {
+  id: string;
+  name: string;
+  kind: string;
+  subkind: string | null;
 }
 
 export interface ShowResult {
   node: GNode;
   callers: Neighbor[];
   callees: Neighbor[];
+  children: Child[];
 }
 
 export interface FindResult {
@@ -67,9 +76,20 @@ export interface FindResult {
   truncated: boolean;
 }
 
+export interface SourceRoot {
+  path: string;
+  kind: string;
+  manifest: string | null;
+  alias: string | null;
+}
+
 export interface UnitInfo {
   id: string;
   dir: string;
+  manifests: string[];
+  langs: string[];
+  roots: SourceRoot[];
+  service: boolean;
   files: number;
 }
 

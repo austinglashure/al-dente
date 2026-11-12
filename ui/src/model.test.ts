@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropNodes, edgeKey, hidden, isTest, mergePayload, newGraph } from './model';
+import { dropNodes, edgeKey, hidden, isTest, labelFor, mergePayload, newGraph } from './model';
 import { apiPath, tokenFrom } from './api';
 import type { GNode, Payload } from './types';
 
@@ -51,5 +51,13 @@ describe('api helpers', () => {
     expect(tokenFrom('', 'stored')).toBe('stored');
     expect(apiPath('expand', { id: 'clj:.//a', visible: ['x', 'y'] })).toBe('/api/v1/expand?id=clj%3A.%2F%2Fa&visible=x&visible=y');
     expect(edgeKey({ from: 'a', to: 'b', kind: 'calls' })).toBe('a|calls|b||');
+  });
+});
+
+describe('labels', () => {
+  it('names units by their last directory', () => {
+    expect(labelFor(node('unit:modules/reitit-core', 'unit', { name: 'modules/reitit-core' }))).toBe('reitit-core');
+    expect(labelFor(node('unit:.', 'unit', { name: '.' }))).toBe('(root)');
+    expect(labelFor(node('clj:.//a/f'))).toBe('f');
   });
 });

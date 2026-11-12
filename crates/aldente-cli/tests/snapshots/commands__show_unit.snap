@@ -1,0 +1,23 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 131
+expression: "env.text(&[\"show\", \"unit:.\"])"
+---
+unit:.  unit
+  langs clj cljs
+callers (0)
+callees (0)
+contains (13)
+  clj:.//shop.audit  namespace
+  clj:.//shop.core  namespace
+  clj:.//shop.interop  namespace
+  clj:.//shop.inventory  namespace
+  clj:.//shop.model  namespace
+  clj:.//shop.payment  namespace
+  clj:.//shop.plugins  namespace
+  clj:.//shop.pricing  namespace
+  clj:.//shop.pricing-test  namespace
+  clj:.//shop.ui.events  namespace
+  clj:.//shop.ui.subs  namespace
+  clj:.//shop.ui.views  namespace
+  clj:.//shop.util  namespace

@@ -31,7 +31,7 @@ test.describe('clj-mini', () => {
     await expect(page).not.toHaveURL(/token=/);
     await expect(page.getByTestId('notice')).toHaveCount(0);
 
-    await page.locator('[data-expand="clj:.//shop.core"]').click();
+    await page.locator('[data-open="clj:.//shop.core"]').click();
     await expect(listed(page, 'clj:.//shop.core/checkout')).toBeVisible();
 
     await listed(page, 'clj:.//shop.core/checkout').click();
@@ -43,6 +43,7 @@ test.describe('clj-mini', () => {
     await details.locator('[data-testid="callee"][data-node-id="clj:.//shop.pricing/price"]').click();
     await expect(details.locator('h2')).toHaveText('price');
     await expect(page.getByTestId('source')).toContainText('(defmulti price');
+    await expect(details.locator('[data-action="focus"]')).toBeVisible();
 
     for (const url of requests) {
       expect(new URL(url).hostname).toBe('127.0.0.1');
@@ -82,5 +83,51 @@ test.describe('hostile case 4', () => {
     expect(await page.evaluate(() => (window as unknown as { __pwned?: string }).__pwned)).toBeUndefined();
     expect(await page.locator('[data-testid="details"] img, [data-testid="details"] script').count()).toBe(0);
     expect(requests.some((u) => new URL(u).pathname === '/x')).toBe(false);
+  });
+});
+
+test.describe('opening units and namespaces', () => {
+  test('a namespace shows its contents and opens on its own canvas', async ({ page }) => {
+    const server = await startServer('clj-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await expect(page.getByTestId('hint')).toBeVisible();
+      await listed(page, 'clj:.//shop.pricing').click();
+      const details = page.getByTestId('details');
+      await expect(details).toContainText('Contains (2)');
+      await expect(details.locator('[data-testid="child"][data-node-id="clj:.//shop.pricing/price"]')).toBeVisible();
+      await expect(details).toContainText('shop.util');
+      await details.locator('[data-action="open"]').click();
+      await expect(page.getByTestId('breadcrumb')).toContainText('shop.pricing');
+      await expect(listed(page, 'clj:.//shop.pricing/half-off')).toBeVisible();
+      // Namespaces that talk to it stay as context; unrelated ones go.
+      await expect(listed(page, 'clj:.//shop.core')).toBeVisible();
+      await expect(listed(page, 'clj:.//shop.audit')).toHaveCount(0);
+      await page.getByTestId('breadcrumb').getByRole('button', { name: 'Repository' }).click();
+      await expect(listed(page, 'clj:.//shop.core')).toBeVisible();
+    } finally {
+      server.close();
+    }
+  });
+
+  test('a unit shows its build files and opens to its namespaces', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await expect(listed(page, 'unit:services/orders')).toHaveText('orders');
+      await listed(page, 'unit:services/orders').click();
+      const details = page.getByTestId('details');
+      await expect(details).toContainText('deps.edn');
+      await expect(details).toContainText('services/orders/test');
+      await expect(details).toContainText('common');
+      await details.locator('[data-action="open"]').click();
+      await expect(page.getByTestId('breadcrumb')).toContainText('orders');
+      await expect(listed(page, 'clj:services/orders//orders.core')).toBeVisible();
+      await expect(listed(page, 'clj:services/billing//billing.core')).toHaveCount(0);
+    } finally {
+      server.close();
+    }
   });
 });

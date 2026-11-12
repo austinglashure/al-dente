@@ -1,17 +1,19 @@
-// The GUI: a graph canvas with a node list, search, toggles, a details panel
-// and a source panel. Every repository string is rendered as React text.
+// The GUI: a canvas with a breadcrumb of what is open, a node list, search
+// and toggles, and a details panel with tools. Every repository string is
+// rendered as React text.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Api, initToken } from './api';
+import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
 import { layout } from './layout';
-import { dropNodes, hidden, isAggregate, mergePayload, newGraph } from './model';
-import type { GNode, Neighbor, ShowResult } from './types';
+import { hidden, isAggregate, labelFor, mergePayload, newGraph } from './model';
+import type { GNode, Payload, ShowResult, UnitInfo } from './types';
 
-/** The location of a node as `file:line:col`.
- *  Example: `where(node)` is `'src/shop/core.clj:12:1'`. */
-function where(n: GNode): string {
-  return n.loc ? `${n.loc.file}:${n.loc.line}:${n.loc.col}` : '';
+/** One level of the breadcrumb: its label and how to load its canvas. */
+interface Crumb {
+  label: string;
+  load: () => Promise<Payload>;
 }
 
 /** The app. */
@@ -19,6 +21,8 @@ export function App() {
   const api = useMemo(() => new Api(initToken()), []);
   const graph = useMemo(() => newGraph(), []);
   const [version, setVersion] = useState(0);
+  const [crumbs, setCrumbs] = useState<Crumb[]>([]);
+  const [units, setUnits] = useState<Map<string, UnitInfo>>(new Map());
   const [selected, setSelected] = useState<string | null>(null);
   const [details, setDetails] = useState<ShowResult | null>(null);
   const [source, setSource] = useState<string | null>(null);
@@ -28,27 +32,46 @@ export function App() {
   const [hideExternals, setHideExternals] = useState(true);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
-  const expanded = useRef(new Map<string, string[]>());
-  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   const relayout = useCallback(() => layout(graph, redraw), [graph, redraw]);
-
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
+
+  /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
+  const show = useCallback(
+    (crumb: Crumb, keep: Crumb[]) => {
+      crumb
+        .load()
+        .then((p) => {
+          graph.clear();
+          mergePayload(graph, p);
+          setCrumbs([...keep, crumb]);
+          setError(null);
+          relayout();
+          redraw();
+        })
+        .catch(fail);
+    },
+    [graph, relayout, redraw, fail],
+  );
 
   useEffect(() => {
     api
-      .graph()
-      .then(({ data: p, warnings }) => {
-        mergePayload(graph, p);
-        if (p.truncated) setNotice('The graph was too large and has been truncated.');
-        else if (warnings.some((w) => w.code === 'coarser') && p.aggregated)
-          setNotice(`Showing the ${p.aggregated.level} level to stay within the size limit.`);
-        relayout();
-        redraw();
-      })
+      .snapshot()
+      .then((s) => setUnits(new Map(s.units.map((u) => [u.id, u]))))
       .catch(fail);
-  }, [api, graph, relayout, redraw, fail]);
+    const repo: Crumb = {
+      label: 'Repository',
+      load: () =>
+        api.graph().then(({ data, warnings }) => {
+          if (data.truncated) setNotice('The graph was too large and has been truncated.');
+          else if (warnings.some((w) => w.code === 'coarser') && data.aggregated)
+            setNotice(`Showing the ${data.aggregated.level} level to stay within the size limit.`);
+          return data;
+        }),
+    };
+    show(repo, []);
+  }, [api, show, fail]);
 
   const select = useCallback(
     (id: string) => {
@@ -64,28 +87,38 @@ export function App() {
     [api, fail],
   );
 
-  const toggleExpand = useCallback(
-    (id: string) => {
-      const children = expanded.current.get(id);
-      if (children) {
-        dropNodes(graph, children);
-        expanded.current.delete(id);
-        setExpandedIds(new Set(expanded.current.keys()));
-        redraw();
-        return;
+  /** Opens a unit (its namespaces) or a namespace (its functions, with the
+   *  namespaces it talks to as context) on a canvas of its own. */
+  const open = useCallback(
+    (n: GNode) => {
+      let load: () => Promise<Payload>;
+      if (n.kind === 'unit') {
+        load = () => api.unitGraph(n.id).then((r) => r.data);
+      } else {
+        const context = graph.filterNodes((_id, a) => a.node.kind === 'namespace' || a.node.kind === 'external').map((id) => graph.getNodeAttribute(id, 'node'));
+        load = () =>
+          api.expand(n.id, context.map((c) => c.id)).then((p) => {
+            const ends = new Set(p.edges.flatMap((e) => [e.from, e.to]));
+            return { ...p, nodes: [...p.nodes, ...context.filter((c) => ends.has(c.id))] };
+          });
       }
+      show({ label: labelFor(n), load }, crumbs);
+      select(n.id);
+    },
+    [api, graph, crumbs, show, select],
+  );
+
+  const expandHere = useCallback(
+    (id: string) =>
       api
         .expand(id, graph.nodes())
         .then((p) => {
-          const added = mergePayload(graph, p, id);
-          expanded.current.set(id, added);
-          setExpandedIds(new Set(expanded.current.keys()));
-          if (p.truncated) setNotice('Only the best-connected children are shown.');
+          mergePayload(graph, p, id);
+          if (p.truncated) setNotice('Only the best-connected contents are shown.');
           relayout();
         })
-        .catch(fail);
-    },
-    [api, graph, redraw, relayout, fail],
+        .catch(fail),
+    [api, graph, relayout, fail],
   );
 
   const neighbors = useCallback(
@@ -100,6 +133,14 @@ export function App() {
     [api, graph, relayout, fail],
   );
 
+  const focus = useCallback(
+    (id: string) => {
+      const label = graph.hasNode(id) ? labelFor(graph.getNodeAttribute(id, 'node')) : id;
+      show({ label: `${label} (focus)`, load: () => api.neighborhood(id) }, crumbs);
+    },
+    [api, graph, crumbs, show],
+  );
+
   const follow = useCallback(
     (id: string) => {
       const go = graph.hasNode(id) ? Promise.resolve() : neighbors(id);
@@ -108,13 +149,15 @@ export function App() {
     [graph, neighbors, select],
   );
 
+  const tools: Tools = { open, expandHere: (id) => void expandHere(id), neighbors: (id) => void neighbors(id), focus, follow };
+
   const onDoubleClick = useCallback(
     (id: string) => {
       const n = graph.hasNode(id) ? graph.getNodeAttribute(id, 'node') : null;
-      if (n && isAggregate(n)) toggleExpand(id);
+      if (n && isAggregate(n)) open(n);
       else void neighbors(id);
     },
-    [graph, toggleExpand, neighbors],
+    [graph, open, neighbors],
   );
 
   const isHidden = useCallback(
@@ -125,7 +168,7 @@ export function App() {
   const visible = graph
     .mapNodes((_id, a) => a.node)
     .filter((n) => !hidden(n, { hideTests, hideExternals }))
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
 
   const runSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,30 +183,42 @@ export function App() {
     <div className="app">
       <aside className="left">
         <form onSubmit={runSearch} className="search">
-          <input data-testid="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search symbols…" aria-label="Search" />
+          <input data-testid="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search functions…" aria-label="Search" />
         </form>
         {results.length > 0 && (
           <ul className="results" data-testid="results">
             {results.map((n) => (
               <li key={n.id}>
-                <button type="button" data-node-id={n.id} onClick={() => follow(n.id)}>
-                  {n.name} <span className="muted">{n.kind}</span>
+                <button type="button" data-node-id={n.id} onClick={() => follow(n.id)} title={n.id}>
+                  {n.name} <span className="muted">{n.namespace ?? n.kind}</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
         <label>
-          <input type="checkbox" data-testid="hide-tests" checked={hideTests} onChange={(e) => {
+          <input
+            type="checkbox"
+            data-testid="hide-tests"
+            checked={hideTests}
+            onChange={(e) => {
               setHideTests(e.target.checked);
               redraw();
-            }} /> Hide tests
+            }}
+          />{' '}
+          Hide tests
         </label>
         <label>
-          <input type="checkbox" data-testid="hide-externals" checked={hideExternals} onChange={(e) => {
+          <input
+            type="checkbox"
+            data-testid="hide-externals"
+            checked={hideExternals}
+            onChange={(e) => {
               setHideExternals(e.target.checked);
               redraw();
-            }} /> Hide externals
+            }}
+          />{' '}
+          Hide external libraries
         </label>
         {notice && (
           <p className="notice" data-testid="notice">
@@ -179,16 +234,12 @@ export function App() {
         <ul className="nodes" data-testid="node-list">
           {visible.map((n) => (
             <li key={n.id} className={n.id === selected ? 'selected' : ''}>
-              <button type="button" className="name" data-node-id={n.id} onClick={() => select(n.id)} title={n.id}>
-                {n.name}
+              <button type="button" className="name" data-node-id={n.id} onClick={() => select(n.id)} title={`${n.kind}: ${n.id}`}>
+                {labelFor(n)}
               </button>
-              {isAggregate(n) ? (
-                <button type="button" className="small" data-expand={n.id} onClick={() => toggleExpand(n.id)}>
-                  {expandedIds.has(n.id) ? 'collapse' : 'expand'}
-                </button>
-              ) : (
-                <button type="button" className="small" data-neighbors={n.id} onClick={() => void neighbors(n.id)}>
-                  neighbors
+              {isAggregate(n) && (
+                <button type="button" className="small" data-open={n.id} onClick={() => open(n)} title="Show only this">
+                  open
                 </button>
               )}
             </li>
@@ -196,73 +247,39 @@ export function App() {
         </ul>
       </aside>
       <main className="center">
+        <nav className="breadcrumb" data-testid="breadcrumb" aria-label="What is open">
+          {crumbs.map((c, i) => (
+            <span key={`${i}-${c.label}`}>
+              {i > 0 && <span className="muted"> › </span>}
+              {i < crumbs.length - 1 ? (
+                <button type="button" onClick={() => show(c, crumbs.slice(0, i))}>
+                  {c.label}
+                </button>
+              ) : (
+                <strong>{c.label}</strong>
+              )}
+            </span>
+          ))}
+        </nav>
         <GraphView graph={graph} version={version} selected={selected} isHidden={isHidden} onSelect={select} onDoubleClick={onDoubleClick} />
       </main>
       <aside className="right">
-        {details ? <Details d={details} onFollow={follow} /> : <p className="muted">Select a node.</p>}
-        {source !== null && (
+        {details ? (
+          <Details d={details} unit={units.get(details.node.id)} tools={tools} />
+        ) : (
+          <div className="muted" data-testid="hint">
+            <p>Click a node to see what it is, what it contains and what it is connected to.</p>
+            <p>Double-click a unit or namespace (or use Open) to show only its contents; the bar above the canvas takes you back.</p>
+            <p>A unit is a directory with its own build file (deps.edn, project.clj, shadow-cljs.edn, bb.edn). Callers, callees and source appear once you select a function.</p>
+          </div>
+        )}
+        {source && (
           <section>
             <h2>Source</h2>
-            {source ? (
-              <pre data-testid="source">{source}</pre>
-            ) : (
-              <p className="muted" data-testid="source">
-                No source for this node.
-              </p>
-            )}
+            <pre data-testid="source">{source}</pre>
           </section>
         )}
       </aside>
     </div>
-  );
-}
-
-/** The details panel: kind, location, signature, doc, callers and callees.
- *  Example: `<Details d={show} onFollow={follow} />`. */
-function Details({ d, onFollow }: { d: ShowResult; onFollow: (id: string) => void }) {
-  const n = d.node;
-  return (
-    <section data-testid="details">
-      <h2 title={n.id}>{n.name}</h2>
-      <p className="muted">
-        {n.kind}
-        {n.subkind ? ` / ${n.subkind}` : ''}
-        {(n.flags ?? []).length > 0 ? ` · ${(n.flags ?? []).join(', ')}` : ''}
-      </p>
-      <p className="id">{n.id}</p>
-      {n.loc && <p data-testid="location">{where(n)}</p>}
-      {n.signature && <p className="mono">{n.signature}</p>}
-      {n.doc && (
-        <p className="doc" data-testid="doc">
-          {n.doc}
-        </p>
-      )}
-      <NeighborList title="Callers" list={d.callers} testid="caller" onFollow={onFollow} />
-      <NeighborList title="Callees" list={d.callees} testid="callee" onFollow={onFollow} />
-    </section>
-  );
-}
-
-/** A list of neighbor links, strongest certainty first.
- *  Example: `<NeighborList title="Callees" list={d.callees} … />`. */
-function NeighborList({ title, list, testid, onFollow }: { title: string; list: Neighbor[]; testid: string; onFollow: (id: string) => void }) {
-  return (
-    <>
-      <h3>
-        {title} ({list.length})
-      </h3>
-      <ul className="neighbors">
-        {list.map((x) => (
-          <li key={`${x.id}|${x.kind}|${x.reason ?? ''}`}>
-            <button type="button" data-testid={testid} data-node-id={x.id} onClick={() => onFollow(x.id)} title={x.id}>
-              {x.name}
-            </button>{' '}
-            <span className={`muted cert-${x.certainty ?? 'none'}`}>
-              {x.kind} · {x.certainty ?? '–'} · {x.reason ?? '–'}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </>
   );
 }

@@ -84,7 +84,7 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
   for (const n of p.nodes) {
     if (g.hasNode(n.id)) continue;
     g.addNode(n.id, {
-      label: n.name,
+      label: labelFor(n),
       x: base.x + (random() - 0.5) * 10,
       y: base.y + (random() - 0.5) * 10,
       size: n.kind === 'unit' || n.kind === 'namespace' ? 8 : 4,
@@ -112,6 +112,15 @@ export function dropNodes(g: CanvasGraph, ids: string[]): void {
   for (const id of ids) {
     if (g.hasNode(id)) g.dropNode(id);
   }
+}
+
+/** The label shown for a node: units by their last directory (`(root)` for
+ *  the repository root), everything else by name.
+ *  Example: `labelFor({kind: 'unit', name: 'modules/reitit-core'})` is `'reitit-core'`. */
+export function labelFor(n: GNode): string {
+  if (n.kind !== 'unit') return n.name;
+  if (n.name === '.') return '(root)';
+  return n.name.split('/').pop() ?? n.name;
 }
 
 /** Whether double-clicking a node expands it (aggregates) rather than

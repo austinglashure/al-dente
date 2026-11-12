@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::str::FromStr;
 
-use aldente_model::query::Neighbor;
+use aldente_model::query::{Child, Neighbor};
 use aldente_model::{
     Aggregation, AggregationLevel, Certainty, Edge, EdgeKind, GraphPayload, Node, NodeId, NodeKind,
 };
@@ -89,31 +89,56 @@ pub fn search(graph: &Graph, pattern: &str, kinds: &[NodeKind], limit: usize) ->
     (hits, truncated)
 }
 
-/// Direct callers and callees of `id` over invocation edges, strongest
-/// certainty first, then by ID.
+/// Direct callers and callees of `id`, strongest certainty first, then by
+/// ID. For a symbol or impl: invocation edges. For a namespace or unit: the
+/// rolled-up edges at that level (`requires` too), with counts.
 ///
 /// Example: `neighbors(g, shop.pricing/half-off)` gives caller
-/// `shop.pricing/price@:book` (references, likely) and callee `clojure.core//`.
+/// `shop.pricing/price@:book` (references, likely); `neighbors(g, shop.core)`
+/// gives callee `shop.pricing` (calls, count 1) and the `requires` edge.
 pub fn neighbors(graph: &Graph, id: &NodeId) -> (Vec<Neighbor>, Vec<Neighbor>) {
+    let level = match graph.nodes.get(id).map(|n| n.kind) {
+        Some(NodeKind::Namespace) => Some(AggregationLevel::Namespace),
+        Some(NodeKind::Unit) => Some(AggregationLevel::Unit),
+        _ => None,
+    };
+    // Rolled-up edges and group nodes for aggregates; stored ones otherwise.
+    let rolled = level.map(|l| graph.payload(l));
+    let (edges, nodes): (Vec<&Edge>, Vec<&Node>) = match &rolled {
+        Some(p) => (
+            p.edges
+                .iter()
+                .filter(|e| INVOCATION.contains(&e.kind) || e.kind == EdgeKind::Requires)
+                .collect(),
+            p.nodes.iter().collect(),
+        ),
+        None => (
+            graph
+                .edges
+                .iter()
+                .filter(|e| INVOCATION.contains(&e.kind))
+                .collect(),
+            graph.nodes.values().collect(),
+        ),
+    };
+    let names: BTreeMap<&NodeId, &str> = nodes.iter().map(|n| (&n.id, n.name.as_str())).collect();
+    let names = |n: &NodeId| names.get(n).map(|s| (*s).to_owned()).unwrap_or_default();
     let make = |e: &Edge, other: &NodeId| Neighbor {
         id: other.clone(),
-        name: graph
-            .nodes
-            .get(other)
-            .map(|n| n.name.clone())
-            .unwrap_or_default(),
+        name: names(other),
         kind: e.kind,
         certainty: e.certainty,
         reason: e.reason,
         sites: e.sites.clone(),
+        count: e.count,
     };
-    let invocation = graph.edges.iter().filter(|e| INVOCATION.contains(&e.kind));
-    let mut callers: Vec<Neighbor> = invocation
-        .clone()
+    let mut callers: Vec<Neighbor> = edges
+        .iter()
         .filter(|e| &e.to == id)
         .map(|e| make(e, &e.from))
         .collect();
-    let mut callees: Vec<Neighbor> = invocation
+    let mut callees: Vec<Neighbor> = edges
+        .iter()
         .filter(|e| &e.from == id)
         .map(|e| make(e, &e.to))
         .collect();
@@ -123,9 +148,62 @@ pub fn neighbors(graph: &Graph, id: &NodeId) -> (Vec<Neighbor>, Vec<Neighbor>) {
                 .cmp(&a.certainty)
                 .then_with(|| a.id.cmp(&b.id))
                 .then(a.kind.cmp(&b.kind))
+                .then(a.reason.cmp(&b.reason))
         });
+        merge_languages(list);
     }
     (callers, callees)
+}
+
+/// Merges neighbors that differ only by language (the `clj` and `cljs`
+/// edges of one `.cljc` call) into one, with their sites combined. The list
+/// must be sorted so such neighbors are adjacent.
+///
+/// Example: two `calls direct` entries for `map-data` become one.
+fn merge_languages(list: &mut Vec<Neighbor>) {
+    let mut merged: Vec<Neighbor> = Vec::with_capacity(list.len());
+    for n in list.drain(..) {
+        match merged.last_mut() {
+            Some(last)
+                if last.id == n.id
+                    && last.kind == n.kind
+                    && last.reason == n.reason
+                    && last.certainty == n.certainty =>
+            {
+                for site in n.sites {
+                    if !last.sites.contains(&site) {
+                        last.sites.push(site);
+                    }
+                }
+                last.count = match (last.count, n.count) {
+                    (Some(a), Some(b)) => Some(a.max(b)),
+                    (a, b) => a.or(b),
+                };
+            }
+            _ => merged.push(n),
+        }
+    }
+    *list = merged;
+}
+
+/// What `id` contains (its `contains` edges), by kind then name.
+///
+/// Example: `children(g, shop.pricing)` gives `half-off` and `price`.
+pub fn children(graph: &Graph, id: &NodeId) -> Vec<Child> {
+    let mut out: Vec<Child> = graph
+        .edges
+        .iter()
+        .filter(|e| e.kind == EdgeKind::Contains && &e.from == id)
+        .filter_map(|e| graph.nodes.get(&e.to))
+        .map(|n| Child {
+            id: n.id.clone(),
+            name: n.name.clone(),
+            kind: n.kind,
+            subkind: n.subkind,
+        })
+        .collect();
+    out.sort_by(|a, b| (a.kind, &a.name, &a.id).cmp(&(b.kind, &b.name, &b.id)));
+    out
 }
 
 /// Which way to walk from a focus node.
@@ -521,6 +599,107 @@ mod tests {
         let capped = cap(big);
         assert!(capped.truncated);
         assert_eq!(capped.nodes.len(), MAX_NODES);
+    }
+
+    /// Two namespaces in one unit: `orders.core/total` calls
+    /// `billing.core/charge!`, and `orders.core` requires `billing.core`.
+    fn two_namespaces() -> Graph {
+        let mut g = Graph::default();
+        let mut add = |id: &str, ns: Option<&str>| {
+            let mut n = node(id);
+            n.namespace = ns.map(Into::into);
+            n.unit = Some(NodeId::from_str("unit:.").unwrap());
+            g.nodes.insert(n.id.clone(), n);
+        };
+        add("unit:.", None);
+        add("clj:.//orders.core", None);
+        add("clj:.//billing.core", None);
+        add("clj:.//orders.core/total", Some("orders.core"));
+        add("clj:.//orders.core/charge!", Some("orders.core"));
+        add("clj:.//billing.core/charge!", Some("billing.core"));
+        g.edges = vec![
+            edge("unit:.", "clj:.//orders.core", EdgeKind::Contains, None),
+            edge("unit:.", "clj:.//billing.core", EdgeKind::Contains, None),
+            edge(
+                "clj:.//orders.core",
+                "clj:.//orders.core/total",
+                EdgeKind::Contains,
+                None,
+            ),
+            edge(
+                "clj:.//orders.core",
+                "clj:.//orders.core/charge!",
+                EdgeKind::Contains,
+                None,
+            ),
+            edge(
+                "clj:.//billing.core",
+                "clj:.//billing.core/charge!",
+                EdgeKind::Contains,
+                None,
+            ),
+            edge(
+                "clj:.//orders.core",
+                "clj:.//billing.core",
+                EdgeKind::Requires,
+                None,
+            ),
+            edge(
+                "clj:.//orders.core/total",
+                "clj:.//billing.core/charge!",
+                EdgeKind::Calls,
+                Some(Certainty::Certain),
+            ),
+        ];
+        g
+    }
+
+    #[test]
+    fn edges_differing_only_by_language_are_one_neighbor() {
+        let mut g = graph();
+        let total = "clj:services/orders//orders.core/total";
+        let charge = "clj:services/orders//orders.core/charge!";
+        let mut cljs = edge(total, charge, EdgeKind::Calls, Some(Certainty::Certain));
+        cljs.lang = Some(aldente_model::Lang::Cljs);
+        g.edges.push(cljs);
+        let (callers, _) = neighbors(&g, &NodeId::from_str(charge).unwrap());
+        assert_eq!(callers.len(), 1, "{callers:?}");
+    }
+
+    #[test]
+    fn aggregates_list_their_children() {
+        let g = two_namespaces();
+        let ns = NodeId::from_str("clj:.//orders.core").unwrap();
+        let names: Vec<String> = children(&g, &ns).into_iter().map(|c| c.name).collect();
+        assert_eq!(names, ["charge!", "total"]);
+        let unit = NodeId::from_str("unit:.").unwrap();
+        assert_eq!(children(&g, &unit).len(), 2);
+        let leaf = NodeId::from_str("clj:.//orders.core/total").unwrap();
+        assert!(children(&g, &leaf).is_empty());
+    }
+
+    #[test]
+    fn namespaces_get_rolled_up_neighbors_with_counts() {
+        let g = two_namespaces();
+        let orders = NodeId::from_str("clj:.//orders.core").unwrap();
+        let (callers, callees) = neighbors(&g, &orders);
+        assert!(callers.is_empty());
+        let kinds: Vec<(String, EdgeKind, Option<u64>)> = callees
+            .iter()
+            .map(|n| (n.id.to_string(), n.kind, n.count))
+            .collect();
+        assert!(
+            kinds.contains(&("clj:.//billing.core".into(), EdgeKind::Calls, Some(1))),
+            "{kinds:?}"
+        );
+        assert!(
+            kinds.contains(&("clj:.//billing.core".into(), EdgeKind::Requires, None)),
+            "{kinds:?}"
+        );
+        let billing = NodeId::from_str("clj:.//billing.core").unwrap();
+        let (callers, _) = neighbors(&g, &billing);
+        assert_eq!(callers.len(), 2);
+        assert_eq!(callers[0].name, "orders.core");
     }
 
     #[test]

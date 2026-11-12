@@ -239,6 +239,7 @@ pub async fn node(State(s): St, RawQuery(q): RawQuery) -> Response {
             node,
             callers,
             callees,
+            children: query::children(&s.snapshot.graph, &id),
         },
     )
 }

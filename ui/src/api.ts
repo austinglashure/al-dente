@@ -75,6 +75,7 @@ export class Api {
 
   snapshot = () => this.json<SnapshotOverview>('snapshot');
   graph = () => this.envelope<Payload>('graph');
+  unitGraph = (unit: string) => this.envelope<Payload>('graph', { level: 'namespace', unit });
   neighborhood = (id: string) => this.json<Payload>('neighborhood', { id, depth: 1 });
   expand = (id: string, visible: string[]) => this.json<Payload>('expand', { id, visible });
   node = (id: string) => this.json<ShowResult>('node', { id });
