@@ -2,7 +2,7 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 1 done locally; **stopped for Austin's review before Phase 2** (phase-01.md: "Show Austin before starting Phase 2"). Next: WP2.1. "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 2, WP2.2 (not started). Phase 0, Phase 1 and WP2.1 are done locally. "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
@@ -23,7 +23,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 - [x] WP1.10 **Milestone M1** (stop and show Austin)
 
 ## Phase 2. Call resolution
-- [ ] WP2.1 Certainty everywhere
+- [x] WP2.1 Certainty everywhere
 - [ ] WP2.2 Multimethods
 - [ ] WP2.3 Protocols, records, types, reify
 - [ ] WP2.4 Higher-order flow
@@ -123,6 +123,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
 
+- 2026-11-12 WP2.1: `--min-certainty` on `graph` and `show` (CLI) and `min_certainty` on `/graph`, `/neighborhood`, `/expand`, `/node`; `analyze` reports `edge_certainty` (edges by kind and certainty). GUI: certain/likely/possible toggles with counts in a legend; hidden levels are left out of the force layout. Accept: `--min-certainty certain` on clj-mini removes exactly the likely and possible edges (CLI test); Playwright unchecks `possible` and the drawn-edge count drops by exactly the possible count. **Deviation:** Sigma 3 has no dashed or dotted edge program, so certainty is shown by color and width (dark thick, blue medium, light thin) instead of line style; a custom WebGL edge program would add dotted lines later. `find` has no `--min-certainty`: it returns nodes, not edges. Bug found by the e2e test and fixed: toggling a level changed a callback's identity and re-ran the initial-load effect, reloading the repository view; levels now live in a ref.
 - 2026-11-12 GUI quality of life (Austin's request; Phase 1 accepted): deselect with Escape, the × in the details header, or a click on empty canvas; hide either side panel with the toggles at the right of the breadcrumb bar; resize them by dragging the border (arrow keys when it is focused, Shift for bigger steps), 180–720 px; sizes and visibility are kept in localStorage (wrapped in try/catch, defaults if unavailable). The canvas follows its container's size (ResizeObserver). Tests first: e2e for deselect and for hide/resize/reload; a unit test for parsing saved sizes.
 - 2026-11-12 Phase 1 follow-up (Austin's review of the GUI): clicking a unit or namespace showed empty callers/callees, and "unit" was unexplained. Now: `show` and `/node` give namespaces and units rolled-up "used by"/"depends on" with counts and a `children` list (`ShowResult.children`, `Neighbor.count`); a unit's panel shows its directory, build files, source files, languages, roots and service flag; unit labels are their last directory (`(root)` for `.`). The GUI opens a unit or namespace on its own canvas (double-click, the list's "open", or the Open tool), with a breadcrumb back (`Repository › reitit-core › reitit.impl`); opening a namespace keeps the namespaces it talks to as context. Tools per selection: Open, Expand here (aggregates); Show neighbors, Focus (symbols); Copy ID. A hint explains units when nothing is selected. Callers and callees differing only by language are merged into one entry (the full R12 merge is still Phase 2). Tests first: query tests for children, rolled neighbors and language merging; e2e tests for opening a namespace and a unit (mono-mini) and the hint; `show` snapshots for a namespace and a unit. Milestone screenshots regenerated.
 - 2026-11-12 WP1.10: `acceptance/repos.toml` (ring, reitit, re-frame, pinned commits, 15 facts read from source), the runner `cargo run -p acceptance`, and `ui/scripts/milestone.mjs` for screenshots. All facts hold; parse rate 100% on all three; release-build analysis 1.1 s (ring, 72 files), 3.7 s (reitit, 131 files), 1.7 s (re-frame, 70 files). Evidence in `docs/milestones/m1/` (summary README, `analyze --json`, runner reports, overview and drill-down screenshots). The screenshots exposed a UI bug, fixed test first: the "showing the unit level to stay within the size limit" notice appeared whenever the payload was aggregated, including the normal multi-unit default; `query::fit` now reports a real fallback, `/graph` sends a `coarser` warning, and the UI shows the notice only then (e2e asserts no notice on clj-mini). Seen but not fixed (Phase 2, R12): a `.cljc` call appears twice in the callee list (clj and cljs edges), without saying which language. Debt: the runner duplicates the CLI's clj-kondo and cache setup (`commands/loaded.rs`); a shared library function would remove that.

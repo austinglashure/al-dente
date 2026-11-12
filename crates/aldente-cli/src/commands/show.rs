@@ -6,7 +6,7 @@ use aldente_model::{Envelope, ExitCode};
 use clap::Args;
 
 use crate::commands::loaded::load;
-use crate::commands::query::node_id;
+use crate::commands::query::{MinCertainty, node_id, passes};
 use crate::commands::target::TargetArgs;
 use crate::output::{fail, print_json, print_lines, printable, token};
 
@@ -17,6 +17,9 @@ pub struct ShowArgs {
     symbol: String,
     #[command(flatten)]
     target: TargetArgs,
+    /// Leave out callers and callees weaker than this.
+    #[arg(long, value_enum)]
+    min_certainty: Option<MinCertainty>,
 }
 
 /// The envelope `schema` tag for this command's output.
@@ -46,7 +49,10 @@ pub fn run(args: &ShowArgs, json: bool) -> anyhow::Result<ExitCode> {
             json,
         );
     };
-    let (callers, callees) = neighbors(graph, &id);
+    let (mut callers, mut callees) = neighbors(graph, &id);
+    let min = args.min_certainty.map(Into::into);
+    callers.retain(|n| passes(n.certainty, min));
+    callees.retain(|n| passes(n.certainty, min));
     let children = aldente_graph::query::children(graph, &id);
     let result = ShowResult {
         node,

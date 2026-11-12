@@ -74,6 +74,17 @@ fn render(s: &AnalyzeSummary) -> Vec<String> {
             counts(s.edges.iter().map(|(k, v)| (token(k), *v)).collect())
         ),
         format!(
+            "certainty: {}",
+            counts(
+                s.edge_certainty
+                    .iter()
+                    .flat_map(|(k, by)| by
+                        .iter()
+                        .map(move |(c, n)| (format!("{} {}", token(k), token(c)), *n)))
+                    .collect()
+            )
+        ),
+        format!(
             "blind spots: {}",
             counts(s.blindspots.iter().map(|(k, v)| (token(k), *v)).collect())
         ),

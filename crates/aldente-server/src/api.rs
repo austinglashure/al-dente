@@ -209,7 +209,11 @@ pub async fn expand(State(s): St, RawQuery(q): RawQuery) -> Response {
     ok(
         &s,
         "graph",
-        query::expand(&s.snapshot.graph, &id, &visible, EXPAND_LIMIT),
+        query::filter(
+            &s.snapshot.graph,
+            query::expand(&s.snapshot.graph, &id, &visible, EXPAND_LIMIT),
+            &filter_from(&p),
+        ),
     )
 }
 
@@ -231,7 +235,11 @@ pub async fn node(State(s): St, RawQuery(q): RawQuery) -> Response {
             None,
         );
     };
-    let (callers, callees) = query::neighbors(&s.snapshot.graph, &id);
+    let (mut callers, mut callees) = query::neighbors(&s.snapshot.graph, &id);
+    if let Some(min) = filter_from(&p).min_certainty {
+        callers.retain(|n| n.certainty.is_none_or(|c| c >= min));
+        callees.retain(|n| n.certainty.is_none_or(|c| c >= min));
+    }
     ok(
         &s,
         "show",

@@ -349,6 +349,25 @@ fn neighborhood_and_graph_payloads() {
 }
 
 #[test]
+fn every_edge_endpoint_honors_min_certainty() {
+    let s = start("mincert");
+    for path in [
+        "/api/v1/graph?level=symbol&min_certainty=certain",
+        "/api/v1/neighborhood?id=f&min_certainty=certain",
+        "/api/v1/expand?id=clj%3A.%2F%2Fa&min_certainty=certain",
+    ] {
+        let (status, _, body) = s.ok_get(path);
+        assert_eq!(status, 200, "{path}");
+        assert!(
+            !body.contains("\"likely\"") && !body.contains("\"possible\""),
+            "{path}"
+        );
+    }
+    let (status, _, _) = s.ok_get("/api/v1/node?id=g&min_certainty=likely");
+    assert_eq!(status, 200);
+}
+
+#[test]
 fn the_ui_is_served_with_a_strict_policy() {
     let s = start("ui");
     let (status, head, body) = get(s.port, "/", &[("Host", &format!("localhost:{}", s.port))]);

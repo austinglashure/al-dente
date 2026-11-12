@@ -7,7 +7,7 @@ use aldente_model::{AggregationLevel, Envelope, ErrorCode, ExitCode};
 use clap::{Args, ValueEnum};
 
 use crate::commands::loaded::load;
-use crate::commands::query::node_id;
+use crate::commands::query::{MinCertainty, node_id};
 use crate::commands::target::{Failure, TargetArgs};
 use crate::formats;
 use crate::output::{fail, print_json, print_lines};
@@ -55,6 +55,9 @@ pub struct GraphArgs {
     direction: Dir,
     #[arg(long, value_enum, default_value = "text")]
     format: Format,
+    /// Leave out edges weaker than this (edges without a certainty stay).
+    #[arg(long, value_enum)]
+    min_certainty: Option<MinCertainty>,
     /// `--limit 0` allows a graph larger than the payload cap.
     #[arg(long)]
     limit: Option<usize>,
@@ -79,7 +82,11 @@ pub fn run(args: &GraphArgs, json: bool) -> anyhow::Result<ExitCode> {
         Level::Namespace => AggregationLevel::Namespace,
         Level::Symbol => AggregationLevel::Symbol,
     };
-    let mut payload = graph.payload(level);
+    let filter = aldente_graph::query::Filter {
+        min_certainty: args.min_certainty.map(Into::into),
+        ..Default::default()
+    };
+    let mut payload = aldente_graph::query::filter(graph, graph.payload(level), &filter);
     if let Some(focus) = &args.focus {
         let id = match node_id(graph, focus) {
             Ok(id) => id,

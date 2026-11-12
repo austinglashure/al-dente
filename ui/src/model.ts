@@ -44,16 +44,32 @@ export function kindColor(kind: string): string {
 }
 
 /** Edge color by certainty: certain dark, likely medium, possible light.
- *  Example: `certaintyColor('possible')` is `'#d9d9d9'`. */
+ *  Example: `certaintyColor('possible')` is `'#bdbdbd'`. */
 export function certaintyColor(certainty: string | undefined): string {
   switch (certainty) {
     case 'possible':
-      return '#d9d9d9';
+      return '#bdbdbd';
     case 'likely':
-      return '#969696';
+      return '#6baed6';
     default:
-      return '#525252';
+      return '#252525';
   }
+}
+
+/** Base line width by certainty: certain thickest, possible thinnest.
+ *  Example: `certaintyWidth('possible')` is `0.5`. */
+export function certaintyWidth(certainty: string | undefined): number {
+  return certainty === 'possible' ? 0.5 : certainty === 'likely' ? 1 : 1.6;
+}
+
+/** The certainty levels shown; edges without a certainty are always shown. */
+export type Levels = Record<'certain' | 'likely' | 'possible', boolean>;
+
+/** Whether an edge is shown at these levels.
+ *  Example: `edgeShown({certainty: 'possible'} as GEdge, {certain: true, likely: true, possible: false})` is `false`. */
+export function edgeShown(e: GEdge, levels: Levels): boolean {
+  const c = e.certainty as keyof Levels | undefined;
+  return c === undefined || levels[c] !== false;
 }
 
 /** A stable key for an edge.
@@ -98,7 +114,7 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
     const key = edgeKey(e);
     if (g.hasEdge(key)) continue;
     g.addDirectedEdgeWithKey(key, e.from, e.to, {
-      size: e.count ? Math.min(1 + Math.log2(e.count), 6) : 1,
+      size: certaintyWidth(e.certainty) * (e.count ? Math.min(1 + Math.log2(e.count), 5) : 1),
       color: certaintyColor(e.certainty),
       edge: e,
     });

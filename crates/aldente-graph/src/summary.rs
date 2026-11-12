@@ -17,8 +17,16 @@ pub fn summarize(snap: &Snapshot, extra: &[Diagnostic]) -> AnalyzeSummary {
         *nodes.entry(n.kind).or_default() += 1;
     }
     let mut edges = BTreeMap::new();
+    let mut edge_certainty: BTreeMap<_, BTreeMap<_, usize>> = BTreeMap::new();
     for e in &snap.graph.edges {
         *edges.entry(e.kind).or_default() += 1;
+        if let Some(c) = e.certainty {
+            *edge_certainty
+                .entry(e.kind)
+                .or_default()
+                .entry(c)
+                .or_default() += 1;
+        }
     }
     let mut blindspots = BTreeMap::new();
     for b in &snap.graph.blindspots {
@@ -33,6 +41,7 @@ pub fn summarize(snap: &Snapshot, extra: &[Diagnostic]) -> AnalyzeSummary {
         files: snap.units.iter().map(|u| u.files).sum(),
         nodes,
         edges,
+        edge_certainty,
         blindspots,
         diagnostics,
     }

@@ -36,3 +36,9 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .details-head { display: flex; justify-content: space-between; align-items: start; }
 .close { font-size: 1.3rem; line-height: 1; color: #777; padding: 0 4px; }
 .close:hover { color: #000; }
+.legend { border: 1px solid #ddd; border-radius: 4px; margin: 8px 0; padding: 4px 8px; }
+.legend legend { font-size: 0.85rem; color: #555; }
+.swatch { display: inline-block; width: 22px; vertical-align: middle; border-top-style: solid; }
+.swatch-certain { border-top-width: 3px; }
+.swatch-likely { border-top-width: 2px; }
+.swatch-possible { border-top-width: 1px; }

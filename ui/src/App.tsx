@@ -2,12 +2,12 @@
 // and toggles, and a details panel with tools. Every repository string is
 // rendered as React text.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Api, initToken } from './api';
 import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
 import { layout } from './layout';
-import { hidden, isAggregate, labelFor, mergePayload, newGraph } from './model';
+import { certaintyColor, edgeShown, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
 import type { GNode, Payload, ShowResult, UnitInfo } from './types';
 
@@ -34,9 +34,20 @@ export function App() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
   const [panels, setPanels] = usePanels();
+  const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
-  const relayout = useCallback(() => layout(graph, redraw), [graph, redraw]);
+  // A ref, so callbacks that read the levels keep their identity and do not
+  // re-trigger effects (such as the initial load) when a toggle changes.
+  const levelsRef = useRef(levels);
+  useLayoutEffect(() => {
+    levelsRef.current = levels;
+  }, [levels]);
+  const edgeVisible = useCallback(
+    (key: string) => graph.hasEdge(key) && edgeShown(graph.getEdgeAttribute(key, 'edge'), levelsRef.current),
+    [graph, levelsRef],
+  );
+  const relayout = useCallback(() => layout(graph, redraw, edgeVisible), [graph, redraw, edgeVisible]);
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
 
   /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
@@ -181,6 +192,21 @@ export function App() {
     [graph, hideTests, hideExternals],
   );
 
+  const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
+  const counts = { certain: 0, likely: 0, possible: 0 };
+  let visibleEdges = 0;
+  graph.forEachEdge((key, a) => {
+    const c = a.edge.certainty as keyof Levels | undefined;
+    if (c && c in counts) counts[c] += 1;
+    if (edgeShown(a.edge, levels)) visibleEdges += 1;
+  });
+  const setLevel = (level: keyof Levels, on: boolean) => {
+    setLevels((l) => ({ ...l, [level]: on }));
+  };
+  useEffect(() => {
+    relayout();
+  }, [levels, relayout]);
+
   const visible = graph
     .mapNodes((_id, a) => a.node)
     .filter((n) => !hidden(n, { hideTests, hideExternals }))
@@ -242,6 +268,15 @@ export function App() {
           />{' '}
           Hide external libraries
         </label>
+        <fieldset className="legend" data-testid="legend">
+          <legend>Edges by certainty</legend>
+          {(['certain', 'likely', 'possible'] as const).map((level) => (
+            <label key={level} data-testid={`legend-${level}`}>
+              <input type="checkbox" data-testid={`show-${level}`} checked={levels[level]} onChange={(e) => setLevel(level, e.target.checked)} />{' '}
+              <span className={`swatch swatch-${level}`} style={{ borderTopColor: certaintyColor(level) }} /> {level} ({counts[level]})
+            </label>
+          ))}
+        </fieldset>
         {notice && (
           <p className="notice" data-testid="notice">
             {notice}
@@ -305,7 +340,7 @@ export function App() {
             </button>
           </span>
         </nav>
-        <GraphView graph={graph} version={version} selected={selected} isHidden={isHidden} onSelect={select} onDoubleClick={onDoubleClick} onDeselect={deselect} />
+        <GraphView graph={graph} version={version} selected={selected} isHidden={isHidden} isEdgeHidden={isEdgeHidden} visibleEdges={visibleEdges} onSelect={select} onDoubleClick={onDoubleClick} onDeselect={deselect} />
       </main>
       {panels.rightOpen && <Splitter side="right" width={panels.right} onResize={(right) => setPanels({ right })} />}
       {panels.rightOpen && (

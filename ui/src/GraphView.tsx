@@ -11,6 +11,10 @@ interface Props {
   version: number;
   selected: string | null;
   isHidden: (id: string) => boolean;
+  /** Whether an edge (by key) is hidden by the certainty toggles. */
+  isEdgeHidden: (key: string) => boolean;
+  /** How many edges are drawn, exposed as `data-visible-edges`. */
+  visibleEdges: number;
   onSelect: (id: string) => void;
   onDoubleClick: (id: string) => void;
   /** Called when the empty canvas is clicked. */
@@ -19,12 +23,12 @@ interface Props {
 
 /** Renders `graph`; click selects, double-click expands or loads neighbors.
  *  Example: `<GraphView graph={g} version={v} selected={id} … />`. */
-export function GraphView({ graph, version, selected, isHidden, onSelect, onDoubleClick, onDeselect }: Props) {
+export function GraphView({ graph, version, selected, isHidden, isEdgeHidden, visibleEdges, onSelect, onDoubleClick, onDeselect }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const sigma = useRef<Sigma<NodeAttrs, EdgeAttrs> | null>(null);
-  const handlers = useRef({ onSelect, onDoubleClick, onDeselect, isHidden, selected });
+  const handlers = useRef({ onSelect, onDoubleClick, onDeselect, isHidden, isEdgeHidden, selected });
   useLayoutEffect(() => {
-    handlers.current = { onSelect, onDoubleClick, onDeselect, isHidden, selected };
+    handlers.current = { onSelect, onDoubleClick, onDeselect, isHidden, isEdgeHidden, selected };
   });
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export function GraphView({ graph, version, selected, isHidden, onSelect, onDoub
         const h = handlers.current;
         return { ...attrs, hidden: h.isHidden(id), highlighted: id === h.selected };
       },
-      edgeReducer: (_id, attrs) => attrs,
+      edgeReducer: (key, attrs) => ({ ...attrs, hidden: handlers.current.isEdgeHidden(key) }),
     });
     s.on('clickNode', ({ node }) => handlers.current.onSelect(node));
     s.on('doubleClickNode', (e) => {
@@ -64,5 +68,5 @@ export function GraphView({ graph, version, selected, isHidden, onSelect, onDoub
     sigma.current?.refresh();
   }, [version, selected]);
 
-  return <div ref={container} className="canvas" data-testid="canvas" />;
+  return <div ref={container} className="canvas" data-testid="canvas" data-visible-edges={visibleEdges} />;
 }

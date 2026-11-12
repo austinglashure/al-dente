@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropNodes, edgeKey, hidden, isTest, labelFor, mergePayload, newGraph } from './model';
+import { dropNodes, edgeKey, edgeShown, hidden, isTest, labelFor, mergePayload, newGraph } from './model';
 import { apiPath, tokenFrom } from './api';
 import type { GNode, Payload } from './types';
 
@@ -71,5 +71,14 @@ describe('panels', () => {
     expect(parsePanels('{"left": 300, "rightOpen": false}')).toEqual({ left: 300, right: 360, leftOpen: true, rightOpen: false });
     expect(parsePanels('not json').left).toBe(280);
     expect(parsePanels(null).rightOpen).toBe(true);
+  });
+});
+
+describe('certainty levels', () => {
+  it('hides only the unchecked levels', () => {
+    const levels = { certain: true, likely: true, possible: false };
+    expect(edgeShown({ from: 'a', to: 'b', kind: 'calls', certainty: 'possible' }, levels)).toBe(false);
+    expect(edgeShown({ from: 'a', to: 'b', kind: 'calls', certainty: 'likely' }, levels)).toBe(true);
+    expect(edgeShown({ from: 'a', to: 'b', kind: 'requires' }, levels)).toBe(true);
   });
 });

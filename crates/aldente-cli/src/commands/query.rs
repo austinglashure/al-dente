@@ -30,3 +30,35 @@ pub fn node_id(graph: &Graph, query: &str) -> Result<NodeId, Failure> {
         }
     }
 }
+
+/// `--min-certainty` on the command line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum MinCertainty {
+    Certain,
+    Likely,
+    Possible,
+}
+
+impl From<MinCertainty> for aldente_model::Certainty {
+    /// Example: `Certainty::from(MinCertainty::Likely)` is `Certainty::Likely`.
+    fn from(m: MinCertainty) -> Self {
+        match m {
+            MinCertainty::Certain => aldente_model::Certainty::Certain,
+            MinCertainty::Likely => aldente_model::Certainty::Likely,
+            MinCertainty::Possible => aldente_model::Certainty::Possible,
+        }
+    }
+}
+
+/// Whether an edge certainty passes `--min-certainty`; edges without one always do.
+///
+/// Example: `passes(Some(Possible), Some(Likely))` is `false`; `passes(None, Some(Certain))` is `true`.
+pub fn passes(
+    certainty: Option<aldente_model::Certainty>,
+    min: Option<aldente_model::Certainty>,
+) -> bool {
+    match (certainty, min) {
+        (Some(c), Some(m)) => c >= m,
+        _ => true,
+    }
+}

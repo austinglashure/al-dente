@@ -230,3 +230,38 @@ fn units_text() {
     let env = Env::new("mono-mini", "units");
     insta::assert_snapshot!("units_mono_mini", env.text(&["units"]));
 }
+
+/// WP2.1: `--min-certainty certain` removes exactly the edges whose
+/// certainty is lower; edges without a certainty (contains, requires) stay.
+#[test]
+fn min_certainty_filters_exactly_the_weaker_edges() {
+    let env = Env::new("clj-mini", "mincert");
+    let all = env.json(&["graph", "--level", "symbol"]);
+    let strong = env.json(&["graph", "--level", "symbol", "--min-certainty", "certain"]);
+    let edges = |v: &Value| v["data"]["edges"].as_array().unwrap().clone();
+    let weaker = edges(&all)
+        .iter()
+        .filter(|e| matches!(e["certainty"].as_str(), Some("likely" | "possible")))
+        .count();
+    assert!(weaker > 0, "the fixture has likely and possible edges");
+    assert_eq!(edges(&strong).len(), edges(&all).len() - weaker);
+    assert!(
+        edges(&strong)
+            .iter()
+            .all(|e| matches!(e["certainty"].as_str(), None | Some("certain")))
+    );
+
+    let show = env.json(&["show", "shop.util/with-timing", "--min-certainty", "likely"]);
+    assert_eq!(
+        show["data"]["callees"].as_array().unwrap().len(),
+        0,
+        "macro-body edges are possible"
+    );
+    let analyze = env.json(&["analyze"]);
+    assert!(
+        analyze["data"]["edge_certainty"]["references"]["possible"]
+            .as_u64()
+            .unwrap()
+            >= 4
+    );
+}

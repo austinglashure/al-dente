@@ -181,3 +181,26 @@ test.describe('panels', () => {
     expect(Math.abs(reloaded - after)).toBeLessThan(5);
   });
 });
+
+test.describe('certainty', () => {
+  test('toggling possible off hides the possible edges', async ({ page }) => {
+    const server = await startServer('clj-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await page.locator('[data-open="clj:.//shop.util"]').click();
+      await expect(listed(page, 'clj:.//shop.util/with-timing')).toBeVisible();
+      const possible = page.getByTestId('legend-possible');
+      await expect(possible).toContainText(/possible \([1-9]/);
+      const canvas = page.getByTestId('canvas');
+      const before = Number(await canvas.getAttribute('data-visible-edges'));
+      const count = Number((await possible.textContent())?.match(/\((\d+)\)/)?.[1]);
+      await page.getByTestId('show-possible').uncheck();
+      await expect(canvas).toHaveAttribute('data-visible-edges', String(before - count));
+      await page.getByTestId('show-possible').check();
+      await expect(canvas).toHaveAttribute('data-visible-edges', String(before));
+    } finally {
+      server.close();
+    }
+  });
+});

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::certainty::Certainty;
 use crate::diagnostic::Diagnostic;
 use crate::kinds::{BlindSpotCategory, EdgeKind, NodeKind};
 use crate::units::UnitInfo;
@@ -19,6 +20,8 @@ pub struct AnalyzeSummary {
     pub files: usize,
     pub nodes: BTreeMap<NodeKind, usize>,
     pub edges: BTreeMap<EdgeKind, usize>,
+    /// Edges by kind and certainty, for kinds that carry one.
+    pub edge_certainty: BTreeMap<EdgeKind, BTreeMap<Certainty, usize>>,
     pub blindspots: BTreeMap<BlindSpotCategory, usize>,
     pub diagnostics: Vec<Diagnostic>,
 }
