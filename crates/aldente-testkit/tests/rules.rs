@@ -1267,3 +1267,51 @@ fn global_namespace_map_keeps_only_repository_code() {
     );
     assert!(!p.edges.is_empty());
 }
+
+/// Node caps for the global map: the top N namespaces by calls in and out
+/// (rolled-up counts), and only the edges among them.
+#[test]
+fn top_namespaces_by_call_counts() {
+    use aldente_graph::query::{Filter, filter, top_by_calls};
+    let g = analyze_fixture(&fixture_dir("clj-mini")).graph;
+    let all = filter(
+        &g,
+        g.payload(AggregationLevel::Namespace),
+        &Filter {
+            repo_only: true,
+            ..Filter::default()
+        },
+    );
+    let weight = |id: &NodeId| -> u64 {
+        all.edges
+            .iter()
+            .filter(|e| &e.from == id || &e.to == id)
+            .filter(|e| e.kind != EdgeKind::Requires)
+            .map(|e| e.count.unwrap_or(1))
+            .sum()
+    };
+    let mut ranked: Vec<(u64, String)> = all
+        .nodes
+        .iter()
+        .map(|n| (weight(&n.id), n.id.to_string()))
+        .collect();
+    ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    let expected: BTreeSet<String> = ranked.iter().take(3).map(|(_, id)| id.clone()).collect();
+
+    let top = top_by_calls(all.clone(), 3);
+    let ids: BTreeSet<String> = top.nodes.iter().map(|n| n.id.to_string()).collect();
+    assert_eq!(ids, expected);
+    assert!(top.truncated);
+    assert!(
+        expected.contains("clj:.//shop.core"),
+        "the hub is kept: {expected:?}"
+    );
+    assert!(
+        top.edges
+            .iter()
+            .all(|e| ids.contains(&e.from.to_string()) && ids.contains(&e.to.to_string()))
+    );
+    let same = top_by_calls(all.clone(), 10_000);
+    assert_eq!(same.nodes.len(), all.nodes.len());
+    assert!(!same.truncated);
+}

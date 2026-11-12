@@ -338,6 +338,20 @@ fn responses_match_the_cli_schemas() {
 }
 
 #[test]
+fn graph_top_keeps_the_level_and_the_busiest_nodes() {
+    let s = start("top");
+    let (_, _, body) = s.ok_get("/api/v1/graph?level=symbol&top=1");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["nodes"].as_array().unwrap().len(), 1, "{env:#}");
+    assert_eq!(env["data"]["truncated"], true);
+    assert!(
+        env["data"]["aggregated"].is_null(),
+        "no coarser level: {env:#}"
+    );
+    assert!(env["warnings"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn neighborhood_and_graph_payloads() {
     let s = start("payloads");
     let (_, _, body) = s.ok_get("/api/v1/neighborhood?id=g&direction=in");

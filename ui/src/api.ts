@@ -75,8 +75,8 @@ export class Api {
 
   snapshot = () => this.json<SnapshotOverview>('snapshot');
   graph = () => this.envelope<Payload>('graph');
-  /** Every repository namespace (and hole) at once, without externals. */
-  allNamespaces = () => this.envelope<Payload>('graph', { level: 'namespace', scope: 'repo' });
+  /** The `top` busiest repository namespaces (and holes), without externals. */
+  allNamespaces = (top: number) => this.envelope<Payload>('graph', { level: 'namespace', scope: 'repo', top });
   unitGraph = (unit: string) => this.envelope<Payload>('graph', { level: 'namespace', unit });
   neighborhood = (id: string) => this.json<Payload>('neighborhood', { id, depth: 1 });
   expand = (id: string, visible: string[]) => this.json<Payload>('expand', { id, visible });

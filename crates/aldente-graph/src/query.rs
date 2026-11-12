@@ -387,6 +387,62 @@ pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> (GraphPayload,
     (cap(last), true)
 }
 
+/// The `n` nodes with the most calls in and out (invocation edges, each
+/// weighted by its rolled-up `count`; `requires` does not count), ties by
+/// ID, and the edges among them; at most [`MAX_NODES`] nodes, and the
+/// [`MAX_EDGES`] heaviest edges. `truncated` when anything was dropped.
+///
+/// Example: `top_by_calls(namespace_map, 250)` keeps the 250 busiest namespaces.
+pub fn top_by_calls(p: GraphPayload, n: usize) -> GraphPayload {
+    let n = n.min(MAX_NODES);
+    let weight = |e: &Edge| {
+        if e.kind == EdgeKind::Requires {
+            0
+        } else {
+            e.count.unwrap_or(1)
+        }
+    };
+    let mut calls: BTreeMap<&NodeId, u64> = BTreeMap::new();
+    for e in &p.edges {
+        *calls.entry(&e.from).or_default() += weight(e);
+        *calls.entry(&e.to).or_default() += weight(e);
+    }
+    let mut ranked: Vec<(u64, &NodeId)> = p
+        .nodes
+        .iter()
+        .map(|node| (calls.get(&node.id).copied().unwrap_or(0), &node.id))
+        .collect();
+    ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
+    let keep: BTreeSet<NodeId> = ranked
+        .into_iter()
+        .take(n)
+        .map(|(_, id)| id.clone())
+        .collect();
+    let dropped_nodes = keep.len() < p.nodes.len();
+    let nodes: Vec<Node> = p
+        .nodes
+        .into_iter()
+        .filter(|x| keep.contains(&x.id))
+        .collect();
+    let mut edges: Vec<Edge> = p
+        .edges
+        .into_iter()
+        .filter(|e| keep.contains(&e.from) && keep.contains(&e.to))
+        .collect();
+    let dropped_edges = edges.len() > MAX_EDGES;
+    if dropped_edges {
+        edges.sort_by(|a, b| weight(b).cmp(&weight(a)));
+        edges.truncate(MAX_EDGES);
+        edges.sort_by(|a, b| (&a.from, &a.to, a.kind).cmp(&(&b.from, &b.to, b.kind)));
+    }
+    GraphPayload {
+        nodes,
+        edges,
+        truncated: p.truncated || dropped_nodes || dropped_edges,
+        aggregated: p.aggregated,
+    }
+}
+
 /// Keeps the best-connected nodes up to the cap and the edges among them,
 /// marking the payload truncated. Payloads within the cap are unchanged.
 ///

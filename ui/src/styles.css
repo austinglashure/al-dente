@@ -35,6 +35,7 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .view-switch { margin-left: 16px; display: inline-flex; border: 1px solid #ccc; border-radius: 4px; overflow: hidden; }
 .view-switch button { padding: 1px 8px; font-size: 0.85rem; border: none; background: #fff; }
 .view-switch button[aria-pressed="true"] { background: #333; color: #fff; }
+.top-select { margin-left: 8px; font-size: 0.85rem; color: #555; }
 .panel-toggles button { color: #555; font-size: 0.85rem; }
 .details-head { display: flex; justify-content: space-between; align-items: start; }
 .close { font-size: 1.3rem; line-height: 1; color: #777; padding: 0 4px; }

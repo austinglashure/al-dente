@@ -248,7 +248,7 @@ test.describe('global namespace map', () => {
   test('one click switches from units to every namespace and back', async ({ page }) => {
     const server = await startServer('mono-mini');
     try {
-      guardNetwork(page);
+      const requests = guardNetwork(page);
       await page.goto(server.url);
       await expect(listed(page, 'unit:services/orders')).toBeVisible();
       await expect(page.getByTestId('view-units')).toHaveAttribute('aria-pressed', 'true');
@@ -262,8 +262,14 @@ test.describe('global namespace map', () => {
       // Repository code only: no externals on the global map.
       await expect(page.locator('[data-testid="node-list"] [data-node-id^="ext:"]')).toHaveCount(0);
 
+      // Node cap: keep the namespace level, show only the busiest.
+      await page.getByTestId('top').selectOption('100');
+      await expect(page.getByTestId('top')).toHaveValue('100');
+      await expect.poll(() => requests.some((u) => u.includes('scope=repo') && u.includes('top=100'))).toBe(true);
+
       await page.getByTestId('view-units').click();
       await expect(listed(page, 'unit:services/orders')).toBeVisible();
+      await expect(page.getByTestId('top')).toHaveCount(0);
     } finally {
       server.close();
     }

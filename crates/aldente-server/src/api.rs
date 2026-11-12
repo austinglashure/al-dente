@@ -137,8 +137,11 @@ pub async fn snapshot(State(s): St) -> Response {
     ok(&s, "snapshot", overview)
 }
 
-/// `GET /graph?level=&unit=&min_certainty=&kinds=`: a graph within the
-/// payload cap. Default level: unit for several units, else namespace.
+/// `GET /graph?level=&unit=&min_certainty=&kinds=&scope=&top=`: a graph
+/// within the payload cap. Default level: unit for several units, else
+/// namespace. With `top=N` the level is kept and only the N nodes with the
+/// most calls in and out are returned (`truncated` when some were dropped);
+/// without it a too-large level falls back to a coarser one.
 ///
 /// Example: `?level=namespace` for clj-mini gives 13 namespaces and externals.
 pub async fn graph(State(s): St, RawQuery(q): RawQuery) -> Response {
@@ -152,7 +155,16 @@ pub async fn graph(State(s): St, RawQuery(q): RawQuery) -> Response {
         .get("level")
         .and_then(token::<AggregationLevel>)
         .unwrap_or(default);
-    let (payload, coarser) = query::fit(&s.snapshot.graph, level, &filter_from(&p));
+    let top: Option<usize> = p.get("top").and_then(|t| t.parse().ok());
+    let (payload, coarser) = match top {
+        // Node cap: stay at this level, keep the busiest nodes.
+        Some(n) => {
+            let g = &s.snapshot.graph;
+            let all = query::filter(g, g.payload(level), &filter_from(&p));
+            (query::top_by_calls(all, n), false)
+        }
+        None => query::fit(&s.snapshot.graph, level, &filter_from(&p)),
+    };
     let mut env = Envelope::success("graph", Some(s.info.clone()), payload);
     if coarser {
         env.warnings.push(Warning {

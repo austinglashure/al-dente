@@ -38,6 +38,8 @@ export function App() {
   const [spots, setSpots] = useState<BlindSpot[]>([]);
   const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
   const [view, setView] = useState<'units' | 'namespaces'>('units');
+  const [top, setTop] = useState(250);
+  const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   // A ref, so callbacks that read the levels keep their identity and do not
@@ -63,9 +65,20 @@ export function App() {
     };
     return {
       units: { label: 'Repository', load: () => api.graph().then(fitted) } as Crumb,
-      namespaces: { label: 'All namespaces', load: () => api.allNamespaces().then(fitted) } as Crumb,
+      namespaces: {
+        label: 'All namespaces',
+        load: () =>
+          api.allNamespaces(top).then(({ data }) => {
+            if (data.truncated) {
+              const shown = data.nodes.filter((n) => n.kind === 'namespace').length;
+              const of = namespaceCount === null ? '' : ` of ${namespaceCount}`;
+              setNotice(`Showing the ${shown} busiest${of} namespaces (most calls in and out).`);
+            }
+            return data;
+          }),
+      } as Crumb,
     };
-  }, [api]);
+  }, [api, top, namespaceCount]);
 
   /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
   const show = useCallback(
@@ -88,7 +101,10 @@ export function App() {
   useEffect(() => {
     api
       .snapshot()
-      .then((s) => setUnits(new Map(s.units.map((u) => [u.id, u]))))
+      .then((s) => {
+        setUnits(new Map(s.units.map((u) => [u.id, u])));
+        setNamespaceCount(s.summary.nodes?.namespace ?? null);
+      })
       .catch(fail);
     api
       .blindspots()
@@ -96,6 +112,12 @@ export function App() {
       .catch(fail);
     show(roots.units, []);
   }, [api, show, fail, roots]);
+
+  // A new Top value reloads the namespace map.
+  useEffect(() => {
+    if (view === 'namespaces') show(roots.namespaces, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [top]);
 
   /** Switches the canvas to the unit overview or the global namespace map. */
   const switchView = useCallback(
@@ -384,6 +406,25 @@ export function App() {
               All namespaces
             </button>
           </span>
+          {view === 'namespaces' && (
+            <label className="top-select" title="How many namespaces to show, busiest first">
+              Top{' '}
+              <select
+                data-testid="top"
+                value={top}
+                onChange={(e) => {
+                  setTop(Number(e.target.value));
+                  setNotice(null);
+                }}
+              >
+                {[100, 250, 500, 2000].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <span className="panel-toggles">
             <button
               type="button"

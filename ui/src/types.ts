@@ -94,7 +94,7 @@ export interface UnitInfo {
 }
 
 export interface SnapshotOverview {
-  summary: { units: number; files: number };
+  summary: { units: number; files: number; nodes?: Record<string, number> };
   units: UnitInfo[];
 }
 
