@@ -2,7 +2,7 @@
 //! "Aggregation levels").
 //!
 //! - `symbol`: every stored node and edge.
-//! - `namespace`: namespaces, namespace-level externals and platforms;
+//! - `namespace`: namespaces, namespace-level externals, platforms and holes;
 //!   `requires` as stored, plus `calls`, `references` and `dispatches`
 //!   rolled up between namespaces (self-loops dropped).
 //! - `unit`: units; invocation edges rolled up between different units.
@@ -105,13 +105,14 @@ impl Graph {
 
     /// The namespace-level node a node rolls up into: its namespace (from
     /// `namespace` and `unit`), the namespace-level external for externals,
-    /// itself for namespaces and platforms; units and holes have none.
+    /// itself for namespaces, platforms and holes (blind spots stay visible
+    /// when zoomed out); units have none.
     ///
     /// Example: `clj:.//shop.core/checkout` gives `clj:.//shop.core`;
     /// `ext:clj//clojure.core/map` gives `ext:clj//clojure.core`.
     pub fn namespace_of(&self, id: &NodeId) -> Option<NodeId> {
         match id {
-            NodeId::Namespace(_) | NodeId::Platform(_) => Some(id.clone()),
+            NodeId::Namespace(_) | NodeId::Platform(_) | NodeId::Hole(_) => Some(id.clone()),
             NodeId::External(ext) => ExternalId::namespace(ext.lang(), ext.ns())
                 .ok()
                 .map(NodeId::External),

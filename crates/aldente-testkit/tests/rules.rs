@@ -1208,3 +1208,28 @@ fn m2_clj_mini_expected_is_fully_satisfied() {
         "certain edges not in EXPECTED.md: {extra_certain:#?}"
     );
 }
+
+/// Blind spots stay visible when zoomed out: holes keep their own node at
+/// namespace level, with the rolled-up `dynamic` call from the namespace.
+#[test]
+fn holes_are_visible_at_namespace_level() {
+    let g = analyze_fixture(&fixture_dir("clj-mini")).graph;
+    let p = g.payload(AggregationLevel::Namespace);
+    for hole in [
+        "hole:dynamic-eval@src/shop/plugins.clj:12:3",
+        "hole:dynamic-resolve@src/shop/plugins.clj:8:11",
+    ] {
+        assert!(
+            p.nodes.iter().any(|n| n.id.to_string() == hole),
+            "no node {hole}"
+        );
+        assert!(
+            p.edges
+                .iter()
+                .any(|e| e.from.to_string() == "clj:.//shop.plugins"
+                    && e.to.to_string() == hole
+                    && e.kind == EdgeKind::Calls),
+            "no edge to {hole}"
+        );
+    }
+}
