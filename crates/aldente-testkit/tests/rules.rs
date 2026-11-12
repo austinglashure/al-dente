@@ -730,3 +730,481 @@ fn tests_alone_do_not_make_a_service() {
     let unit = g.nodes.get(&"unit:.".parse::<NodeId>().unwrap()).unwrap();
     assert!(!unit.flags.contains(&SymbolFlag::Service));
 }
+
+/// M2 (WP2.10): `fixtures/clj-mini/EXPECTED.md` is fully satisfied. Every
+/// row of its edge tables (transcribed below, `contains` aside) exists, and
+/// every `certain` edge is a row or one of the unlisted forms its scope rules
+/// 2, 3 and 4a name (`let`, `fn`, `fn*`, `deref`, `var`).
+#[test]
+fn m2_clj_mini_expected_is_fully_satisfied() {
+    let g = analyze_fixture(&fixture_dir("clj-mini")).graph;
+    let short = |id: &NodeId| {
+        id.to_string()
+            .replace("clj:.//", "")
+            .replace("ext:clj//", "ext:")
+    };
+    let token = |k: EdgeKind| {
+        serde_json::to_value(k)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    let actual: BTreeSet<(String, String, String)> = g
+        .edges
+        .iter()
+        .filter(|e| e.kind != EdgeKind::Contains)
+        .map(|e| (short(&e.from), token(e.kind), short(&e.to)))
+        .collect();
+    let expected: BTreeSet<(String, String, String)> = [
+        (
+            "lib:maven:org.clojure/clojure",
+            "provides",
+            "ext:clojure.core",
+        ),
+        (
+            "lib:maven:org.clojure/clojure",
+            "provides",
+            "ext:clojure.string",
+        ),
+        (
+            "lib:maven:org.clojure/clojure",
+            "provides",
+            "ext:clojure.test",
+        ),
+        (
+            "lib:maven:org.clojure/clojurescript",
+            "provides",
+            "ext:cljs.core",
+        ),
+        (
+            "lib:maven:re-frame/re-frame",
+            "provides",
+            "ext:re-frame.core",
+        ),
+        ("lib:npm:react", "provides", "ext:react"),
+        ("shop.audit/record!", "calls", "ext:clojure.core/println"),
+        ("shop.core", "requires", "shop.inventory"),
+        ("shop.core", "requires", "shop.model"),
+        ("shop.core", "requires", "shop.payment"),
+        ("shop.core", "requires", "shop.plugins"),
+        ("shop.core", "requires", "shop.pricing"),
+        ("shop.core", "requires", "shop.util"),
+        ("shop.core/-main", "calls", "ext:clojure.core/println"),
+        ("shop.core/-main", "calls", "shop.core/checkout"),
+        ("shop.core/-main", "calls", "shop.payment/->Card"),
+        ("shop.core/-main", "calls", "shop.payment/charge"),
+        ("shop.core/-main", "calls", "shop.plugins/audit-hook"),
+        ("shop.core/-main", "dispatches", "shop.payment/charge@Card"),
+        ("shop.core/<top>@L10", "calls", "ext:clojure.core/println"),
+        ("shop.core/checkout", "calls", "shop.inventory/reserve!"),
+        ("shop.core/checkout", "calls", "shop.model/order-summary"),
+        ("shop.core/checkout", "calls", "shop.payment/charge"),
+        ("shop.core/checkout", "calls", "shop.pricing/price"),
+        ("shop.core/checkout", "calls", "shop.util/with-timing"),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.payment/charge@Card",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.payment/charge@String",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.payment/charge@Voucher",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.payment/charge@reify:L25",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.pricing/price@:book",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.pricing/price@:default",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.pricing/price@:food",
+        ),
+        (
+            "shop.core/checkout",
+            "dispatches",
+            "shop.pricing/price@:gift",
+        ),
+        ("shop.interop", "references", "java:java.util.UUID"),
+        ("shop.interop/new-id", "calls", "ext:clojure.core/str"),
+        (
+            "shop.interop/new-id",
+            "calls",
+            "java:java.util.UUID#randomUUID",
+        ),
+        (
+            "shop.interop/now-ms",
+            "calls",
+            "java:java.lang.System#currentTimeMillis",
+        ),
+        (
+            "shop.interop/shout",
+            "calls",
+            "java:java.lang.String#toUpperCase",
+        ),
+        ("shop.inventory/available", "calls", "ext:clojure.core/get"),
+        (
+            "shop.inventory/available",
+            "references",
+            "shop.inventory/stock",
+        ),
+        ("shop.inventory/reserve!", "calls", "ext:clojure.core/swap!"),
+        (
+            "shop.inventory/reserve!",
+            "references",
+            "ext:clojure.core/-",
+        ),
+        (
+            "shop.inventory/reserve!",
+            "references",
+            "ext:clojure.core/update",
+        ),
+        (
+            "shop.inventory/reserve!",
+            "references",
+            "shop.inventory/stock",
+        ),
+        ("shop.inventory/restock!", "calls", "ext:clojure.core/fnil"),
+        ("shop.inventory/restock!", "calls", "ext:clojure.core/swap!"),
+        (
+            "shop.inventory/restock!",
+            "references",
+            "ext:clojure.core/+",
+        ),
+        (
+            "shop.inventory/restock!",
+            "references",
+            "ext:clojure.core/update",
+        ),
+        (
+            "shop.inventory/restock!",
+            "references",
+            "shop.inventory/stock",
+        ),
+        ("shop.inventory/stock", "calls", "ext:clojure.core/atom"),
+        ("shop.model", "requires", "ext:clojure.string"),
+        ("shop.model/format-money", "calls", "ext:cljs.core/str"),
+        (
+            "shop.model/format-money",
+            "calls",
+            "ext:clojure.core/double",
+        ),
+        (
+            "shop.model/format-money",
+            "calls",
+            "ext:clojure.core/format",
+        ),
+        (
+            "shop.model/order-summary",
+            "calls",
+            "ext:clojure.string/join",
+        ),
+        (
+            "shop.model/order-summary",
+            "calls",
+            "shop.model/format-money",
+        ),
+        (
+            "shop.payment/charge@Card",
+            "implements",
+            "shop.payment/Chargeable",
+        ),
+        (
+            "shop.payment/charge@String",
+            "implements",
+            "shop.payment/Chargeable",
+        ),
+        ("shop.payment/charge@Voucher", "calls", "ext:clojure.core/-"),
+        (
+            "shop.payment/charge@Voucher",
+            "calls",
+            "ext:clojure.core/max",
+        ),
+        (
+            "shop.payment/charge@Voucher",
+            "implements",
+            "shop.payment/Chargeable",
+        ),
+        (
+            "shop.payment/charge@reify:L25",
+            "implements",
+            "shop.payment/Chargeable",
+        ),
+        (
+            "shop.payment/free-charger",
+            "calls",
+            "ext:clojure.core/reify",
+        ),
+        (
+            "shop.plugins/audit-hook",
+            "calls",
+            "ext:clojure.core/requiring-resolve",
+        ),
+        ("shop.plugins/audit-hook", "calls", "shop.audit/record!"),
+        (
+            "shop.plugins/load-plugin",
+            "calls",
+            "ext:clojure.core/requiring-resolve",
+        ),
+        (
+            "shop.plugins/load-plugin",
+            "calls",
+            "ext:clojure.core/symbol",
+        ),
+        (
+            "shop.plugins/load-plugin",
+            "calls",
+            "hole:dynamic-resolve@src/shop/plugins.clj:8:11",
+        ),
+        ("shop.plugins/run-script", "calls", "ext:clojure.core/eval"),
+        (
+            "shop.plugins/run-script",
+            "calls",
+            "ext:clojure.core/read-string",
+        ),
+        (
+            "shop.plugins/run-script",
+            "calls",
+            "hole:dynamic-eval@src/shop/plugins.clj:12:3",
+        ),
+        ("shop.pricing", "requires", "shop.util"),
+        ("shop.pricing-test", "requires", "ext:clojure.test"),
+        ("shop.pricing-test", "requires", "shop.pricing"),
+        (
+            "shop.pricing-test/book-is-half-off",
+            "calls",
+            "ext:clojure.core/=",
+        ),
+        (
+            "shop.pricing-test/book-is-half-off",
+            "calls",
+            "ext:clojure.test/is",
+        ),
+        (
+            "shop.pricing-test/book-is-half-off",
+            "calls",
+            "shop.pricing/price",
+        ),
+        (
+            "shop.pricing-test/book-is-half-off",
+            "dispatches",
+            "shop.pricing/price@:book",
+        ),
+        (
+            "shop.pricing-test/book-is-half-off",
+            "dispatches",
+            "shop.pricing/price@:default",
+        ),
+        (
+            "shop.pricing-test/food-is-taxed",
+            "calls",
+            "ext:clojure.core/<",
+        ),
+        (
+            "shop.pricing-test/food-is-taxed",
+            "calls",
+            "ext:clojure.test/is",
+        ),
+        (
+            "shop.pricing-test/food-is-taxed",
+            "calls",
+            "shop.pricing/price",
+        ),
+        (
+            "shop.pricing-test/food-is-taxed",
+            "dispatches",
+            "shop.pricing/price@:default",
+        ),
+        (
+            "shop.pricing-test/food-is-taxed",
+            "dispatches",
+            "shop.pricing/price@:food",
+        ),
+        ("shop.pricing/half-off", "calls", "ext:clojure.core//"),
+        (
+            "shop.pricing/price@:book",
+            "calls",
+            "shop.util/apply-discount",
+        ),
+        (
+            "shop.pricing/price@:book",
+            "implements",
+            "shop.pricing/price",
+        ),
+        (
+            "shop.pricing/price@:book",
+            "references",
+            "shop.pricing/half-off",
+        ),
+        (
+            "shop.pricing/price@:default",
+            "implements",
+            "shop.pricing/price",
+        ),
+        ("shop.pricing/price@:food", "calls", "ext:clojure.core/*"),
+        (
+            "shop.pricing/price@:food",
+            "implements",
+            "shop.pricing/price",
+        ),
+        (
+            "shop.pricing/price@:gift",
+            "implements",
+            "shop.pricing/price",
+        ),
+        ("shop.ui.events", "requires", "ext:re-frame.core"),
+        (
+            "shop.ui.events/reg-event-db@:cart/add",
+            "calls",
+            "ext:cljs.core/fnil",
+        ),
+        (
+            "shop.ui.events/reg-event-db@:cart/add",
+            "calls",
+            "ext:cljs.core/update-in",
+        ),
+        (
+            "shop.ui.events/reg-event-db@:cart/add",
+            "calls",
+            "ext:re-frame.core/reg-event-db",
+        ),
+        (
+            "shop.ui.events/reg-event-db@:cart/add",
+            "references",
+            "ext:cljs.core/inc",
+        ),
+        (
+            "shop.ui.events/reg-event-db@:order/submitted",
+            "calls",
+            "ext:cljs.core/assoc",
+        ),
+        (
+            "shop.ui.events/reg-event-db@:order/submitted",
+            "calls",
+            "ext:re-frame.core/reg-event-db",
+        ),
+        (
+            "shop.ui.events/reg-event-fx@:order/submit",
+            "calls",
+            "ext:cljs.core/assoc",
+        ),
+        (
+            "shop.ui.events/reg-event-fx@:order/submit",
+            "calls",
+            "ext:re-frame.core/reg-event-fx",
+        ),
+        (
+            "shop.ui.events/reg-event-fx@:order/submit",
+            "calls",
+            "shop.ui.events/reg-event-db@:order/submitted",
+        ),
+        ("shop.ui.subs", "requires", "ext:re-frame.core"),
+        (
+            "shop.ui.subs/reg-sub@:cart/items",
+            "calls",
+            "ext:re-frame.core/reg-sub",
+        ),
+        ("shop.ui.views", "requires", "ext:re-frame.core"),
+        ("shop.ui.views", "requires", "ext:react"),
+        ("shop.ui.views", "requires", "shop.model"),
+        ("shop.ui.views", "requires", "shop.ui.events"),
+        ("shop.ui.views", "requires", "shop.ui.subs"),
+        ("shop.ui.views/cart-view", "calls", "ext:cljs.core/count"),
+        (
+            "shop.ui.views/cart-view",
+            "calls",
+            "ext:re-frame.core/subscribe",
+        ),
+        (
+            "shop.ui.views/cart-view",
+            "calls",
+            "ext:react/createElement",
+        ),
+        (
+            "shop.ui.views/cart-view",
+            "calls",
+            "shop.ui.subs/reg-sub@:cart/items",
+        ),
+        ("shop.ui.views/init", "calls", "ext:re-frame.core/dispatch"),
+        ("shop.ui.views/init", "calls", "js:console.log"),
+        ("shop.ui.views/init", "calls", "shop.model/format-money"),
+        (
+            "shop.ui.views/init",
+            "calls",
+            "shop.ui.events/reg-event-db@:cart/add",
+        ),
+        (
+            "shop.ui.views/submit-button",
+            "calls",
+            "ext:re-frame.core/dispatch",
+        ),
+        (
+            "shop.ui.views/submit-button",
+            "calls",
+            "ext:react/createElement",
+        ),
+        (
+            "shop.ui.views/submit-button",
+            "calls",
+            "shop.ui.events/reg-event-fx@:order/submit",
+        ),
+        ("shop.util", "requires", "shop.interop"),
+        ("shop.util/apply-discount", "calls", "shop.pricing/half-off"),
+        ("shop.util/apply-discount", "calls", "shop.util/clamp"),
+        ("shop.util/clamp", "calls", "ext:clojure.core/max"),
+        ("shop.util/clamp", "calls", "ext:clojure.core/min"),
+        ("shop.util/log-timing", "calls", "ext:clojure.core/println"),
+        ("shop.util/with-timing", "references", "ext:clojure.core/-"),
+        (
+            "shop.util/with-timing",
+            "references",
+            "ext:clojure.core/let",
+        ),
+        ("shop.util/with-timing", "references", "shop.interop/now-ms"),
+        (
+            "shop.util/with-timing",
+            "references",
+            "shop.util/log-timing",
+        ),
+    ]
+    .iter()
+    .map(|(a, k, b)| ((*a).to_owned(), (*k).to_owned(), (*b).to_owned()))
+    .collect();
+    let missing: Vec<_> = expected.difference(&actual).collect();
+    assert!(missing.is_empty(), "missing rows: {missing:#?}");
+    let unlisted_forms = ["let", "fn", "fn*", "deref", "var"];
+    let extra_certain: Vec<_> = g
+        .edges
+        .iter()
+        .filter(|e| e.kind != EdgeKind::Contains && e.certainty == Some(Certainty::Certain))
+        .map(|e| (short(&e.from), token(e.kind), short(&e.to)))
+        .filter(|row| !expected.contains(row))
+        .filter(|(_, _, to)| {
+            let form = to
+                .strip_prefix("ext:clojure.core/")
+                .or_else(|| to.strip_prefix("ext:cljs.core/"));
+            !form.is_some_and(|f| unlisted_forms.contains(&f))
+        })
+        .collect();
+    assert!(
+        extra_certain.is_empty(),
+        "certain edges not in EXPECTED.md: {extra_certain:#?}"
+    );
+}

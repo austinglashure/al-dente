@@ -180,11 +180,11 @@ Below, `events@L5`, `events@L9`, `events@L14` and `subs@L5` stand for these impl
 | `shop.model/format-money` | calls | `ext:clojure.core/format`, `ext:clojure.core/double` | edge `lang` = clj |
 | `shop.model/format-money` | calls | `ext:cljs.core/str` | edge `lang` = cljs |
 | `shop.model/order-summary` | calls | `ext:clojure.string/join`, `shop.model/format-money` | both languages; one edge each |
-| `events@L5` | calls | `ext:re-frame.core/reg-event-db`, `ext:cljs.core/update-in`, `ext:cljs.core/fnil` | |
-| `events@L5` | references | `ext:cljs.core/inc` | |
-| `events@L9` | calls | `ext:re-frame.core/reg-event-fx`, `ext:cljs.core/assoc` | |
-| `events@L14` | calls | `ext:re-frame.core/reg-event-db`, `ext:cljs.core/assoc` | |
-| `subs@L5` | calls | `ext:re-frame.core/reg-sub` | |
+| `shop.ui.events/reg-event-db@:cart/add` | calls | `ext:re-frame.core/reg-event-db`, `ext:cljs.core/update-in`, `ext:cljs.core/fnil` | |
+| `shop.ui.events/reg-event-db@:cart/add` | references | `ext:cljs.core/inc` | |
+| `shop.ui.events/reg-event-fx@:order/submit` | calls | `ext:re-frame.core/reg-event-fx`, `ext:cljs.core/assoc` | |
+| `shop.ui.events/reg-event-db@:order/submitted` | calls | `ext:re-frame.core/reg-event-db`, `ext:cljs.core/assoc` | |
+| `shop.ui.subs/reg-sub@:cart/items` | calls | `ext:re-frame.core/reg-sub` | |
 | `shop.ui.views/cart-view` | calls | `ext:re-frame.core/subscribe`, `ext:react/createElement`, `ext:cljs.core/count` | |
 | `shop.ui.views/submit-button` | calls | `ext:react/createElement`, `ext:re-frame.core/dispatch` | the `#(…)` belongs to `submit-button` |
 | `shop.ui.views/init` | calls | `shop.model/format-money` (lang cljs), `ext:re-frame.core/dispatch` | |

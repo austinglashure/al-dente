@@ -1,9 +1,11 @@
 //! Runs `acceptance/repos.toml`: clones each repository at its pinned commit
 //! (hardened, into the cache), analyzes it, checks the parse rate and the
-//! listed facts, and writes each report to `docs/milestones/m1/<name>-acceptance.json`. Needs the
+//! listed facts, records M2 statistics (edges by certainty and reason, blind
+//! spots, orphaned symbols), and writes each report to
+//! `<out>/<name>-acceptance.json` (default `docs/milestones/m2`). Needs the
 //! network, so it is not part of `cargo test`.
 //!
-//! Usage: `cargo run -p acceptance [-- <name>…]`.
+//! Usage: `cargo run -p acceptance [-- [--out <dir>] <name>…]`.
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -21,6 +23,8 @@ use aldente_graph::snapshot::SCHEMA_VERSION;
 use aldente_model::{BlindSpotCategory, DiagnosticCode, EdgeKind, NodeId};
 use anyhow::{Context, bail};
 use serde::Deserialize;
+
+mod stats;
 
 /// The required share of source files that parse (WP1.10).
 const MIN_PARSE_RATE: f64 = 0.95;
@@ -50,6 +54,10 @@ enum Fact {
         from: String,
         edge: String,
         to: String,
+        /// When given, the edge must have this reason (`keyword-dispatch`, …).
+        reason: Option<String>,
+        /// When given, the edge must have this certainty.
+        certainty: Option<String>,
     },
     NoEdge {
         from: String,
@@ -67,8 +75,8 @@ fn main() -> anyhow::Result<()> {
     let text = std::fs::read_to_string(root.join("acceptance/repos.toml"))
         .context("reading acceptance/repos.toml")?;
     let repos: Repos = toml::from_str(&text).context("parsing acceptance/repos.toml")?;
-    let wanted: Vec<String> = std::env::args().skip(1).collect();
-    let out_dir = root.join("docs/milestones/m1");
+    let (out, wanted) = parse_args(std::env::args().skip(1));
+    let out_dir = root.join(out);
     std::fs::create_dir_all(&out_dir)?;
     let mut failures = 0;
     for repo in repos
@@ -92,6 +100,22 @@ fn main() -> anyhow::Result<()> {
         bail!("{failures} acceptance checks failed");
     }
     Ok(())
+}
+
+/// `--out <dir>` (default `docs/milestones/m2`) and the repository names.
+///
+/// Example: `["--out", "x", "ring"]` gives `("x", ["ring"])`.
+fn parse_args(args: impl Iterator<Item = String>) -> (String, Vec<String>) {
+    let mut out = "docs/milestones/m2".to_owned();
+    let mut names = Vec::new();
+    let mut args = args.peekable();
+    while let Some(a) = args.next() {
+        match (a.as_str(), args.peek()) {
+            ("--out", Some(_)) => out = args.next().unwrap_or_default(),
+            _ => names.push(a),
+        }
+    }
+    (out, names)
 }
 
 /// Clones, analyzes and checks one repository; returns the number of failed checks.
@@ -126,7 +150,9 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
             schema: SCHEMA_VERSION.to_owned(),
             adapters: vec![("clj".to_owned(), CLJ_VERSION.to_owned())],
             clj_kondo: kondo.version.clone(),
-            config: String::new(),
+            config: aldente_acquire::maven::default_repository()
+                .map(|p| format!("maven={}", p.display()))
+                .unwrap_or_default(),
         },
         repo: repo.url.clone(),
         rev: Some(repo.rev.clone()),
@@ -170,6 +196,17 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
         println!("  {} {label}", if ok { "ok  " } else { "FAIL" });
         failed += usize::from(!ok);
     }
+    let edges = stats::edge_breakdown(&outcome.snapshot.graph);
+    let orphans = stats::orphans(&outcome.snapshot.graph, 20);
+    println!(
+        "orphans: {} of {} eligible symbols ({:.1}%) have no incoming edge",
+        orphans.orphaned,
+        orphans.eligible,
+        orphans.share * 100.0
+    );
+    for o in &orphans.largest {
+        println!("  {:>4} lines  {}  {}", o.lines, o.id, o.location);
+    }
     let report = serde_json::json!({
         "repo": repo.url,
         "rev": repo.rev,
@@ -177,6 +214,8 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
         "analyze_seconds": analyzed.as_secs_f64(),
         "parse_rate": rate,
         "summary": summary,
+        "edges_by_kind_certainty_reason": edges,
+        "orphans": orphans,
     });
     std::fs::write(
         out_dir.join(format!("{}-acceptance.json", repo.name)),
@@ -208,26 +247,60 @@ fn unparsed_files(g: &Graph) -> usize {
 ///
 /// Example: an `edge` fact holds when an edge of that kind joins the two IDs.
 fn check(g: &Graph, fact: &Fact) -> (bool, String) {
-    let has_edge = |from: &str, edge: &str, to: &str| {
-        let kind =
-            serde_json::from_value::<EdgeKind>(serde_json::Value::String(edge.to_owned())).ok();
-        let (Ok(from), Ok(to)) = (NodeId::from_str(from), NodeId::from_str(to)) else {
-            return false;
+    let token = |v: serde_json::Value| v.as_str().map(str::to_owned);
+    let has_edge =
+        |from: &str, edge: &str, to: &str, reason: Option<&str>, certainty: Option<&str>| {
+            let kind =
+                serde_json::from_value::<EdgeKind>(serde_json::Value::String(edge.to_owned())).ok();
+            let (Ok(from), Ok(to)) = (NodeId::from_str(from), NodeId::from_str(to)) else {
+                return false;
+            };
+            g.edges.iter().any(|e| {
+                e.from == from
+                    && e.to == to
+                    && Some(e.kind) == kind
+                    && reason.is_none_or(|r| {
+                        e.reason
+                            .and_then(|x| serde_json::to_value(x).ok().and_then(token))
+                            .as_deref()
+                            == Some(r)
+                    })
+                    && certainty.is_none_or(|c| {
+                        e.certainty
+                            .and_then(|x| serde_json::to_value(x).ok().and_then(token))
+                            .as_deref()
+                            == Some(c)
+                    })
+            })
         };
-        g.edges
-            .iter()
-            .any(|e| e.from == from && e.to == to && Some(e.kind) == kind)
-    };
     match fact {
         Fact::Node { id } => (
             NodeId::from_str(id).is_ok_and(|i| g.nodes.contains_key(&i)),
             format!("node {id}"),
         ),
-        Fact::Edge { from, edge, to } => {
-            (has_edge(from, edge, to), format!("{from} -{edge}-> {to}"))
+        Fact::Edge {
+            from,
+            edge,
+            to,
+            reason,
+            certainty,
+        } => {
+            let attrs: Vec<&str> = [certainty.as_deref(), reason.as_deref()]
+                .into_iter()
+                .flatten()
+                .collect();
+            let label = if attrs.is_empty() {
+                format!("{from} -{edge}-> {to}")
+            } else {
+                format!("{from} -{edge}({})-> {to}", attrs.join(" "))
+            };
+            (
+                has_edge(from, edge, to, reason.as_deref(), certainty.as_deref()),
+                label,
+            )
         }
         Fact::NoEdge { from, edge, to } => (
-            !has_edge(from, edge, to),
+            !has_edge(from, edge, to, None, None),
             format!("no {from} -{edge}-> {to}"),
         ),
     }

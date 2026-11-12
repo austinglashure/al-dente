@@ -6,8 +6,11 @@
 # Run: cargo run -p acceptance            (all)
 #      cargo run -p acceptance -- ring    (one)
 #
-# Fact kinds: `node` (id exists), `edge` (from -kind-> to exists),
-# `no-edge` (it must not exist).
+# Fact kinds: `node` (id exists), `edge` (from -kind-> to exists; optional
+# `reason` and `certainty` must match too), `no-edge` (it must not exist).
+#
+# M2 (WP2.10) adds at least five dispatch facts per repository, each read
+# from the source line noted beside it.
 
 [[repo]]
 name = "ring"
@@ -51,6 +54,51 @@ from = "clj:ring-core//ring.middleware.params/params-request"
 edge = "calls"
 to = "clj:ring-core//ring.middleware.params/wrap-params"
 
+# ring-core/src/ring/middleware/session.clj:28 (store/read-session store req-key); MemoryStore implements SessionStore
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.session/bare-session-request"
+edge = "dispatches"
+to = "clj:ring-core//ring.middleware.session.store/read-session@MemoryStore"
+reason = "protocol-dispatch"
+certainty = "possible"
+
+# ring-core/src/ring/middleware/session.clj:52 (store/write-session store nil); CookieStore implements SessionStore
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.session/bare-session-response"
+edge = "dispatches"
+to = "clj:ring-core//ring.middleware.session.store/write-session@CookieStore"
+reason = "protocol-dispatch"
+certainty = "possible"
+
+# ring-core/src/ring/middleware/content_length.clj:39 (body-size-in-bytes (:body response) response); extended to String at line 20
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.content-length/content-length-response"
+edge = "dispatches"
+to = "clj:ring-core//ring.middleware.content-length/body-size-in-bytes@String"
+reason = "protocol-dispatch"
+certainty = "possible"
+
+# ring-core/src/ring/util/response.clj:304 (resource-data url); (defmethod resource-data :jar …) at line 292
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.util.response/url-response"
+edge = "dispatches"
+to = "clj:ring-core//ring.util.response/resource-data@:jar"
+reason = "multimethod-dispatch"
+certainty = "possible"
+
+# ring-core/src/ring/middleware/cookies.clj:115 (->seconds value); CookieInterval extended to Duration at line 88
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.cookies/write-attr-map"
+edge = "dispatches"
+to = "clj:ring-core//ring.middleware.cookies/->seconds@Duration"
+reason = "protocol-dispatch"
+certainty = "possible"
+
 [[repo]]
 name = "reitit"
 url = "https://github.com/metosin/reitit"
@@ -72,6 +120,69 @@ kind = "edge"
 from = "clj:modules/reitit-core//reitit.impl/path-conflicting-routes"
 edge = "calls"
 to = "clj:modules/reitit-core//reitit.trie/split-path"
+
+# examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:49 (re-frame/dispatch [::push-state …]); registered at line 26
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/frontend-re-frame//frontend-re-frame.core/home-page"
+edge = "calls"
+to = "clj:examples/frontend-re-frame//frontend-re-frame.core/reg-event-fx@:frontend-re-frame.core/push-state"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:100 (re-frame/dispatch [::navigated new-match]); registered at line 30
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/frontend-re-frame//frontend-re-frame.core/on-navigate"
+edge = "calls"
+to = "clj:examples/frontend-re-frame//frontend-re-frame.core/reg-event-db@:frontend-re-frame.core/navigated"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:28 effect map {:push-state route}; (re-frame/reg-fx :push-state …) at line 14
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/frontend-re-frame//frontend-re-frame.core/reg-event-fx@:frontend-re-frame.core/push-state"
+edge = "calls"
+to = "clj:examples/frontend-re-frame//frontend-re-frame.core/reg-fx@:push-state"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:126 (re-frame/subscribe [::current-route]); registered at line 38
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/frontend-re-frame//frontend-re-frame.core/router-component"
+edge = "calls"
+to = "clj:examples/frontend-re-frame//frontend-re-frame.core/reg-sub@:frontend-re-frame.core/current-route"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# modules/reitit-core/src/reitit/interceptor.cljc:113 (into-interceptor % data opts); IntoInterceptor extended at line 31
+[[repo.fact]]
+kind = "edge"
+from = "clj:modules/reitit-core//reitit.interceptor/chain"
+edge = "dispatches"
+to = "clj:modules/reitit-core//reitit.interceptor/into-interceptor@Interceptor"
+reason = "protocol-dispatch"
+certainty = "possible"
+
+# modules/reitit-core/src/reitit/exception.cljc:21 (format-exception (:type data) …); (defmethod format-exception :path-conflicts …) at line 32
+[[repo.fact]]
+kind = "edge"
+from = "clj:modules/reitit-core//reitit.exception/exception"
+edge = "dispatches"
+to = "clj:modules/reitit-core//reitit.exception/format-exception@:path-conflicts"
+reason = "multimethod-dispatch"
+certainty = "possible"
+
+# examples/ring-integrant/src/example/server.clj:10 (ig/ref :example/handler); (defmethod ig/init-key :example/handler …) at line 20
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/ring-integrant//example.server/system-config"
+edge = "references"
+to = "clj:examples/ring-integrant//integrant.core/init-key@:example/handler"
+reason = "keyword-dispatch"
+certainty = "possible"
 
 [[repo]]
 name = "re-frame"
@@ -104,3 +215,48 @@ kind = "edge"
 from = "clj:examples/todomvc//todomvc.views"
 edge = "requires"
 to = "clj:.//re-frame.alpha"
+
+# examples/todomvc/src/todomvc/core.cljs:20 (dispatch-sync [:initialise-db]); registered in events.cljs:103
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/todomvc//todomvc.core/<top>@L20"
+edge = "calls"
+to = "clj:examples/todomvc//todomvc.events/reg-event-fx@:initialise-db"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/todomvc/src/todomvc/events.cljs:107 (inject-cofx :local-store-todos); (re-frame/reg-cofx :local-store-todos …) in db.cljs:75
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/todomvc//todomvc.events/reg-event-fx@:initialise-db"
+edge = "calls"
+to = "clj:examples/todomvc//todomvc.db/reg-cofx@:local-store-todos"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/todomvc/src/todomvc/subs.cljs:147 :<- [:todos]; (reg-sub :todos …) at line 60
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/todomvc//todomvc.subs/reg-sub@:all-complete?"
+edge = "calls"
+to = "clj:examples/todomvc//todomvc.subs/reg-sub@:todos"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/todomvc/src/todomvc/views.cljs:81 #(dispatch [:clear-completed]); registered in events.cljs:194
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/todomvc//todomvc.views/footer-controls"
+edge = "calls"
+to = "clj:examples/todomvc//todomvc.events/reg-event-db@:clear-completed"
+reason = "keyword-dispatch"
+certainty = "likely"
+
+# examples/simple/src/simple/core.cljs:55 (rf/subscribe [:time]); (rf/reg-sub :time …) at line 41
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/simple//simple.core/clock"
+edge = "calls"
+to = "clj:examples/simple//simple.core/reg-sub@:time"
+reason = "keyword-dispatch"
+certainty = "likely"

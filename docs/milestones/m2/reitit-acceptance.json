@@ -1,0 +1,212 @@
+{
+  "analyze_seconds": 4.132645799,
+  "edges_by_kind_certainty_reason": {
+    "calls/certain/direct": 7672,
+    "calls/certain/dynamic": 7,
+    "calls/certain/interop": 200,
+    "calls/likely/keyword-dispatch": 5,
+    "calls/possible/param-flow": 14,
+    "contains/-/-": 1574,
+    "dispatches/likely/protocol-dispatch": 1,
+    "dispatches/possible/multimethod-dispatch": 13,
+    "dispatches/possible/protocol-dispatch": 267,
+    "implements/-/-": 205,
+    "provides/certain/direct": 22,
+    "provides/likely/name-match": 72,
+    "provides/possible/name-match": 59,
+    "references/certain/interop": 70,
+    "references/likely/value-ref": 1695,
+    "references/possible/keyword-dispatch": 1,
+    "references/possible/macro-body": 10,
+    "requires/-/-": 777
+  },
+  "fetch_seconds": 31.041484183,
+  "orphans": {
+    "eligible": 615,
+    "largest": [
+      {
+        "id": "clj:modules/reitit-dev//reitit.dev.pretty/->EdnPrinter",
+        "lines": 73,
+        "location": "modules/reitit-dev/src/reitit/dev/pretty.cljc:73"
+      },
+      {
+        "id": "clj:modules/reitit-frontend//reitit.frontend.history/->Html5History",
+        "lines": 42,
+        "location": "modules/reitit-frontend/src/reitit/frontend/history.cljs:100"
+      },
+      {
+        "id": "clj:modules/reitit-frontend//reitit.frontend.history/->FragmentHistory",
+        "lines": 36,
+        "location": "modules/reitit-frontend/src/reitit/frontend/history.cljs:18"
+      },
+      {
+        "id": "clj:examples/pedestal-malli-swagger//server/start",
+        "lines": 14,
+        "location": "examples/pedestal-malli-swagger/src/server.clj:149"
+      },
+      {
+        "id": "clj:examples/just-coercion-with-ring//example.naive/app",
+        "lines": 12,
+        "location": "examples/just-coercion-with-ring/src/example/naive.clj:15"
+      },
+      {
+        "id": "clj:examples/just-coercion-with-ring//example.server/restart",
+        "lines": 10,
+        "location": "examples/just-coercion-with-ring/src/example/server.clj:8"
+      },
+      {
+        "id": "clj:modules/reitit-schema//reitit.ring.schema/map->Upload",
+        "lines": 10,
+        "location": "modules/reitit-schema/src/reitit/ring/schema.cljc:6"
+      },
+      {
+        "id": "clj:modules/reitit-interceptors//reitit.http.interceptors.dev/print-context-diffs",
+        "lines": 9,
+        "location": "modules/reitit-interceptors/src/reitit/http/interceptors/dev.clj:45"
+      },
+      {
+        "id": "clj:modules/reitit-middleware//reitit.ring.middleware.dev/print-request-diffs",
+        "lines": 8,
+        "location": "modules/reitit-middleware/src/reitit/ring/middleware/dev.clj:46"
+      },
+      {
+        "id": "clj:modules/reitit-http//reitit.http.spec/validate",
+        "lines": 6,
+        "location": "modules/reitit-http/src/reitit/http/spec.cljc:21"
+      },
+      {
+        "id": "clj:modules/reitit-middleware//reitit.ring.middleware.exception/wrap-exception",
+        "lines": 5,
+        "location": "modules/reitit-middleware/src/reitit/ring/middleware/exception.clj:111"
+      },
+      {
+        "id": "clj:modules/reitit-interceptors//reitit.http.interceptors.exception/wrap-log-to-console",
+        "lines": 4,
+        "location": "modules/reitit-interceptors/src/reitit/http/interceptors/exception.clj:69"
+      },
+      {
+        "id": "clj:modules/reitit-middleware//reitit.ring.middleware.exception/wrap-log-to-console",
+        "lines": 4,
+        "location": "modules/reitit-middleware/src/reitit/ring/middleware/exception.clj:94"
+      },
+      {
+        "id": "clj:modules/reitit-core//reitit.impl/wild-path?",
+        "lines": 2,
+        "location": "modules/reitit-core/src/reitit/impl.cljc:78"
+      },
+      {
+        "id": "clj:modules/reitit-dev//reitit.dev.pretty/indent",
+        "lines": 2,
+        "location": "modules/reitit-dev/src/reitit/dev/pretty.cljc:249"
+      },
+      {
+        "id": "clj:modules/reitit-core//reitit.coercion/->CoercionError",
+        "lines": 1,
+        "location": "modules/reitit-core/src/reitit/coercion.cljc:30"
+      },
+      {
+        "id": "clj:modules/reitit-core//reitit.coercion/map->ParameterCoercion",
+        "lines": 1,
+        "location": "modules/reitit-core/src/reitit/coercion.cljc:39"
+      },
+      {
+        "id": "clj:modules/reitit-core//reitit.interceptor/->Context",
+        "lines": 1,
+        "location": "modules/reitit-core/src/reitit/interceptor.cljc:12"
+      },
+      {
+        "id": "clj:modules/reitit-core//reitit.interceptor/->Endpoint",
+        "lines": 1,
+        "location": "modules/reitit-core/src/reitit/interceptor.cljc:11"
+      },
+      {
+        "id": "clj:modules/reitit-core//reitit.interceptor/->Interceptor",
+        "lines": 1,
+        "location": "modules/reitit-core/src/reitit/interceptor.cljc:10"
+      }
+    ],
+    "orphaned": 63,
+    "share": 0.1024390243902439
+  },
+  "parse_rate": 1.0,
+  "repo": "https://github.com/metosin/reitit",
+  "rev": "1d2fc6735f53e2026fed98e92322a29f7a35c371",
+  "summary": {
+    "blindspots": {
+      "dynamic-eval": 2,
+      "dynamic-resolve": 5,
+      "interop": 143,
+      "macro-generated": 2,
+      "unresolved-symbol": 89
+    },
+    "diagnostics": [
+      {
+        "code": "analyzer-failed",
+        "message": "1 clj-kondo locals records could not be read and were skipped (first: invalid type: null, expected u32)",
+        "path": null
+      },
+      {
+        "code": "missing-root",
+        "message": "declared in project.clj but does not exist",
+        "path": "modules/reitit/src"
+      },
+      {
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed",
+        "path": "scripts/build.clj"
+      },
+      {
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed",
+        "path": "scripts/repl.clj"
+      },
+      {
+        "code": "missing-root",
+        "message": "declared in project.clj but does not exist",
+        "path": "src"
+      }
+    ],
+    "edge_certainty": {
+      "calls": {
+        "certain": 7879,
+        "likely": 5,
+        "possible": 14
+      },
+      "dispatches": {
+        "likely": 1,
+        "possible": 280
+      },
+      "provides": {
+        "certain": 22,
+        "likely": 72,
+        "possible": 59
+      },
+      "references": {
+        "certain": 70,
+        "likely": 1695,
+        "possible": 11
+      }
+    },
+    "edges": {
+      "calls": 7898,
+      "contains": 1574,
+      "dispatches": 281,
+      "implements": 205,
+      "provides": 153,
+      "references": 1776,
+      "requires": 777
+    },
+    "files": 131,
+    "nodes": {
+      "external": 823,
+      "hole": 7,
+      "impl": 426,
+      "library": 45,
+      "namespace": 130,
+      "platform": 143,
+      "symbol": 1018,
+      "unit": 37
+    },
+    "units": 37
+  }
+}

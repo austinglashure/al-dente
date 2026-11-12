@@ -1,0 +1,199 @@
+{
+  "analyze_seconds": 2.192952022,
+  "edges_by_kind_certainty_reason": {
+    "calls/certain/direct": 6062,
+    "calls/certain/dynamic": 13,
+    "calls/certain/interop": 73,
+    "calls/likely/keyword-dispatch": 172,
+    "calls/possible/param-flow": 7,
+    "contains/-/-": 1133,
+    "dispatches/possible/multimethod-dispatch": 21,
+    "dispatches/possible/protocol-dispatch": 36,
+    "implements/-/-": 30,
+    "provides/certain/direct": 13,
+    "provides/likely/name-match": 5,
+    "provides/possible/name-match": 4,
+    "references/certain/interop": 21,
+    "references/likely/value-ref": 1056,
+    "references/possible/macro-body": 52,
+    "requires/-/-": 335
+  },
+  "fetch_seconds": 45.38159779,
+  "orphans": {
+    "eligible": 496,
+    "largest": [
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/subscribe",
+        "lines": 18,
+        "location": "src/re_frame/alpha_instrumented.cljc:128"
+      },
+      {
+        "id": "clj:.//re-frame.core-instrumented/reg-event-error-handler",
+        "lines": 14,
+        "location": "src/re_frame/core_instrumented.cljc:266"
+      },
+      {
+        "id": "clj:.//re-frame.core/reg-cofx",
+        "lines": 13,
+        "location": "src/re_frame/core.cljc:763"
+      },
+      {
+        "id": "clj:.//re-frame.core-instrumented/dispatch-and-settle",
+        "lines": 11,
+        "location": "src/re_frame/core_instrumented.cljc:140"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/dispatch-and-settle",
+        "lines": 10,
+        "location": "src/re_frame/alpha_instrumented.cljc:117"
+      },
+      {
+        "id": "clj:.//re-frame.core-instrumented/reg-cofx",
+        "lines": 10,
+        "location": "src/re_frame/core_instrumented.cljc:255"
+      },
+      {
+        "id": "clj:docs//ns-to-markdown/hook",
+        "lines": 10,
+        "location": "docs/src/ns_to_markdown.clj:145"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/dispatch",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:80"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/reg-event-ctx",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:169"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/reg-event-db",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:149"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/reg-event-error-handler",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:215"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/reg-event-fx",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:159"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/reg-sub",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:179"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/reg-sub-raw",
+        "lines": 9,
+        "location": "src/re_frame/alpha_instrumented.cljc:189"
+      },
+      {
+        "id": "clj:.//re-frame.core-instrumented/dispatch-sync-with",
+        "lines": 9,
+        "location": "src/re_frame/core_instrumented.cljc:130"
+      },
+      {
+        "id": "clj:.//re-frame.core-instrumented/dispatch-with",
+        "lines": 9,
+        "location": "src/re_frame/core_instrumented.cljc:120"
+      },
+      {
+        "id": "clj:.//re-frame.core-instrumented/reg-sub-raw",
+        "lines": 9,
+        "location": "src/re_frame/core_instrumented.cljc:234"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/dispatch-sync",
+        "lines": 8,
+        "location": "src/re_frame/alpha_instrumented.cljc:90"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/dispatch-sync-with",
+        "lines": 8,
+        "location": "src/re_frame/alpha_instrumented.cljc:108"
+      },
+      {
+        "id": "clj:.//re-frame.alpha-instrumented/dispatch-with",
+        "lines": 8,
+        "location": "src/re_frame/alpha_instrumented.cljc:99"
+      }
+    ],
+    "orphaned": 63,
+    "share": 0.12701612903225806
+  },
+  "parse_rate": 1.0,
+  "repo": "https://github.com/day8/re-frame",
+  "rev": "1a1bf1df6570b17a148ebce70d500ec2da393cdc",
+  "summary": {
+    "blindspots": {
+      "dynamic-eval": 4,
+      "dynamic-resolve": 9,
+      "interop": 69,
+      "macro-generated": 4,
+      "unresolved-symbol": 99
+    },
+    "diagnostics": [
+      {
+        "code": "analyzer-failed",
+        "message": "2 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)",
+        "path": null
+      },
+      {
+        "code": "skipped-dir",
+        "message": "deny-listed directory, not entered",
+        "path": "examples/simple/target"
+      },
+      {
+        "code": "skipped-dir",
+        "message": "deny-listed directory, not entered",
+        "path": "examples/todomvc/target"
+      }
+    ],
+    "edge_certainty": {
+      "calls": {
+        "certain": 6148,
+        "likely": 172,
+        "possible": 7
+      },
+      "dispatches": {
+        "possible": 57
+      },
+      "provides": {
+        "certain": 13,
+        "likely": 5,
+        "possible": 4
+      },
+      "references": {
+        "certain": 21,
+        "likely": 1056,
+        "possible": 52
+      }
+    },
+    "edges": {
+      "calls": 6327,
+      "contains": 1133,
+      "dispatches": 57,
+      "implements": 30,
+      "provides": 22,
+      "references": 1129,
+      "requires": 335
+    },
+    "files": 70,
+    "nodes": {
+      "external": 441,
+      "hole": 13,
+      "impl": 309,
+      "library": 7,
+      "namespace": 62,
+      "platform": 69,
+      "symbol": 762,
+      "unit": 5
+    },
+    "units": 5
+  }
+}
