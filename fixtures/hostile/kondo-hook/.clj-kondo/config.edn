@@ -1,0 +1,5 @@
+;; Hostile case 1. If clj-kondo loaded this, `widget` would become a var
+;; definition (lint-as) and the call to `tricky` would be rewritten into a
+;; call to `target` (hook). Al Dente must ignore this directory entirely.
+{:lint-as {evil.core/defthing clojure.core/def}
+ :hooks {:analyze-call {evil.core/tricky hooks.evil/tricky}}}

@@ -13,8 +13,8 @@ Hand-written. Golden snapshots are reviewed against this file, never the other w
 ## Scope rules for the edge tables
 
 1. **Definition forms are not listed.** Usages of `ns`, `defn`, `defn-`, `def`, `defonce`, `defmacro`, `defmulti`, `defmethod`, `defprotocol`, `defrecord`, `extend-type` and `deftest` that *define* the node are not edges. (WP1.5 must decide how clj-kondo's usages of these forms are suppressed and record it here.)
-2. **`let` and `fn` (verify).** Every usage of `clojure.core/let` and `clojure.core/fn` (`cljs.core/…` in `.cljs`) is a certain `calls` edge from the enclosing scope if clj-kondo reports it. They are not listed row by row. The scopes that use them: `shop.core/checkout`, `shop.core/-main`, `shop.plugins/load-plugin`, `shop.ui.views/cart-view` (`let`); the four re-frame registrations (`fn`).
-3. **`@x` (verify).** The reader expands `@x` to `(deref x)`. Whether clj-kondo reports a `deref` usage is unknown; `x` itself is a `references` edge either way.
+2. **`let` and `fn`** (confirmed with clj-kondo 2026.10.26 in WP1.3). Every usage of `clojure.core/let` and `clojure.core/fn` (`cljs.core/…` in `.cljs`) is a certain `calls` edge from the enclosing scope (clj-kondo reports 5 `let` and 4 `fn` usages). They are not listed row by row. The scopes that use them: `shop.core/checkout`, `shop.core/-main`, `shop.plugins/load-plugin`, `shop.ui.views/cart-view` (`let`); the four re-frame registrations (`fn`).
+3. **`@x`** (confirmed in WP1.3). The reader expands `@x` to `(deref x)` and clj-kondo reports it as a `clojure.core/deref` usage (2 in this fixture), so each is a certain `calls` edge to `ext:clojure.core/deref`, not listed row by row; `x` itself is a `references` edge.
 4. **Keywords in call position** (`(:sku order)`) are not vars and produce no edge.
 5. **Every other certain edge is listed.** Phase 2.10 requires "no extra `certain` edge".
 
@@ -52,9 +52,9 @@ Hand-written. Golden snapshots are reviewed against this file, never the other w
 | `shop.pricing/half-off` | fn | | |
 | `shop.payment/Chargeable` | protocol | | |
 | `shop.payment/charge` | protocol-method | | |
-| `shop.payment/Card` | record | | **verify** clj-kondo's var names for `defrecord` |
-| `shop.payment/Voucher` | record | | **verify** |
-| `shop.payment/->Card`, `map->Card`, `->Voucher`, `map->Voucher` | fn | | generated constructors; **verify** they appear as definitions |
+| `shop.payment/Card` | record | | clj-kondo defines `Card` (confirmed in WP1.3) |
+| `shop.payment/Voucher` | record | | |
+| `shop.payment/->Card`, `map->Card`, `->Voucher`, `map->Voucher` | fn | | generated constructors; clj-kondo defines them (confirmed in WP1.3) |
 | `shop.payment/free-charger` | fn | | contains a `reify` |
 | `shop.plugins/audit-hook` | fn | | |
 | `shop.plugins/load-plugin` | fn | | |
@@ -143,7 +143,7 @@ Below, `events@L5`, `events@L9`, `events@L14` and `subs@L5` stand for these impl
 | `shop.core/checkout` | calls | `shop.payment/charge` | `src/shop/core.clj:18:7` |
 | `shop.core/checkout` | calls | `shop.model/order-summary` | |
 | `shop.core/-main` | calls | `shop.plugins/audit-hook` | `src/shop/core.clj:22:3` |
-| `shop.core/-main` | calls | `shop.payment/->Card` | `src/shop/core.clj:23:14` (**verify**) |
+| `shop.core/-main` | calls | `shop.payment/->Card` | `src/shop/core.clj:23:14` |
 | `shop.core/-main` | calls | `shop.payment/charge` | `src/shop/core.clj:24:5` |
 | `shop.core/-main` | calls | `shop.core/checkout` | |
 | `shop.core/-main` | calls | `ext:clojure.core/println` | |

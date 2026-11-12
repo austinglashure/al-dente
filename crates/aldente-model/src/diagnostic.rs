@@ -48,6 +48,10 @@ pub enum DiagnosticCode {
     OutsideRoots,
     /// A git submodule; never fetched, so its contents are not analyzed.
     Submodule,
+    /// A source file with syntax errors; only what could be read is analyzed.
+    ParseError,
+    /// The Clojure front end failed for a unit; its files are not analyzed.
+    AnalyzerFailed,
 }
 
 impl Diagnostic {

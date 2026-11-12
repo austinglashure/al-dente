@@ -1,3 +1,4 @@
-//! The Clojure and ClojureScript adapter.
-//!
-//! Empty until a later work package fills it; see `docs/plan/02-architecture.md`.
+//! The Clojure and ClojureScript adapter: the clj-kondo runner ([`kondo`]).
+//! See `docs/plan/04-clojure-analysis.md`.
+
+pub mod kondo;

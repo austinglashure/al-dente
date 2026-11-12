@@ -4,7 +4,7 @@ Each case is a small repository that tries to make Al Dente execute code, escape
 
 | # | Case | Added by | Status |
 |---|---|---|---|
-| 1 | `.clj-kondo` directory with a hook that would create a marker file or rewrite a call | WP1.3 | todo |
+| 1 | `.clj-kondo` directory with a hook that would create a marker file or rewrite a call | WP1.3 | done: `kondo-hook/` (lint-as plus a call-rewriting hook), tested in `crates/aldente-clj/tests/kondo.rs` with a control run |
 | 2 | symlink to a file outside the repository | WP1.1 | done: built at test time in `crates/aldente-acquire/tests/walk.rs` (Unix only; symlinks need privileges on Windows) |
 | 3 | file name with shell metacharacters, newlines and terminal escapes | WP1.1 | done: built at test time in `tests/walk.rs` (Windows gets the subset of names it allows) |
 | 4 | docstring containing `<script>` and an `onerror` attribute (browser test) | WP1.9 | todo |

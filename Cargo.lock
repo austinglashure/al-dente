@@ -66,6 +66,13 @@ dependencies = [
 [[package]]
 name = "aldente-clj"
 version = "0.1.0"
+dependencies = [
+ "aldente-acquire",
+ "aldente-model",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
 
 [[package]]
 name = "aldente-graph"

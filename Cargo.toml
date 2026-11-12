@@ -23,6 +23,8 @@ dirs = "7"
 ignore = "0.4"
 blake3 = "1"
 aldente-acquire = { path = "crates/aldente-acquire" }
+aldente-clj = { path = "crates/aldente-clj" }
+aldente-testkit = { path = "crates/aldente-testkit" }
 # dev-only
 jsonschema = { version = "0.61", default-features = false }
 proptest = "1"
