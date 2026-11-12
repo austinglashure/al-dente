@@ -431,7 +431,7 @@ pub fn top_by_calls(p: GraphPayload, n: usize) -> GraphPayload {
         .collect();
     let dropped_edges = edges.len() > MAX_EDGES;
     if dropped_edges {
-        edges.sort_by(|a, b| weight(b).cmp(&weight(a)));
+        edges.sort_by_key(|e| std::cmp::Reverse(weight(e)));
         edges.truncate(MAX_EDGES);
         edges.sort_by(|a, b| (&a.from, &a.to, a.kind).cmp(&(&b.from, &b.to, b.kind)));
     }
