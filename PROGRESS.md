@@ -2,7 +2,7 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 1, WP1.1 (not started). Phase 0 (WP0.1–WP0.4) is done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 1, WP1.2 (not started). Phase 0 and WP1.1 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
@@ -11,7 +11,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 - [x] WP0.4 Doctor
 
 ## Phase 1. First proof
-- [ ] WP1.1 Local target, walk, units
+- [x] WP1.1 Local target, walk, units
 - [ ] WP1.2 Safe remote acquisition
 - [ ] WP1.3 clj-kondo runner
 - [ ] WP1.4 Form index
@@ -120,6 +120,18 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
 
+- 2026-11-11 WP1.1: `aldente units [TARGET]`. In `aldente-acquire`: `target` (nearest `.git`, else the directory, `git: false`), `walk` (ignore crate), `edn` (in-crate reader; `#=` kept as `ReadEval`, metadata dropped, nesting capped at 256), `manifest`, `units`, `key`. Model: `Diagnostic`/`DiagnosticCode`, `UnitsReport` (schema `units`), `RepoPath::{join_relative, starts_with, parent, components}`. New deps `ignore` 0.4 and `blake3` 1, both in `02-architecture.md`. New fixtures `mono-mini/` and `hostile/read-eval/`. Choices where the plan was silent:
+  - Only the four Clojure manifests make units; `package.json`/`pyproject.toml` wait for Phase 10.
+  - An implicit root unit `unit:.` (no manifest) exists only when some source file has no enclosing unit, so `mono-mini` stays at three.
+  - Fallback roots: `src` and `test` if present, else the unit directory. Tool defaults (deps.edn `src`, Leiningen `src`/`test`) are dropped silently when absent; explicitly declared but absent roots give `missing-root`.
+  - A root is `test` when its alias/profile name contains "test", it comes from Leiningen `:test-paths`, or its last directory is `test`/`tests`.
+  - Service flag: Leiningen `:main`, a shadow-cljs build with `:target`, or a `Dockerfile` in the unit directory. deps.edn never sets it (`-m` aliases are mostly test runners and tools); `-main` detection (R13) adds it in WP1.5+.
+  - Source files inside a unit but under none of its roots (e.g. `build.clj`) get `outside-roots` and are not analyzed.
+  - The walk honors only the repository's own `.gitignore` files (no global gitignore, no `.git/info/exclude`, no `.ignore`), for machine-independent results. Run caps: 200,000 files, 1 GiB.
+  - Snapshot key: inputs plus `(path, hash)` of analyzed sources and manifests, length-prefixed, `b3:` + hex. Pinned in tests (`key.rs`, and over clj-mini in `tests/units.rs`). Not printed anywhere until snapshots exist.
+  - A target inside a git repository analyzes the whole repository.
+  - Hostile cases 2, 3, 8 are generated at test time; 2 is Unix-only, 3 uses fewer names on Windows. 6a moves to the first WP that runs local git.
+  Not verified: macOS and Windows (the pinned clj-mini key is the cross-OS check). Debt: (a) a tracked file that matches `.gitignore` (force-added) is skipped without a diagnostic; fix once local `git ls-files` exists; (b) unit ownership is files × units, fine now, revisit in Phase 9; (c) parsing project.clj ignores `#=`/unquote, and vet should report them (Phase 5).
 - 2026-11-11 WP0.4: `aldente doctor` in `aldente-cli`; logic in `aldente-acquire` (`process::run_captured` with timeout and temp-dir cwd, `tools`, `cache`); report types in `aldente-model::doctor`, schema `doctor`. New deps `which` 8 and `dirs` 7, both named in `02-architecture.md`. Choices where the plan was silent: (a) a too-old tool, an unrecognized `--version` output and an unwritable cache also exit 5, since none of the other codes fit; (b) with `--json`, a failing doctor still carries the full report in `data` next to the `tool-missing` error; (c) doctor's `data` holds absolute paths (tool and cache locations), an exception to the no-absolute-paths rule, which is about snapshot data; (d) tools are looked up only in `PATH`'s directories, never the current directory, and run with the temp dir as cwd, so a `git.exe` inside an analyzed repo is never picked up on Windows. `clj-kondo` minimum is `tools::CLJ_KONDO` (2026.10.26, latest release today); bump it with the CI pin. Not verified locally: the Windows `.cmd` stubs in `tests/doctor.rs` and the new CI `doctor` step (accept criterion "on Windows CI, doctor finds clj-kondo.exe"). The process timeout test is Unix-only.
 - 2026-11-11 (Austin's answers, between WP0.3 and WP0.4): (1) `dispatches` edges start at the calling scope with per-caller certainty; no global multimethod/protocol-method → impl edge. A value usage of a multimethod gives `possible` dispatches to every impl; `:default` is `possible` when a literal selected another impl (my choice, the plan was silent). (2) New reasons `macro-body` (possible) and `dynamic` (certain, edges into holes) in `aldente-model`. Updated `03-graph-model.md`, `04-clojure-analysis.md` R4/R5/R6/R8 and `fixtures/clj-mini/EXPECTED.md`.
 - 2026-11-11 WP0.3: `fixtures/clj-mini/` has 13 source files plus `deps.edn` and `EXPECTED.md`, covering every item WP0.3 lists. `clj-kondo --lint` gives 0 errors and 0 warnings with the local 2023.09.07; CI lints it with 2026.10.26 and fails only on errors (exit ≥ 3).

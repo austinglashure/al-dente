@@ -6,9 +6,10 @@ use serde_json::Value;
 
 use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
+use crate::units::UnitsReport;
 
 /// Names `schema_by_name` understands, sorted.
-pub const SCHEMA_NAMES: &[&str] = &["doctor", "envelope"];
+pub const SCHEMA_NAMES: &[&str] = &["doctor", "envelope", "units"];
 
 /// The JSON Schema (draft 2020-12) for the envelope with `data` of any shape.
 ///
@@ -40,6 +41,7 @@ pub fn schema_by_name(name: &str) -> Option<Value> {
     match name {
         "doctor" => Some(schemars::schema_for!(DoctorReport).to_value()),
         "envelope" => Some(envelope_schema()),
+        "units" => Some(schemars::schema_for!(UnitsReport).to_value()),
         _ => None,
     }
 }
@@ -139,6 +141,43 @@ mod tests {
         assert!(!report.all_ok());
         report.cache.writable = true;
         assert!(report.all_ok());
+    }
+
+    #[test]
+    fn units_schema_is_valid_and_matches_a_report() {
+        use crate::diagnostic::{Diagnostic, DiagnosticCode};
+        use crate::units::{RootKind, SourceRoot, UnitInfo, UnitsReport};
+        use crate::{Lang, NodeId, RepoPath};
+        let report = UnitsReport {
+            git: false,
+            units: vec![UnitInfo {
+                id: NodeId::Unit(RepoPath::root()),
+                dir: RepoPath::root(),
+                manifests: vec!["deps.edn".into()],
+                langs: [Lang::Clj].into(),
+                roots: vec![SourceRoot {
+                    path: RepoPath::parse("test").unwrap(),
+                    kind: RootKind::Test,
+                    manifest: Some("deps.edn".into()),
+                    alias: Some("test".into()),
+                }],
+                service: false,
+                files: 1,
+            }],
+            diagnostics: vec![Diagnostic::new(None, DiagnosticCode::LimitReached, "cap")],
+        };
+        let schema = schema_by_name("units").unwrap();
+        assert!(jsonschema::meta::is_valid(&schema), "{schema:#}");
+        let value = serde_json::to_value(&report).unwrap();
+        assert!(
+            jsonschema::validator_for(&schema).unwrap().is_valid(&value),
+            "{value:#}"
+        );
+        assert_eq!(value["units"][0]["id"], "unit:.");
+        assert_eq!(value["units"][0]["roots"][0]["kind"], "test");
+        assert_eq!(value["diagnostics"][0]["code"], "limit-reached");
+        let back: UnitsReport = serde_json::from_value(value).unwrap();
+        assert_eq!(back, report);
     }
 
     fn arb_envelope() -> impl Strategy<Value = Envelope<GraphPayload>> {

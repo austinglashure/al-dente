@@ -3,6 +3,7 @@
 //! `docs/plan/03-graph-model.md` and `docs/plan/05-cli.md`.
 
 pub mod certainty;
+pub mod diagnostic;
 pub mod doctor;
 pub mod envelope;
 pub mod graph;
@@ -10,11 +11,13 @@ pub mod id;
 pub mod kinds;
 pub mod path;
 pub mod schema;
+pub mod units;
 
 #[cfg(test)]
 mod strategies;
 
 pub use certainty::{Certainty, Reason};
+pub use diagnostic::{Diagnostic, DiagnosticCode};
 pub use envelope::{
     Envelope, ErrorBody, ErrorCode, ExitCode, SnapshotInfo, Warning, WarningCode, schema_tag,
 };
@@ -26,3 +29,4 @@ pub use id::{
 };
 pub use kinds::{BlindSpotCategory, EdgeKind, Lang, NodeKind, SymbolFlag, SymbolSubkind};
 pub use path::{PathError, PathStyle, RepoPath};
+pub use units::{RootKind, SourceRoot, UnitInfo, UnitsReport};

@@ -5,5 +5,11 @@
 //! `docs/plan/02-architecture.md`.
 
 pub mod cache;
+pub mod edn;
+pub mod key;
+pub mod manifest;
 pub mod process;
+pub mod target;
 pub mod tools;
+pub mod units;
+pub mod walk;

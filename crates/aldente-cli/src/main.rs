@@ -23,6 +23,8 @@ enum Command {
     Doctor(commands::doctor::DoctorArgs),
     /// Print JSON Schemas for the envelope and data shapes.
     Schema(commands::schema::SchemaArgs),
+    /// List build units, their source roots, and skipped files.
+    Units(commands::units::UnitsArgs),
 }
 
 /// Parses arguments, runs the command and exits with its exit code.
@@ -34,6 +36,7 @@ fn main() -> std::process::ExitCode {
     let result = match &cli.command {
         Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),
+        Command::Units(args) => commands::units::run(args, cli.json),
     };
     match result {
         Ok(code) => std::process::ExitCode::from(code.code()),

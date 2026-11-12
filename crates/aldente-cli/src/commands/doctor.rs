@@ -9,7 +9,7 @@ use aldente_model::doctor::{DoctorReport, Platform, ToolCheck, ToolStatus};
 use aldente_model::{Envelope, ErrorCode, ExitCode};
 use clap::Args;
 
-use crate::output::{print_json, print_lines};
+use crate::output::{print_json, print_lines, printable};
 
 /// Arguments for `aldente doctor` (none yet besides the global `--json`).
 #[derive(Debug, Args)]
@@ -152,16 +152,6 @@ fn status_word(status: ToolStatus) -> &'static str {
     }
 }
 
-/// Replaces control characters (which could come from a tool's output or a
-/// path) so they cannot move the cursor or recolor the terminal.
-///
-/// Example: `printable("a\u{1b}[31mb")` is `"a?[31mb"`.
-fn printable(s: &str) -> String {
-    s.chars()
-        .map(|c| if c.is_control() { '?' } else { c })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,11 +213,6 @@ mod tests {
         assert_eq!(env.error.unwrap().message, "failed: git");
         assert!(env.data.is_some());
         assert!(envelope(report(ToolStatus::Ok)).ok);
-    }
-
-    #[test]
-    fn control_characters_are_neutralized() {
-        assert_eq!(printable("a\u{1b}[31mb\n"), "a?[31mb?");
     }
 
     #[test]

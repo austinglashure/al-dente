@@ -4,7 +4,7 @@ Al Dente is a static analyzer that turns a git repository into an explorable gra
 
 ## Status
 
-Pre-alpha. Phase 0 (foundations) is in progress: the graph model and JSON envelope exist, and the `aldente` binary answers `--version`, `doctor` and `schema`. See `PROGRESS.md` for what is done and `docs/plan/roadmap.md` for the plan.
+Pre-alpha. Phase 0 (foundations) is in progress: the graph model and JSON envelope exist, and the `aldente` binary answers `--version`, `doctor`, `units` and `schema`. Phase 1 (first proof) is in progress. See `PROGRESS.md` for what is done and `docs/plan/roadmap.md` for the plan.
 
 ## Run
 
@@ -13,6 +13,7 @@ One-time setup: install Rust with [rustup](https://rustup.rs). The pinned toolch
 ```sh
 cargo run -- --version
 cargo run -- doctor              # checks git, clj-kondo and the cache directory
+cargo run -- units PATH          # build units and source roots of a repository
 cargo run -- schema envelope     # JSON Schema of the output envelope
 ```
 
@@ -46,7 +47,7 @@ Golden files live under `fixtures/<name>/golden/`. After an intended change, rev
 | `crates/aldente-server` | local HTTP API and embedded UI |
 | `crates/aldente-testkit` | test support: fixture paths, golden graph harness |
 | `crates/acceptance` | runner for real-repository acceptance checks (needs network) |
-| `fixtures/` | crafted repositories and golden graphs (`clj-mini/EXPECTED.md` is the ground truth); `hostile/` safety cases |
+| `fixtures/` | crafted repositories and golden graphs (`clj-mini/EXPECTED.md` is the ground truth, `mono-mini` is a three-unit monorepo); `hostile/` safety cases |
 | `docs/plan/` | the full design and phase plan |
 
 Most crates are empty until their work package lands.

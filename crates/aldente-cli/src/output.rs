@@ -25,6 +25,17 @@ pub fn print_lines<'a>(lines: impl IntoIterator<Item = &'a str>) -> anyhow::Resu
     Ok(())
 }
 
+/// Replaces control characters (which could come from a tool's output, a
+/// path or a hostile file name) so they cannot move the cursor or recolor the
+/// terminal.
+///
+/// Example: `printable("a\u{1b}[31mb")` is `"a?[31mb"`.
+pub fn printable(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_control() { '?' } else { c })
+        .collect()
+}
+
 /// Whether `err` means the reader of stdout went away (e.g. `aldente … | head`).
 /// That is not a failure of the command, so `main` exits quietly.
 ///
@@ -47,6 +58,11 @@ pub fn is_broken_pipe(err: &anyhow::Error) -> bool {
 mod tests {
     use super::*;
     use std::io;
+
+    #[test]
+    fn control_characters_are_neutralized() {
+        assert_eq!(printable("a\u{1b}[31mb\nc"), "a?[31mb?c");
+    }
 
     #[test]
     fn broken_pipe_is_recognized() {

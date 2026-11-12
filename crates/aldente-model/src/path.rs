@@ -141,6 +141,67 @@ impl RepoPath {
         let s = path.to_str().ok_or(PathError::NotUtf8)?;
         RepoPath::from_native_str(s, PathStyle::NATIVE)
     }
+
+    /// Joins a `/`-separated relative path written in a build file, resolving
+    /// `.` and `..` lexically. Fails if the result would leave the repository,
+    /// or if `rel` is absolute.
+    ///
+    /// Example: `services/orders` joined with `../../libs/common/src` gives
+    /// `libs/common/src`; joined with `../../../etc` is an error.
+    pub fn join_relative(&self, rel: &str) -> Result<RepoPath, PathError> {
+        if rel.contains('\0') {
+            return Err(PathError::Nul);
+        }
+        if rel.starts_with('/') || has_drive_prefix(rel) {
+            return Err(PathError::Absolute(rel.to_owned()));
+        }
+        let mut parts: Vec<&str> = self.components().collect();
+        for component in rel.split('/') {
+            match component {
+                "" | "." => {}
+                ".." => {
+                    if parts.pop().is_none() {
+                        return Err(PathError::BadComponent(rel.to_owned()));
+                    }
+                }
+                c => parts.push(c),
+            }
+        }
+        if parts.is_empty() {
+            Ok(RepoPath::root())
+        } else {
+            Ok(RepoPath(parts.join("/")))
+        }
+    }
+
+    /// Whether `self` is `prefix` or lies inside it, comparing whole components.
+    ///
+    /// Example: `a/b/c` starts with `a/b`; `a/bc` does not; everything starts with `.`.
+    pub fn starts_with(&self, prefix: &RepoPath) -> bool {
+        let mut mine = self.components();
+        prefix.components().all(|p| mine.next() == Some(p))
+    }
+
+    /// The containing directory; `None` for the root.
+    ///
+    /// Example: `a/b/c.clj` gives `a/b`; `a` gives `.`.
+    pub fn parent(&self) -> Option<RepoPath> {
+        if self.is_root() {
+            return None;
+        }
+        Some(match self.0.rsplit_once('/') {
+            Some((dir, _)) => RepoPath(dir.to_owned()),
+            None => RepoPath::root(),
+        })
+    }
+
+    /// The components; none for the root.
+    ///
+    /// Example: `a/b` gives `["a", "b"]`; `.` gives `[]`.
+    pub fn components(&self) -> impl Iterator<Item = &str> {
+        let s = if self.is_root() { "" } else { self.0.as_str() };
+        s.split('/').filter(|c| !c.is_empty())
+    }
 }
 
 /// Whether `s` starts with a Windows drive such as `C:`.
@@ -232,6 +293,45 @@ mod tests {
         assert!(p("C:\\Users\\x").is_err());
         assert!(p("\\\\server\\share").is_err());
         assert!(p("..\\escape").is_err());
+    }
+
+    #[test]
+    fn join_resolves_dot_dot_inside_the_repository() {
+        let unit = RepoPath::parse("services/orders").unwrap();
+        let j = |rel| unit.join_relative(rel).map(|p| p.as_str().to_owned());
+        assert_eq!(j("src").unwrap(), "services/orders/src");
+        assert_eq!(j("./src/").unwrap(), "services/orders/src");
+        assert_eq!(j("../../libs/common/src").unwrap(), "libs/common/src");
+        assert_eq!(j("..").unwrap(), "services");
+        assert_eq!(j("../..").unwrap(), ".");
+        assert_eq!(j(".").unwrap(), "services/orders");
+        assert!(j("../../..").is_err());
+        assert!(j("../../../etc").is_err());
+        assert!(j("/etc").is_err());
+        assert!(j("C:/x").is_err());
+        assert!(j("a\0b").is_err());
+        assert_eq!(
+            RepoPath::root().join_relative("src").unwrap().as_str(),
+            "src"
+        );
+    }
+
+    #[test]
+    fn parent_drops_the_last_component() {
+        let p = |s| RepoPath::parse(s).unwrap();
+        assert_eq!(p("a/b/c.clj").parent(), Some(p("a/b")));
+        assert_eq!(p("a").parent(), Some(RepoPath::root()));
+        assert_eq!(RepoPath::root().parent(), None);
+    }
+
+    #[test]
+    fn starts_with_compares_whole_components() {
+        let p = |s| RepoPath::parse(s).unwrap();
+        assert!(p("a/b/c").starts_with(&p("a/b")));
+        assert!(p("a/b").starts_with(&p("a/b")));
+        assert!(!p("a/bc").starts_with(&p("a/b")));
+        assert!(p("a").starts_with(&RepoPath::root()));
+        assert!(!RepoPath::root().starts_with(&p("a")));
     }
 
     #[test]

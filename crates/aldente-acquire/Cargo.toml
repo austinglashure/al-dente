@@ -8,11 +8,18 @@ publish.workspace = true
 
 [dependencies]
 aldente-model.workspace = true
+# Content hashes and snapshot keys (02-architecture.md, "Key dependencies").
+blake3.workspace = true
 # Locates the user cache directory on each OS (02-architecture.md, "Snapshots and the cache").
 dirs.workspace = true
+# Gitignore-aware walk with symlink following off (02-architecture.md, "Key dependencies").
+ignore.workspace = true
 thiserror.workspace = true
 # Resolves `git` and `clj-kondo` on PATH, honoring `.exe`/PATHEXT (02-architecture.md, "Cross-platform notes").
 which.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true
