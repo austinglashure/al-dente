@@ -393,7 +393,11 @@ pub fn expand(graph: &Graph, id: &NodeId, visible: &[NodeId], limit: usize) -> G
     let kids: BTreeSet<&NodeId> = children.iter().collect();
     let shown: BTreeSet<&NodeId> = visible.iter().collect();
     let place = |n: &NodeId| -> Option<NodeId> {
-        if kids.contains(n) || shown.contains(n) {
+        // Interop exits and holes are leaves of the code being expanded.
+        if kids.contains(n)
+            || shown.contains(n)
+            || matches!(n, NodeId::Platform(_) | NodeId::Hole(_))
+        {
             return Some(n.clone());
         }
         [graph.namespace_of(n), graph.unit_of(n)]
@@ -417,15 +421,24 @@ pub fn expand(graph: &Graph, id: &NodeId, visible: &[NodeId], limit: usize) -> G
             groups.entry((from, to, e.kind)).or_default().push(e);
         }
     }
-    let edges = groups
+    let edges: Vec<Edge> = groups
         .into_iter()
         .map(|((from, to, kind), members)| match members.as_slice() {
             [one] if one.from == from && one.to == to => (*one).clone(),
             _ => roll(from, to, kind, &members),
         })
         .collect();
+    let leaves: BTreeSet<NodeId> = edges
+        .iter()
+        .flat_map(|e: &Edge| [e.from.clone(), e.to.clone()])
+        .filter(|n| matches!(n, NodeId::Platform(_) | NodeId::Hole(_)))
+        .collect();
     GraphPayload {
-        nodes: children.iter().map(|c| graph.group_node(c)).collect(),
+        nodes: children
+            .iter()
+            .chain(leaves.iter())
+            .map(|c| graph.group_node(c))
+            .collect(),
         edges,
         truncated,
         aggregated: None,
@@ -664,6 +677,35 @@ mod tests {
         g.edges.push(cljs);
         let (callers, _) = neighbors(&g, &NodeId::from_str(charge).unwrap());
         assert_eq!(callers.len(), 1, "{callers:?}");
+    }
+
+    #[test]
+    fn expanding_keeps_interop_exits_and_holes() {
+        let mut g = two_namespaces();
+        let exit = node("java:java.lang.System#currentTimeMillis");
+        g.nodes.insert(exit.id.clone(), exit);
+        g.edges.push(edge(
+            "clj:.//orders.core/total",
+            "java:java.lang.System#currentTimeMillis",
+            EdgeKind::Calls,
+            Some(Certainty::Certain),
+        ));
+        let p = expand(
+            &g,
+            &NodeId::from_str("clj:.//orders.core").unwrap(),
+            &[],
+            10,
+        );
+        assert!(
+            p.nodes
+                .iter()
+                .any(|n| n.id.to_string() == "java:java.lang.System#currentTimeMillis")
+        );
+        assert!(
+            p.edges
+                .iter()
+                .any(|e| e.to.to_string() == "java:java.lang.System#currentTimeMillis")
+        );
     }
 
     #[test]

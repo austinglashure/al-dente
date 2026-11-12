@@ -61,6 +61,8 @@ enum Suppression {
     ProtocolSignature,
     /// A name in an `ns` form's `:refer`; the `requires` edge covers it.
     NsRefer,
+    /// The interop special forms `.` and `new`; R9 links the real target.
+    InteropForm,
     /// An unresolvable symbol inside a macro's syntax-quoted template: a
     /// gensym (`start#`) or special form (`do`), not a var.
     MacroTemplate,
@@ -77,6 +79,7 @@ impl Suppression {
             Suppression::ProtocolInImplForm => "protocol-in-impl-form",
             Suppression::ProtocolSignature => "protocol-signature",
             Suppression::NsRefer => "ns-refer",
+            Suppression::InteropForm => "interop-form",
             Suppression::MacroTemplate => "macro-template",
         }
     }
@@ -121,6 +124,7 @@ pub fn resolve(unit: &UnitInfo, run: &KondoRun, indexes: &[FileIndex]) -> Resolv
     r.multimethod_dispatch();
     r.protocol_dispatch();
     r.param_flow();
+    r.interop();
     r.macro_blind_spots();
     r.finish()
 }
@@ -494,6 +498,15 @@ impl<'a> Resolver<'a> {
             };
             let to = if self.local_ns.contains(&u.to) {
                 self.ns_id(&u.to).map(NodeId::Namespace)
+            } else if u.to == "goog" || u.to.starts_with("goog.") {
+                PlatformId::js(&u.to)
+                    .ok()
+                    .map(NodeId::Platform)
+                    .inspect(|id| {
+                        self.nodes
+                            .entry(id.clone())
+                            .or_insert_with(|| platform_node(id, &u.to));
+                    })
             } else {
                 self.external(&u.to, None)
             };
@@ -756,6 +769,11 @@ impl<'a> Resolver<'a> {
         if u.refer == Some(true) {
             return Some(Suppression::NsRefer);
         }
+        if matches!(u.name.as_str(), "." | "new")
+            && matches!(u.to.as_deref(), Some("clojure.core" | "cljs.core"))
+        {
+            return Some(Suppression::InteropForm);
+        }
         let ix = self.indexes.get(u.filename.as_str())?;
         let pos = upos(u)?;
         let name_pos = uname_pos(u)?;
@@ -794,31 +812,46 @@ impl<'a> Resolver<'a> {
     /// `clj:.//shop.core/<top>@L10`.
     fn scope(&mut self, u: &VarUsage) -> Option<NodeId> {
         let pos = upos(u)?;
-        let ix = *self.indexes.get(u.filename.as_str())?;
-        if let Some(top) = ix.forms.iter().find(|f| f.span.contains(pos))
-            && let Some(id) = self
-                .defmethod_impls
-                .get(&(u.filename.clone(), top.span.start))
-        {
-            return Some(id.clone());
-        }
-        if let Some((_, _, id)) = self
-            .protocol_impls
-            .iter()
-            .filter(|(f, span, _)| f == &u.filename && span.contains(pos))
-            .min_by_key(|(_, span, _)| span.end_byte - span.start_byte)
-        {
-            return Some(id.clone());
+        if let Some(id) = self.impl_scope(&u.filename, pos) {
+            return Some(id);
         }
         if let Some(var) = &u.from_var {
             return self.symbol_or_placeholder(&u.from, var, u);
+        }
+        self.scope_at(&u.filename, pos, &u.from)
+    }
+
+    /// The defmethod or protocol impl whose body contains `pos`, if any.
+    ///
+    /// Example: a position inside `(defmethod price :book …)` gives `price@:book`.
+    fn impl_scope(&self, file: &str, pos: Pos) -> Option<NodeId> {
+        let ix = *self.indexes.get(file)?;
+        if let Some(top) = ix.forms.iter().find(|f| f.span.contains(pos))
+            && let Some(id) = self.defmethod_impls.get(&(file.to_owned(), top.span.start))
+        {
+            return Some(id.clone());
+        }
+        self.protocol_impls
+            .iter()
+            .filter(|(f, span, _)| f == file && span.contains(pos))
+            .min_by_key(|(_, span, _)| span.end_byte - span.start_byte)
+            .map(|(_, _, id)| id.clone())
+    }
+
+    /// R3 for a bare position (no clj-kondo `from-var`): an impl body, the
+    /// innermost var definition, else the top-level form's `<top>` impl.
+    ///
+    /// Example: the static call on line 6 of shop.interop gives `shop.interop/now-ms`.
+    fn scope_at(&mut self, file: &str, pos: Pos, ns: &str) -> Option<NodeId> {
+        if let Some(id) = self.impl_scope(file, pos) {
+            return Some(id);
         }
         let innermost = self
             .run
             .analysis
             .var_definitions
             .iter()
-            .filter(|d| d.filename == u.filename && def_span_contains(d, pos))
+            .filter(|d| d.filename == file && def_span_contains(d, pos))
             .min_by_key(|d| {
                 (
                     d.end_row.unwrap_or(d.row) - d.row,
@@ -828,8 +861,9 @@ impl<'a> Resolver<'a> {
         if let Some(def) = innermost {
             return self.sym_id(&def.ns, &def.name).map(NodeId::Symbol);
         }
+        let ix = *self.indexes.get(file)?;
         let top = ix.forms.iter().find(|f| f.span.contains(pos))?;
-        self.top_impl(&u.from, &u.filename, top)
+        self.top_impl(ns, file, top)
     }
 
     /// The `<ns>/<top>@L<line>` impl for a top-level form, created on first use.
@@ -895,6 +929,13 @@ impl<'a> Resolver<'a> {
                 Some((id, true))
             }
             Some(UNKNOWN_NS) => None,
+            Some(ns) if ns == "goog" || ns.starts_with("goog.") => {
+                let id = NodeId::Platform(PlatformId::js(&format!("{ns}.{}", u.name)).ok()?);
+                self.nodes
+                    .entry(id.clone())
+                    .or_insert_with(|| platform_node(&id, &format!("{ns}/{}", u.name)));
+                Some((id, true))
+            }
             Some(ns) if self.local_ns.contains(ns) => {
                 let name = u.name.clone();
                 let ns = ns.to_owned();
@@ -1298,6 +1339,218 @@ impl<'a> Resolver<'a> {
                 }
             }
         }
+    }
+
+    /// R9: Java and JavaScript interop to `platform` nodes, certain, reason
+    /// `interop`. Imports: the namespace `references` the class. Static calls
+    /// (`Class/method`): `calls java:<class>#<method>`. Constructors
+    /// (`Class.`, `new`): `calls java:<class>`. `proxy`: `references` its
+    /// classes. Instance methods: `calls java:<class>#<method>` with the class
+    /// from a type hint on the receiver or its parameter, else
+    /// `java:?#<method>`; in ClojureScript `js:?.<method>`, and `.-prop` is a
+    /// `references` to `js:?.<prop>`. Other class mentions (hints,
+    /// `extend-type` targets) add no edge. Each platform target is one
+    /// `interop` blind spot.
+    ///
+    /// Example: `(System/currentTimeMillis)` in `now-ms` gives
+    /// `now-ms -calls-> java:java.lang.System#currentTimeMillis`.
+    fn interop(&mut self) {
+        let generated: Vec<String> = self.local_ns.iter().map(|ns| format!("{ns}.")).collect();
+        let class_uses = self.run.analysis.java_class_usages.clone();
+        for cu in &class_uses {
+            if generated.iter().any(|g| cu.class.starts_with(g.as_str())) {
+                continue;
+            }
+            let Some(ns) = self.file_ns(&cu.filename) else {
+                continue;
+            };
+            let site = cu
+                .row
+                .zip(cu.col)
+                .and_then(|(r, c)| site(&cu.filename, r, c));
+            if cu.import == Some(true) {
+                if let Some(from) = self.ns_id(&ns).map(NodeId::Namespace) {
+                    self.platform_edge(from, &cu.class, None, EdgeKind::References, site);
+                }
+                continue;
+            }
+            let (Some(row), Some(col)) = (cu.row, cu.col) else {
+                continue;
+            };
+            let pos = Pos { line: row, col };
+            let Some(ix) = self.indexes.get(cu.filename.as_str()).copied() else {
+                continue;
+            };
+            let kind_member = if let (Some(m), Some(true)) = (&cu.method_name, cu.call) {
+                Some((EdgeKind::Calls, Some(m.clone())))
+            } else if ix
+                .calls
+                .iter()
+                .any(|c| c.span.start == pos && (c.head == "new" || c.head.ends_with('.')))
+            {
+                Some((EdgeKind::Calls, None))
+            } else if ix.calls.iter().any(|c| {
+                local(Some(&c.head)) == "proxy" && c.args.first().is_some_and(|a| a.contains(pos))
+            }) {
+                Some((EdgeKind::References, None))
+            } else {
+                None
+            };
+            let Some((kind, member)) = kind_member else {
+                continue;
+            };
+            if let Some(scope) = self.scope_at(&cu.filename, pos, &ns) {
+                self.platform_edge(scope, &cu.class, member.as_deref(), kind, site);
+            }
+        }
+        let invocations = self.run.analysis.instance_invocations.clone();
+        for inv in &invocations {
+            let Some(ix) = self.indexes.get(inv.filename.as_str()).copied() else {
+                continue;
+            };
+            let at = Pos {
+                line: inv.name_row,
+                col: inv.name_col,
+            };
+            let Some(call) = ix
+                .calls
+                .iter()
+                .filter(|c| c.span.contains(at) && c.head.starts_with('.'))
+                .max_by_key(|c| c.span.start_byte)
+                .cloned()
+            else {
+                continue;
+            };
+            let Some(ns) = self.file_ns(&inv.filename) else {
+                continue;
+            };
+            let Some(scope) = self.scope_at(&inv.filename, call.span.start, &ns) else {
+                continue;
+            };
+            let site = site(&inv.filename, call.span.start.line, call.span.start.col);
+            if lang_of(inv.lang.as_deref(), &inv.filename) == Lang::Cljs {
+                let (kind, name) = match inv.method_name.strip_prefix('-') {
+                    Some(prop) => (EdgeKind::References, prop),
+                    None => (EdgeKind::Calls, inv.method_name.as_str()),
+                };
+                let Ok(p) = PlatformId::js(&format!("?.{name}")) else {
+                    continue;
+                };
+                let id = NodeId::Platform(p);
+                self.nodes
+                    .entry(id.clone())
+                    .or_insert_with(|| platform_node(&id, &format!(".{}", inv.method_name)));
+                self.edge(
+                    scope,
+                    id,
+                    kind,
+                    Some(Certainty::Certain),
+                    Some(Reason::Interop),
+                    None,
+                    site,
+                );
+            } else {
+                let class = self
+                    .receiver_class(&inv.filename, &call)
+                    .unwrap_or_else(|| "?".to_owned());
+                self.platform_edge(scope, &class, Some(&inv.method_name), EdgeKind::Calls, site);
+            }
+        }
+        let platforms: Vec<NodeId> = self
+            .nodes
+            .keys()
+            .filter(|id| matches!(id, NodeId::Platform(_)))
+            .cloned()
+            .collect();
+        for id in platforms {
+            self.blindspots.push(BlindSpot {
+                category: BlindSpotCategory::Interop,
+                message: format!("{id} is outside the analyzed code (interop)"),
+                node: Some(id),
+                site: None,
+            });
+        }
+    }
+
+    /// A certain `interop` edge to `java:<class>[#member]`, creating the node.
+    ///
+    /// Example: `platform_edge(f, "java.util.UUID", Some("randomUUID"), Calls, site)`.
+    fn platform_edge(
+        &mut self,
+        from: NodeId,
+        class: &str,
+        member: Option<&str>,
+        kind: EdgeKind,
+        site: Option<Site>,
+    ) {
+        let Ok(p) = PlatformId::java(class, member) else {
+            return;
+        };
+        let id = NodeId::Platform(p);
+        let name = match member {
+            Some(m) => format!("{class}#{m}"),
+            None => class.to_owned(),
+        };
+        self.nodes
+            .entry(id.clone())
+            .or_insert_with(|| platform_node(&id, &name));
+        self.edge(
+            from,
+            id,
+            kind,
+            Some(Certainty::Certain),
+            Some(Reason::Interop),
+            None,
+            site,
+        );
+    }
+
+    /// The Java class of an instance call's receiver: a hint on the argument
+    /// (`(.trim ^String x)`) or on the parameter it is bound to
+    /// (`(defn f [^String s] (.trim s))`), qualified through `java.lang` and
+    /// the file's imports.
+    ///
+    /// Example: in `(defn hinted [^String s] (.trim s))` gives `"java.lang.String"`.
+    fn receiver_class(&self, file: &str, call: &crate::forms::CallSite) -> Option<String> {
+        // `(.m x)` and `(. x m)` both have the receiver first.
+        let (arg, span) = (call.arg_info.first()?, call.args.first()?);
+        let short = match &arg.tag {
+            Some(t) => t.clone(),
+            None if arg.kind == "sym_lit" => {
+                let usage = self.run.analysis.local_usages.iter().find(|l| {
+                    l.filename == file && l.row == span.start.line && l.col == span.start.col
+                })?;
+                let local = self
+                    .run
+                    .analysis
+                    .locals
+                    .iter()
+                    .find(|l| l.id.is_some() && l.id == usage.id)?;
+                let binding = Pos {
+                    line: local.row,
+                    col: local.col,
+                };
+                let ix = self.indexes.get(file)?;
+                let form = ix.forms.iter().find(|f| f.span.contains(binding))?;
+                form.arities.iter().find_map(|a| {
+                    let i = a
+                        .params
+                        .iter()
+                        .position(|p| p.as_ref().is_some_and(|(_, pos)| *pos == binding))?;
+                    a.tags.get(i).cloned().flatten()
+                })?
+            }
+            None => return None,
+        };
+        if short.contains('.') {
+            return Some(short);
+        }
+        let imported = self.run.analysis.java_class_usages.iter().find(|c| {
+            c.filename == file
+                && c.import == Some(true)
+                && c.class.rsplit('.').next() == Some(short.as_str())
+        });
+        Some(imported.map_or_else(|| format!("java.lang.{short}"), |c| c.class.clone()))
     }
 
     /// Adds `impl implements target`, where the target is this unit's symbol

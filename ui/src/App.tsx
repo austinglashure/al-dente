@@ -31,6 +31,7 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [hideTests, setHideTests] = useState(false);
   const [hideExternals, setHideExternals] = useState(true);
+  const [hideInterop, setHideInterop] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
   const [panels, setPanels] = usePanels();
@@ -193,8 +194,8 @@ export function App() {
   );
 
   const isHidden = useCallback(
-    (id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), { hideTests, hideExternals }),
-    [graph, hideTests, hideExternals],
+    (id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), { hideTests, hideExternals, hideInterop }),
+    [graph, hideTests, hideExternals, hideInterop],
   );
 
   const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
@@ -214,7 +215,7 @@ export function App() {
 
   const visible = graph
     .mapNodes((_id, a) => a.node)
-    .filter((n) => !hidden(n, { hideTests, hideExternals }))
+    .filter((n) => !hidden(n, { hideTests, hideExternals, hideInterop }))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
 
   const runSearch = (e: React.FormEvent) => {
@@ -272,6 +273,18 @@ export function App() {
             }}
           />{' '}
           Hide external libraries
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            data-testid="hide-interop"
+            checked={hideInterop}
+            onChange={(e) => {
+              setHideInterop(e.target.checked);
+              redraw();
+            }}
+          />{' '}
+          Hide interop exits (Java, JS)
         </label>
         <fieldset className="legend" data-testid="legend">
           <legend>Edges by certainty</legend>

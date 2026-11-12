@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 20
+# nodes 24
 node clj:.//shop.audit namespace langs:clj
 node clj:.//shop.core namespace langs:clj
 node clj:.//shop.interop namespace langs:clj
@@ -22,8 +22,12 @@ node ext:clj//clojure.string external
 node ext:clj//clojure.test external
 node ext:clj//re-frame.core external
 node ext:clj//react external
+node java:java.lang.String#toUpperCase platform
+node java:java.lang.System#currentTimeMillis platform
+node java:java.util.UUID platform
+node java:java.util.UUID#randomUUID platform
 node js:console.log platform
-# edges 58
+# edges 62
 edge clj:.//shop.audit -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.inventory x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.model x1 [certain:1]
@@ -40,7 +44,11 @@ edge clj:.//shop.core -requires-> clj:.//shop.payment @ src/shop/core.clj:5:14
 edge clj:.//shop.core -requires-> clj:.//shop.plugins @ src/shop/core.clj:6:14
 edge clj:.//shop.core -requires-> clj:.//shop.pricing @ src/shop/core.clj:7:14
 edge clj:.//shop.core -requires-> clj:.//shop.util @ src/shop/core.clj:8:14
-edge clj:.//shop.interop -calls(certain direct)-> ext:clj//clojure.core x2 [certain:2]
+edge clj:.//shop.interop -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
+edge clj:.//shop.interop -calls(certain interop)-> java:java.lang.String#toUpperCase x1 [certain:1]
+edge clj:.//shop.interop -calls(certain interop)-> java:java.lang.System#currentTimeMillis x1 [certain:1]
+edge clj:.//shop.interop -calls(certain interop)-> java:java.util.UUID#randomUUID x1 [certain:1]
+edge clj:.//shop.interop -references(certain interop)-> java:java.util.UUID x1 [certain:1]
 edge clj:.//shop.inventory -calls(certain direct)-> ext:clj//clojure.core x6 [certain:6]
 edge clj:.//shop.inventory -references(likely value-ref)-> ext:clj//clojure.core x4 [likely:4]
 edge clj:.//shop.model -calls(certain direct)-> ext:clj//cljs.core x1 [certain:1]

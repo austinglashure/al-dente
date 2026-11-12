@@ -1,0 +1,70 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 31
+node clj:.//io.jvm namespace langs:clj
+node clj:.//io.jvm/cmp symbol/fn langs:clj
+node clj:.//io.jvm/ctor symbol/fn langs:clj
+node clj:.//io.jvm/ctor-new symbol/fn langs:clj
+node clj:.//io.jvm/hinted symbol/fn langs:clj
+node clj:.//io.jvm/hinted-inline symbol/fn langs:clj
+node clj:.//io.jvm/static-call symbol/fn langs:clj
+node clj:.//io.jvm/unhinted symbol/fn langs:clj
+node clj:.//io.jvm/uuid symbol/fn langs:clj
+node clj:.//io.web namespace langs:cljs
+node clj:.//io.web/fmt symbol/fn langs:cljs
+node clj:.//io.web/log symbol/fn langs:cljs
+node clj:.//io.web/method symbol/fn langs:cljs
+node clj:.//io.web/prop symbol/fn langs:cljs
+node ext:clj//clojure.core/compare external
+node ext:clj//clojure.core/proxy external
+node java:?#close platform
+node java:java.io.File platform
+node java:java.lang.Math#abs platform
+node java:java.lang.String#length platform
+node java:java.lang.String#trim platform
+node java:java.util.ArrayList platform
+node java:java.util.Comparator platform
+node java:java.util.UUID platform
+node java:java.util.UUID#randomUUID platform
+node js:?.focus platform
+node js:?.value platform
+node js:console.log platform
+node js:goog.string platform
+node js:goog.string.format platform
+node unit:. unit langs:clj,cljs
+# edges 32
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/cmp
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/ctor
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/ctor-new
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/hinted
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/hinted-inline
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/static-call
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/unhinted
+edge clj:.//io.jvm -contains-> clj:.//io.jvm/uuid
+edge clj:.//io.jvm -references(certain interop)-> java:java.io.File @ src/io/jvm.clj:3:21
+edge clj:.//io.jvm -references(certain interop)-> java:java.util.ArrayList @ src/io/jvm.clj:2:23
+edge clj:.//io.jvm -references(certain interop)-> java:java.util.UUID @ src/io/jvm.clj:2:33
+edge clj:.//io.jvm/cmp -calls(certain direct)-> ext:clj//clojure.core/compare @ src/io/jvm.clj:19:47
+edge clj:.//io.jvm/cmp -calls(certain direct)-> ext:clj//clojure.core/proxy @ src/io/jvm.clj:19:14
+edge clj:.//io.jvm/cmp -references(certain interop)-> java:java.util.Comparator @ src/io/jvm.clj:19:22
+edge clj:.//io.jvm/ctor -calls(certain interop)-> java:java.util.ArrayList @ src/io/jvm.clj:7:15
+edge clj:.//io.jvm/ctor-new -calls(certain interop)-> java:java.io.File @ src/io/jvm.clj:9:19
+edge clj:.//io.jvm/hinted -calls(certain interop)-> java:java.lang.String#trim @ src/io/jvm.clj:11:26
+edge clj:.//io.jvm/hinted-inline -calls(certain interop)-> java:java.lang.String#length @ src/io/jvm.clj:13:25
+edge clj:.//io.jvm/static-call -calls(certain interop)-> java:java.lang.Math#abs @ src/io/jvm.clj:5:22
+edge clj:.//io.jvm/unhinted -calls(certain interop)-> java:?#close @ src/io/jvm.clj:15:20
+edge clj:.//io.jvm/uuid -calls(certain interop)-> java:java.util.UUID#randomUUID @ src/io/jvm.clj:17:15
+edge clj:.//io.web -contains-> clj:.//io.web/fmt
+edge clj:.//io.web -contains-> clj:.//io.web/log
+edge clj:.//io.web -contains-> clj:.//io.web/method
+edge clj:.//io.web -contains-> clj:.//io.web/prop
+edge clj:.//io.web -requires-> js:goog.string @ src/io/web.cljs:2:14
+edge clj:.//io.web/fmt -calls(certain interop)-> js:goog.string.format @ src/io/web.cljs:10:14
+edge clj:.//io.web/log -calls(certain interop)-> js:console.log @ src/io/web.cljs:4:14
+edge clj:.//io.web/method -calls(certain interop)-> js:?.focus @ src/io/web.cljs:6:19
+edge clj:.//io.web/prop -references(certain interop)-> js:?.value @ src/io/web.cljs:8:17
+edge unit:. -contains-> clj:.//io.jvm
+edge unit:. -contains-> clj:.//io.web
+# truncated false

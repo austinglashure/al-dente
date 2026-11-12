@@ -280,3 +280,77 @@ fn r8_dynamic_code_matches_expected() {
 fn dynamic_golden() {
     assert_graph_snapshot("clj-rules/dynamic", AggregationLevel::Symbol);
 }
+
+#[test]
+fn r9_interop_exits_match_expected() {
+    use aldente_model::Reason;
+    let g = analyze_fixture(&fixture_dir("clj-rules/interop")).graph;
+    let short = |id: &NodeId| id.to_string().trim_start_matches("clj:.//").to_owned();
+    let to_platform: BTreeSet<(String, EdgeKind, String)> = g
+        .edges
+        .iter()
+        .filter(|e| matches!(e.to, NodeId::Platform(_)))
+        .inspect(|e| {
+            if e.kind != EdgeKind::Requires {
+                assert_eq!(
+                    (e.certainty, e.reason),
+                    (Some(Certainty::Certain), Some(Reason::Interop)),
+                    "{e:?}"
+                );
+            }
+        })
+        .map(|e| (short(&e.from), e.kind, e.to.to_string()))
+        .collect();
+    let c = EdgeKind::Calls;
+    let r = EdgeKind::References;
+    let expected: BTreeSet<(String, EdgeKind, String)> = [
+        ("io.jvm", r, "java:java.util.ArrayList"),
+        ("io.jvm", r, "java:java.util.UUID"),
+        ("io.jvm", r, "java:java.io.File"),
+        ("io.jvm/static-call", c, "java:java.lang.Math#abs"),
+        ("io.jvm/ctor", c, "java:java.util.ArrayList"),
+        ("io.jvm/ctor-new", c, "java:java.io.File"),
+        ("io.jvm/hinted", c, "java:java.lang.String#trim"),
+        ("io.jvm/hinted-inline", c, "java:java.lang.String#length"),
+        ("io.jvm/unhinted", c, "java:?#close"),
+        ("io.jvm/uuid", c, "java:java.util.UUID#randomUUID"),
+        ("io.jvm/cmp", r, "java:java.util.Comparator"),
+        ("io.web/log", c, "js:console.log"),
+        ("io.web/method", c, "js:?.focus"),
+        ("io.web/prop", r, "js:?.value"),
+        ("io.web/fmt", c, "js:goog.string.format"),
+        ("io.web", EdgeKind::Requires, "js:goog.string"),
+    ]
+    .into_iter()
+    .map(|(a, k, b)| (a.to_owned(), k, b.to_owned()))
+    .collect();
+    let missing: Vec<_> = expected.difference(&to_platform).collect();
+    let extra: Vec<_> = to_platform.difference(&expected).collect();
+    assert!(
+        missing.is_empty() && extra.is_empty(),
+        "missing {missing:#?}\nextra {extra:#?}"
+    );
+    assert!(!g.edges.iter().any(|e| matches!(
+        e.to.to_string().as_str(),
+        "ext:clj//clojure.core/." | "ext:clj//cljs.core/." | "ext:clj//clojure.core/new"
+    )));
+    let platforms = g
+        .nodes
+        .values()
+        .filter(|n| n.kind == aldente_model::NodeKind::Platform)
+        .count();
+    let spots = g
+        .blindspots
+        .iter()
+        .filter(|b| b.category == aldente_model::BlindSpotCategory::Interop)
+        .count();
+    assert_eq!(
+        spots, platforms,
+        "one interop blind spot per platform target"
+    );
+}
+
+#[test]
+fn interop_golden() {
+    assert_graph_snapshot("clj-rules/interop", AggregationLevel::Symbol);
+}

@@ -331,6 +331,12 @@ fn no_usage_is_dropped() {
                         )
                     )
                 })
+                // Java and instance-method interop come from clj-kondo's class
+                // and instance-invocation records, not var usages.
+                .filter(|e| {
+                    let to = e.to.to_string();
+                    !(to.starts_with("java:") || to.starts_with("js:?."))
+                })
                 .map(|e| e.sites.len())
                 .sum();
             assert_eq!(sites + s.merged_duplicates, s.sites, "{fixture}: {s:?}");

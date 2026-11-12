@@ -224,3 +224,22 @@ test.describe('blind spots', () => {
     }
   });
 });
+
+test.describe('interop', () => {
+  test('the interop exits toggle shows and hides platform nodes', async ({ page }) => {
+    const server = await startServer('clj-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await page.locator('[data-open="clj:.//shop.interop"]').click();
+      const exit = listed(page, 'java:java.lang.System#currentTimeMillis');
+      await expect(exit).toBeVisible();
+      await page.getByTestId('hide-interop').check();
+      await expect(exit).toHaveCount(0);
+      await page.getByTestId('hide-interop').uncheck();
+      await expect(exit).toBeVisible();
+    } finally {
+      server.close();
+    }
+  });
+});

@@ -84,10 +84,22 @@ export function isTest(n: GNode): boolean {
   return (n.flags ?? []).includes('test') || n.subkind === 'test' || n.name.endsWith('-test') || (n.namespace ?? '').endsWith('-test');
 }
 
+/** Which kinds of node the toggles hide. */
+export interface HideOptions {
+  hideTests: boolean;
+  hideExternals: boolean;
+  /** Platform nodes: Java and JavaScript interop exits. */
+  hideInterop?: boolean;
+}
+
 /** Whether a node is hidden by the toggles.
  *  Example: `hidden(externalNode, { hideTests: false, hideExternals: true })` is `true`. */
-export function hidden(n: GNode, opts: { hideTests: boolean; hideExternals: boolean }): boolean {
-  return (opts.hideExternals && n.kind === 'external') || (opts.hideTests && isTest(n));
+export function hidden(n: GNode, opts: HideOptions): boolean {
+  return (
+    (opts.hideExternals && n.kind === 'external') ||
+    (opts.hideTests && isTest(n)) ||
+    (opts.hideInterop === true && n.kind === 'platform')
+  );
 }
 
 /** Adds a payload's nodes and edges that are not on the canvas yet; new

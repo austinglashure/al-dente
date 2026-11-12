@@ -4,8 +4,8 @@ assertion_line: 105
 expression: "env.text(&[\"analyze\"])"
 ---
 units 1, files 13
-nodes: unit 1, namespace 13, symbol 35, impl 13, external 47, platform 1, hole 2
-edges: contains 61, requires 19, calls 78, references 13, dispatches 13, implements 8
-certainty: calls possible 1, calls likely 1, calls certain 76, references possible 4, references likely 9, dispatches possible 10, dispatches likely 3
-blind spots: dynamic-eval 1, dynamic-resolve 1, macro-generated 1
+nodes: unit 1, namespace 13, symbol 35, impl 13, external 46, platform 5, hole 2
+edges: contains 61, requires 19, calls 80, references 14, dispatches 13, implements 8
+certainty: calls possible 1, calls likely 1, calls certain 78, references possible 4, references likely 9, references certain 1, dispatches possible 10, dispatches likely 3
+blind spots: dynamic-eval 1, dynamic-resolve 1, interop 5, macro-generated 1
 diagnostics: 0

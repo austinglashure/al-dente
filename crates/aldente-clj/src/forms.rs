@@ -55,6 +55,8 @@ pub struct TopForm {
 pub struct Arity {
     /// Each fixed parameter's name and position; `None` for a destructured one.
     pub params: Vec<Option<(String, Pos)>>,
+    /// Each fixed parameter's type hint (`^String s` gives `String`).
+    pub tags: Vec<Option<String>>,
     /// Has a `& rest` parameter.
     pub variadic: bool,
 }
@@ -95,6 +97,8 @@ pub struct ArgInfo {
     /// For a map literal: `(key, value)` source texts of its entries; for a
     /// vector: consecutive pairs (a binding vector's names and values).
     pub entries: Vec<(String, String)>,
+    /// A type hint on a symbol argument: `^String x` gives `String`.
+    pub tag: Option<String>,
 }
 
 /// Argument text longer than this is cut.
@@ -423,22 +427,46 @@ impl Ctx<'_> {
     /// Example: `[f {:keys [a]} & xs]` gives `[Some(f), None]`, variadic.
     fn arity(&self, vec: Node<'_>) -> Arity {
         let mut params = Vec::new();
+        let mut tags = Vec::new();
         for v in values(vec) {
             match self.sym(v) {
                 Some(name) if name == "&" => {
                     return Arity {
                         params,
+                        tags,
                         variadic: true,
                     };
                 }
-                Some(name) => params.push(Some((name, self.pos(v.start_byte())))),
-                None => params.push(None),
+                Some(name) => {
+                    let at = v
+                        .child_by_field_name("name")
+                        .map_or(v.start_byte(), |n| n.start_byte());
+                    params.push(Some((name, self.pos(at))));
+                    tags.push(self.tag(v));
+                }
+                None => {
+                    params.push(None);
+                    tags.push(None);
+                }
             }
         }
         Arity {
             params,
+            tags,
             variadic: false,
         }
+    }
+
+    /// The type hint on a symbol (`^String x` or `#^String x`), if any.
+    ///
+    /// Example: the node for `^java.util.Map m` gives `Some("java.util.Map")`.
+    fn tag(&self, node: Node<'_>) -> Option<String> {
+        if node.kind() != "sym_lit" {
+            return None;
+        }
+        let mut cursor = node.walk();
+        let meta = node.children_by_field_name("meta", &mut cursor).next()?;
+        values(meta).first().and_then(|v| self.sym(*v))
     }
 
     /// Walks the whole tree iteratively, collecting calls, impl bodies,
@@ -572,6 +600,7 @@ impl Ctx<'_> {
             kind: node.kind().to_owned(),
             text,
             entries,
+            tag: self.tag(node),
         }
     }
 

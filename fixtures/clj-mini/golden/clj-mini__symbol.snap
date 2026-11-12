@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 112
+# nodes 115
 node clj:.//shop.audit namespace langs:clj
 node clj:.//shop.audit/record! symbol/fn langs:clj
 node clj:.//shop.core namespace langs:clj
@@ -77,7 +77,6 @@ node ext:clj//cljs.core/update-in external
 node ext:clj//clojure.core/* external
 node ext:clj//clojure.core/+ external
 node ext:clj//clojure.core/- external
-node ext:clj//clojure.core/. external
 node ext:clj//clojure.core// external
 node ext:clj//clojure.core/< external
 node ext:clj//clojure.core/= external
@@ -113,9 +112,13 @@ node ext:clj//react external
 node ext:clj//react/createElement external
 node hole:dynamic-eval@src/shop/plugins.clj:12:3 hole langs:clj
 node hole:dynamic-resolve@src/shop/plugins.clj:8:11 hole langs:clj
+node java:java.lang.String#toUpperCase platform
+node java:java.lang.System#currentTimeMillis platform
+node java:java.util.UUID platform
+node java:java.util.UUID#randomUUID platform
 node js:console.log platform
 node unit:. unit langs:clj,cljs
-# edges 192
+# edges 195
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -152,8 +155,11 @@ edge clj:.//shop.core/checkout -dispatches(possible protocol-dispatch)-> clj:.//
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/new-id
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/now-ms
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/shout
+edge clj:.//shop.interop -references(certain interop)-> java:java.util.UUID @ src/shop/interop.clj:3:23
 edge clj:.//shop.interop/new-id -calls(certain direct)-> ext:clj//clojure.core/str @ src/shop/interop.clj:9:3
-edge clj:.//shop.interop/shout -calls(certain direct)-> ext:clj//clojure.core/. @ src/shop/interop.clj:12:3
+edge clj:.//shop.interop/new-id -calls(certain interop)-> java:java.util.UUID#randomUUID @ src/shop/interop.clj:9:8
+edge clj:.//shop.interop/now-ms -calls(certain interop)-> java:java.lang.System#currentTimeMillis @ src/shop/interop.clj:6:3
+edge clj:.//shop.interop/shout -calls(certain interop)-> java:java.lang.String#toUpperCase @ src/shop/interop.clj:12:3
 edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/available
 edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/reserve!
 edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/restock!

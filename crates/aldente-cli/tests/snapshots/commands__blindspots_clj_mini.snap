@@ -3,8 +3,13 @@ source: crates/aldente-cli/tests/commands.rs
 assertion_line: 222
 expression: "env.text(&[\"blindspots\"])"
 ---
-blind spots (3):
+blind spots (8):
   dynamic-eval  src/shop/plugins.clj:12:3  eval with a computed argument: the target cannot be known statically
   dynamic-resolve  src/shop/plugins.clj:8:11  requiring-resolve with a computed argument: the target cannot be known statically
+  interop  -  java:java.lang.String#toUpperCase is outside the analyzed code (interop)
+  interop  -  java:java.lang.System#currentTimeMillis is outside the analyzed code (interop)
+  interop  -  java:java.util.UUID is outside the analyzed code (interop)
+  interop  -  java:java.util.UUID#randomUUID is outside the analyzed code (interop)
+  interop  -  js:console.log is outside the analyzed code (interop)
   macro-generated  src/shop/util.clj:16:1  calls made by expansions of shop.util/with-timing are not visible
 diagnostics (0):
