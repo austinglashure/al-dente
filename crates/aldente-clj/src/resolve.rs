@@ -612,7 +612,7 @@ impl<'a> Resolver<'a> {
         match u.name.as_str() {
             "resolve" | "requiring-resolve" | "find-var" | "ns-resolve" => {
                 let named = if u.name == "ns-resolve" {
-                    quoted(0).zip(quoted(1)).map(|(ns, name)| (ns, name))
+                    quoted(0).zip(quoted(1))
                 } else {
                     quoted(0)
                         .and_then(|s| s.split_once('/').map(|(a, b)| (a.to_owned(), b.to_owned())))
