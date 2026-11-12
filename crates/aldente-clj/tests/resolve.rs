@@ -50,6 +50,33 @@ fn run(name: &str) -> Vec<Resolved> {
         .collect()
 }
 
+/// Resolves a single-unit tree built in a temp dir from `(path, source)` pairs.
+///
+/// Example: `run_files("cond", &[("deps.edn", "{}"), ("src/a.clj", "(ns a)")])`.
+fn run_files(name: &str, files: &[(&str, &str)]) -> Resolved {
+    let root = std::env::temp_dir().join(format!(
+        "aldente-resolve-tree-{}-{name}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    for (path, src) in files {
+        let p = root.join(path);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, src).unwrap();
+    }
+    let root = root.canonicalize().unwrap();
+    let d = discover(&root, false, walk(&root, &Limits::default()));
+    let kondo_path = locate("clj-kondo", std::env::var_os("PATH").as_deref()).unwrap();
+    let kondo = Kondo::new(
+        kondo_path,
+        root.join("..").join(format!("{name}-kondo-empty")),
+    );
+    let unit = &d.report.units[0];
+    let files: Vec<RepoPath> = d.analyzed.iter().map(|f| f.path.clone()).collect();
+    let run = kondo.analyze(&root, &files).unwrap();
+    resolve(unit, &run, &index_files(&root, &files))
+}
+
 fn node<'a>(r: &'a Resolved, id: &str) -> &'a Node {
     r.batch
         .nodes
@@ -276,7 +303,7 @@ fn no_usage_is_dropped() {
             let suppressed: usize = s.suppressed.values().sum();
             assert_eq!(
                 s.usages,
-                s.sites + suppressed + s.unresolved,
+                s.sites + s.positionless + suppressed + s.unresolved,
                 "{fixture}: {s:?}"
             );
             let sites: usize = r
@@ -319,5 +346,34 @@ fn mono_mini_same_named_namespaces_are_distinct() {
             "clj:services/billing//config",
             "clj:services/orders//config"
         ]
+    );
+}
+
+/// Found on metosin/reitit: usages without a position (from `cond->>`) still
+/// become edges, scoped by `from-var`, and are accounted for.
+#[test]
+fn positionless_usages_become_edges_without_sites() {
+    let r = run_files(
+        "cond",
+        &[
+            ("deps.edn", "{}"),
+            (
+                "src/a.clj",
+                "(ns a) (defn f [xs] (cond->> xs true (map inc)))",
+            ),
+        ],
+    );
+    let threading = edges(&r, "clj:.//a/f", EdgeKind::Calls)
+        .into_iter()
+        .find(|e| e.to.to_string() == "ext:clj//clojure.core/->>")
+        .expect("edge to ->>");
+    assert!(threading.sites.is_empty());
+    let s = &r.stats;
+    assert!(s.positionless > 0);
+    let suppressed: usize = s.suppressed.values().sum();
+    assert_eq!(
+        s.usages,
+        s.sites + s.positionless + suppressed + s.unresolved,
+        "{s:?}"
     );
 }

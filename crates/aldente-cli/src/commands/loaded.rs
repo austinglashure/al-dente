@@ -1,0 +1,118 @@
+//! Opening a target and getting its snapshot (from the cache or by analyzing
+//! it). Every command that needs the graph goes through [`load`].
+
+use aldente_acquire::cache::{Layout, default_dir};
+use aldente_acquire::key::KeyInputs;
+use aldente_acquire::local_git::head_rev;
+use aldente_acquire::remote::{EmptyDirs, Git};
+use aldente_acquire::tools::{self, CLJ_KONDO};
+use aldente_adapter::AdapterError;
+use aldente_clj::adapter::{CljAdapter, VERSION as CLJ_VERSION};
+use aldente_clj::kondo::Kondo;
+use aldente_graph::pipeline::{CacheContext, Outcome, analyze_cached};
+use aldente_graph::snapshot::SCHEMA_VERSION;
+use aldente_model::doctor::ToolStatus;
+use aldente_model::{ErrorCode, SnapshotInfo, Warning, WarningCode};
+
+use crate::commands::target::{Failure, Opened, TargetArgs, open};
+
+/// A target with its snapshot.
+#[derive(Debug)]
+pub struct Loaded {
+    pub target: Opened,
+    pub outcome: Outcome,
+}
+
+impl Loaded {
+    /// The envelope's `snapshot` section.
+    ///
+    /// Example: `SnapshotInfo { key: "b3:…", repo: "/home/u/proj", rev: Some("1d2f…"), dirty: false, analyzer: "0.1.0" }`.
+    pub fn info(&self) -> SnapshotInfo {
+        let s = &self.outcome.snapshot;
+        SnapshotInfo {
+            key: s.key.clone(),
+            repo: s.repo.clone(),
+            rev: s.rev.clone(),
+            dirty: false,
+            analyzer: s.analyzer.clone(),
+        }
+    }
+
+    /// Warnings for the envelope (a snapshot that could not be saved).
+    ///
+    /// Example: an unwritable cache gives one warning; normally none.
+    pub fn warnings(&self) -> Vec<Warning> {
+        self.outcome
+            .store_error
+            .iter()
+            .map(|e| Warning {
+                code: WarningCode::NotCached,
+                message: format!("the snapshot could not be saved: {e}"),
+            })
+            .collect()
+    }
+}
+
+/// Opens the target, checks clj-kondo (missing or too old: exit 5 with the
+/// doctor hint), and returns the cached snapshot or a fresh analysis.
+///
+/// Example: `load(&args, false)` on clj-mini analyzes once, then hits the cache.
+pub fn load(args: &TargetArgs, no_cache: bool) -> Result<Loaded, Failure> {
+    let target = open(args)?;
+    let os = std::env::consts::OS;
+    let path_var = std::env::var_os("PATH");
+    let kondo = tools::check(&CLJ_KONDO, path_var.as_deref(), os);
+    let (Some(kondo_path), ToolStatus::Ok) = (kondo.path.clone(), kondo.status) else {
+        let hint = kondo
+            .hint
+            .unwrap_or_else(|| tools::install_hint(&CLJ_KONDO, os));
+        return Err(Failure::new(
+            ErrorCode::ToolMissing,
+            format!("clj-kondo is not usable ({:?}); {hint}", kondo.status),
+        ));
+    };
+    let internal = |m: String| Failure::new(ErrorCode::Internal, m);
+    let cache = default_dir()
+        .ok_or_else(|| internal("no user cache directory; set ALDENTE_CACHE_DIR".into()))?;
+    let layout =
+        Layout::open(&cache).map_err(|e| internal(format!("cannot create the cache: {e}")))?;
+    let rev = if target.git {
+        tools::locate("git", path_var.as_deref()).and_then(|git_path| {
+            let empty = EmptyDirs::prepare(&layout.tmp).ok()?;
+            head_rev(&Git::new(git_path, empty), &target.root)
+        })
+    } else {
+        None
+    };
+    let ctx = CacheContext {
+        snapshots: &layout.snapshots,
+        inputs: KeyInputs {
+            analyzer: env!("CARGO_PKG_VERSION").to_owned(),
+            schema: SCHEMA_VERSION.to_owned(),
+            adapters: vec![("clj".to_owned(), CLJ_VERSION.to_owned())],
+            clj_kondo: kondo.version,
+            config: String::new(),
+        },
+        repo: target.origin.clone(),
+        rev,
+        no_cache,
+    };
+    let adapter = CljAdapter::new(Kondo::new(
+        kondo_path.into(),
+        layout.tmp.join("kondo-empty"),
+    ));
+    let outcome =
+        analyze_cached(&target.root, target.git, &[&adapter], &ctx).map_err(|e| match e {
+            AdapterError::ToolMissing { tool, hint } => {
+                Failure::new(ErrorCode::ToolMissing, format!("{tool} is missing; {hint}"))
+            }
+            AdapterError::Failed(m) => internal(m),
+        })?;
+    if outcome.cached {
+        eprintln!("aldente: using cached snapshot {}", outcome.snapshot.key);
+    }
+    if let Some(e) = &outcome.store_error {
+        eprintln!("aldente: warning: the snapshot could not be saved: {e}");
+    }
+    Ok(Loaded { target, outcome })
+}

@@ -108,7 +108,9 @@ fn parse_project(forms: &[Edn]) -> Result<ManifestInfo, String> {
         items
             .get(3..)
             .unwrap_or_default()
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|kv| (kv[0].clone(), kv[1].clone()))
             .collect(),
     );

@@ -85,10 +85,7 @@ fn render(report: &UnitsReport) -> Vec<String> {
         lines.push(format!("diagnostics ({}):", report.diagnostics.len()));
         for d in &report.diagnostics {
             let path = d.path.as_ref().map_or("-", |p| p.as_str());
-            let code = serde_json::to_value(d.code)
-                .ok()
-                .and_then(|v| v.as_str().map(str::to_owned))
-                .unwrap_or_default();
+            let code = crate::output::token(&d.code);
             lines.push(printable(&format!("  {path}  {code}  {}", d.message)));
         }
     }

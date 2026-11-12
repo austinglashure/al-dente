@@ -32,6 +32,8 @@ pub struct UsageStats {
     pub suppressed: BTreeMap<&'static str, usize>,
     /// Usages whose target clj-kondo could not resolve (blind spots).
     pub unresolved: usize,
+    /// Usages without a position: edges without a site.
+    pub positionless: usize,
     /// Sites identical to one already on the same edge (same position).
     pub merged_duplicates: usize,
 }
@@ -284,10 +286,7 @@ impl<'a> Resolver<'a> {
         };
         self.run.analysis.var_usages.iter().any(|u| {
             u.filename == def.filename
-                && Pos {
-                    line: u.row,
-                    col: u.col,
-                } == value.start
+                && upos(u) == Some(value.start)
                 && STATEFUL_INITS.contains(&u.name.as_str())
                 && matches!(u.to.as_deref(), Some("clojure.core" | "cljs.core"))
         })
@@ -365,10 +364,7 @@ impl<'a> Resolver<'a> {
             .find(|u| {
                 u.filename == file
                     && u.defmethod == Some(true)
-                    && form.span.contains(Pos {
-                        line: u.row,
-                        col: u.col,
-                    })
+                    && upos(u).is_some_and(|p| form.span.contains(p))
             })
             .and_then(|u| Some((u.to.clone()?, u.name.clone())))
     }
@@ -467,15 +463,15 @@ impl<'a> Resolver<'a> {
                 *self.stats.suppressed.entry(s.name()).or_default() += 1;
                 continue;
             }
+            let Some(pos) = upos(u) else {
+                self.positionless(u);
+                continue;
+            };
             let scope = self.scope(u);
             let target = self.target(u);
             let (Some(scope), Some((to, interop))) = (scope, target) else {
                 self.unresolved(u);
                 continue;
-            };
-            let pos = Pos {
-                line: u.row,
-                col: u.col,
             };
             let is_call = self.is_call(u);
             let in_macro_quote = self.in_macro_quote(&scope, &u.filename, pos);
@@ -494,7 +490,7 @@ impl<'a> Resolver<'a> {
                 (EdgeKind::References, Certainty::Likely, Reason::ValueRef)
             };
             let lang = u.lang.as_deref().and_then(Lang::from_token);
-            let site = site(&u.filename, u.row, u.col);
+            let site = site_of(u);
             self.stats.sites += 1;
             self.edge(scope, to, kind, Some(certainty), Some(reason), lang, site);
         }
@@ -511,14 +507,8 @@ impl<'a> Resolver<'a> {
             return Some(Suppression::NsRefer);
         }
         let ix = self.indexes.get(u.filename.as_str())?;
-        let pos = Pos {
-            line: u.row,
-            col: u.col,
-        };
-        let name_pos = Pos {
-            line: u.name_row.unwrap_or(u.row),
-            col: u.name_col.unwrap_or(u.col),
-        };
+        let pos = upos(u)?;
+        let name_pos = uname_pos(u)?;
         let top = ix.forms.iter().find(|f| f.span.contains(pos));
         if let Some(top) = top {
             let head = local(top.head.as_deref());
@@ -553,18 +543,14 @@ impl<'a> Resolver<'a> {
     /// Example: the `println` at top level on line 10 of shop.core gives
     /// `clj:.//shop.core/<top>@L10`.
     fn scope(&mut self, u: &VarUsage) -> Option<NodeId> {
-        let pos = Pos {
-            line: u.row,
-            col: u.col,
-        };
+        let pos = upos(u)?;
         let ix = *self.indexes.get(u.filename.as_str())?;
-        if let Some(top) = ix.forms.iter().find(|f| f.span.contains(pos)) {
-            if let Some(id) = self
+        if let Some(top) = ix.forms.iter().find(|f| f.span.contains(pos))
+            && let Some(id) = self
                 .defmethod_impls
                 .get(&(u.filename.clone(), top.span.start))
-            {
-                return Some(id.clone());
-            }
+        {
+            return Some(id.clone());
         }
         if let Some((_, _, id)) = self
             .protocol_impls
@@ -632,7 +618,7 @@ impl<'a> Resolver<'a> {
             self.blindspots.push(BlindSpot {
                 category: BlindSpotCategory::UnresolvedSymbol,
                 node: Some(id.clone()),
-                site: site(&u.filename, u.row, u.col),
+                site: site_of(u),
                 message: format!("{ns}/{name} is used but has no definition the analyzer can see (likely defined by a macro)"),
             });
             if let Some(ns_id) = self.ns_id(ns) {
@@ -694,6 +680,40 @@ impl<'a> Resolver<'a> {
         Some(id)
     }
 
+    /// A usage clj-kondo reports without a position (inside some macro
+    /// expansions, e.g. `cond->>`): a certain call from its `from-var`, with
+    /// no site, counted in [`UsageStats::positionless`]. Without a
+    /// `from-var` it cannot be placed and becomes a blind spot.
+    ///
+    /// Example: `(defn f [xs] (cond->> xs true (map inc)))` gives
+    /// `f -calls-> ext:clj//clojure.core/->>` without sites.
+    fn positionless(&mut self, u: &VarUsage) {
+        let scope = match &u.from_var {
+            Some(var) => self.symbol_or_placeholder(&u.from, var, u),
+            None => None,
+        };
+        let (Some(scope), Some((to, interop))) = (scope, self.target(u)) else {
+            self.unresolved(u);
+            return;
+        };
+        self.stats.positionless += 1;
+        let reason = if interop {
+            Reason::Interop
+        } else {
+            Reason::Direct
+        };
+        let lang = u.lang.as_deref().and_then(Lang::from_token);
+        self.edge(
+            scope,
+            to,
+            EdgeKind::Calls,
+            Some(Certainty::Certain),
+            Some(reason),
+            lang,
+            None,
+        );
+    }
+
     /// Records an unresolved usage as a blind spot.
     ///
     /// Example: `(frobnicate x)` with no such var gives an `unresolved-symbol`
@@ -703,7 +723,7 @@ impl<'a> Resolver<'a> {
         self.blindspots.push(BlindSpot {
             category: BlindSpotCategory::UnresolvedSymbol,
             node: None,
-            site: site(&u.filename, u.row, u.col),
+            site: site_of(u),
             message: format!("{} could not be resolved", u.name),
         });
     }
@@ -716,13 +736,8 @@ impl<'a> Resolver<'a> {
     /// Example: `(f x)` is a call to `f`; `(map f xs)` makes `f` a reference;
     /// `@stock` is a call to `deref`.
     fn is_call(&self, u: &VarUsage) -> bool {
-        let pos = Pos {
-            line: u.row,
-            col: u.col,
-        };
-        let name_pos = Pos {
-            line: u.name_row.unwrap_or(u.row),
-            col: u.name_col.unwrap_or(u.col),
+        let (Some(pos), Some(name_pos)) = (upos(u), uname_pos(u)) else {
+            return false;
         };
         let core = matches!(u.to.as_deref(), Some("clojure.core" | "cljs.core"));
         if pos == name_pos && core && matches!(u.name.as_str(), "deref" | "fn*" | "var") {
@@ -977,6 +992,35 @@ fn location(
         end_line: end_line.unwrap_or(line),
         end_col: end_col.unwrap_or(col),
     })
+}
+
+/// A usage's position, if clj-kondo gave one.
+///
+/// Example: a usage at row 3, col 5 gives `Some(Pos { line: 3, col: 5 })`.
+fn upos(u: &VarUsage) -> Option<Pos> {
+    Some(Pos {
+        line: u.row?,
+        col: u.col?,
+    })
+}
+
+/// A usage's name position, falling back to its position.
+///
+/// Example: `(f x)` at 3:5 has name position 3:6.
+fn uname_pos(u: &VarUsage) -> Option<Pos> {
+    let pos = upos(u)?;
+    Some(Pos {
+        line: u.name_row.unwrap_or(pos.line),
+        col: u.name_col.unwrap_or(pos.col),
+    })
+}
+
+/// A usage's site, if it has a position and a valid file.
+///
+/// Example: a usage in `src/a.clj` at 3:5 gives that site.
+fn site_of(u: &VarUsage) -> Option<Site> {
+    let pos = upos(u)?;
+    site(&u.filename, pos.line, pos.col)
 }
 
 /// A site; `None` if the file is not a valid path.

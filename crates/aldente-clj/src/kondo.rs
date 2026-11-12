@@ -6,6 +6,7 @@
 //! `--config-dir` so the target's `.clj-kondo` config and hooks never load,
 //! the cache off, a timeout, and a temp working directory.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
@@ -82,8 +83,9 @@ pub struct VarDefinition {
 #[serde(rename_all = "kebab-case")]
 pub struct VarUsage {
     pub filename: String,
-    pub row: u32,
-    pub col: u32,
+    /// Absent for usages inside some macro expansions (e.g. `cond->>`).
+    pub row: Option<u32>,
+    pub col: Option<u32>,
     pub end_row: Option<u32>,
     pub end_col: Option<u32>,
     pub name_row: Option<u32>,
@@ -158,8 +160,10 @@ pub struct Local {
     pub filename: String,
     pub row: u32,
     pub col: u32,
-    pub id: u64,
-    pub name: String,
+    /// Absent for `%` arguments of `#(…)`.
+    pub id: Option<u64>,
+    /// Absent for `%` arguments of `#(…)`.
+    pub name: Option<String>,
     pub lang: Option<String>,
 }
 
@@ -234,11 +238,94 @@ pub struct Finding {
     pub message: String,
 }
 
-#[derive(Debug, Deserialize)]
+/// clj-kondo's output, with each analysis record parsed on its own.
+#[derive(Debug)]
 struct RawOutput {
-    #[serde(default)]
     findings: Vec<Finding>,
     analysis: Option<Analysis>,
+    /// Records that could not be read, per bucket: (count, first error).
+    skipped: BTreeMap<String, (usize, String)>,
+}
+
+/// Parses clj-kondo's JSON. Each record of each bucket is read separately:
+/// one record with an unexpected shape is skipped and counted instead of
+/// failing the whole unit.
+///
+/// Example: a `var-usages` bucket with one record lacking `name` gives the
+/// other records plus `skipped["var-usages"] = (1, "missing field `name`")`.
+fn parse_output(json: &str) -> Result<RawOutput, KondoError> {
+    let mut value: Value =
+        serde_json::from_str(json).map_err(|e| KondoError::BadOutput(e.to_string()))?;
+    let findings = value
+        .get_mut("findings")
+        .map(Value::take)
+        .map(lenient::<Finding>)
+        .map(|(items, _)| items)
+        .unwrap_or_default();
+    let Some(mut analysis) = value.get_mut("analysis").map(Value::take) else {
+        return Ok(RawOutput {
+            findings,
+            analysis: None,
+            skipped: BTreeMap::new(),
+        });
+    };
+    let mut skipped = BTreeMap::new();
+    let mut take = |name: &str| {
+        analysis
+            .get_mut(name)
+            .map(Value::take)
+            .unwrap_or(Value::Null)
+    };
+    macro_rules! bucket {
+        ($name:literal) => {{
+            let (items, bad) = lenient(take($name));
+            if let Some(bad) = bad {
+                skipped.insert($name.to_owned(), bad);
+            }
+            items
+        }};
+    }
+    let a = Analysis {
+        var_definitions: bucket!("var-definitions"),
+        var_usages: bucket!("var-usages"),
+        namespace_definitions: bucket!("namespace-definitions"),
+        namespace_usages: bucket!("namespace-usages"),
+        protocol_impls: bucket!("protocol-impls"),
+        locals: bucket!("locals"),
+        local_usages: bucket!("local-usages"),
+        keywords: bucket!("keywords"),
+        java_class_usages: bucket!("java-class-usages"),
+        instance_invocations: bucket!("instance-invocations"),
+        java_class_definitions: bucket!("java-class-definitions"),
+        java_member_definitions: bucket!("java-member-definitions"),
+    };
+    Ok(RawOutput {
+        findings,
+        analysis: Some(a),
+        skipped,
+    })
+}
+
+/// Parses each element of a JSON array as `T`, returning the good ones and,
+/// if any failed, how many and the first error.
+///
+/// Example: `[{"ok":1}, 5]` as a struct type gives one item and `Some((1, "invalid type…"))`.
+fn lenient<T: serde::de::DeserializeOwned>(value: Value) -> (Vec<T>, Option<(usize, String)>) {
+    let Value::Array(items) = value else {
+        return (Vec::new(), None);
+    };
+    let mut good = Vec::with_capacity(items.len());
+    let mut bad: Option<(usize, String)> = None;
+    for item in items {
+        match serde_json::from_value(item) {
+            Ok(v) => good.push(v),
+            Err(e) => match &mut bad {
+                Some((n, _)) => *n += 1,
+                None => bad = Some((1, e.to_string())),
+            },
+        }
+    }
+    (good, bad)
 }
 
 /// The analysis of one unit, file names repository-relative with `/`.
@@ -297,6 +384,7 @@ impl Kondo {
         let root = simplify(root);
         let mut run = KondoRun::default();
         let mut findings = Vec::new();
+        let mut skipped: BTreeMap<String, (usize, String)> = BTreeMap::new();
         for chunk in chunks(&root, files) {
             let raw = self.run_chunk(&chunk)?;
             let analysis = raw
@@ -304,9 +392,19 @@ impl Kondo {
                 .ok_or_else(|| KondoError::BadOutput("no analysis in output".into()))?;
             merge(&mut run.analysis, analysis);
             findings.extend(raw.findings);
+            for (bucket, (n, first)) in raw.skipped {
+                skipped.entry(bucket).or_insert((0, first)).0 += n;
+            }
         }
         normalize(&mut run.analysis, &root);
         run.diagnostics = file_diagnostics(&findings, &root);
+        for (bucket, (n, first)) in skipped {
+            run.diagnostics.push(Diagnostic::new(
+                None,
+                DiagnosticCode::AnalyzerFailed,
+                format!("{n} clj-kondo {bucket} records could not be read and were skipped (first: {first})"),
+            ));
+        }
         Ok(run)
     }
 
@@ -339,7 +437,7 @@ impl Kondo {
                 });
             }
         }
-        serde_json::from_str(&out.stdout).map_err(|e| KondoError::BadOutput(e.to_string()))
+        parse_output(&out.stdout)
     }
 }
 
@@ -481,6 +579,22 @@ fn simplify(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn one_bad_record_does_not_sink_the_rest() {
+        let json = r#"{"findings": [], "analysis": {"var-usages": [
+            {"filename": "a.clj", "row": 1, "col": 1, "name": "f", "from": "a", "to": "a"},
+            {"filename": "a.clj", "row": 2}
+        ], "var-definitions": "not a list"}}"#;
+        let raw = parse_output(json).unwrap();
+        let a = raw.analysis.unwrap();
+        assert_eq!(a.var_usages.len(), 1);
+        assert!(a.var_definitions.is_empty());
+        let (n, first) = &raw.skipped["var-usages"];
+        assert_eq!(*n, 1);
+        assert!(first.contains("name"), "{first}");
+        assert!(parse_output("not json").is_err());
+    }
 
     #[test]
     fn chunks_respect_the_size_limit() {

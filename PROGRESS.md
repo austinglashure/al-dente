@@ -2,7 +2,7 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 1, WP1.6 (not started). Phase 0 and WP1.1–WP1.5 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 1, WP1.7 (not started). Phase 0 and WP1.1–WP1.6 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
@@ -16,7 +16,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 - [x] WP1.3 clj-kondo runner
 - [x] WP1.4 Form index
 - [x] WP1.5 Graph build v1
-- [ ] WP1.6 Snapshot store
+- [x] WP1.6 Snapshot store
 - [ ] WP1.7 Core CLI
 - [ ] WP1.8 Server and API v1
 - [ ] WP1.9 GUI v1
@@ -120,6 +120,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
 
+- 2026-11-11 WP1.6: `aldente-graph::{snapshot, adjacency}`, `pipeline::analyze_cached`, `acquire::local_git::head_rev`, `aldente analyze`, `cache gc` prunes snapshots (newest 5 per repository). Accept criteria all met: clj-mini round trip (`testkit/tests/snapshot.rs`), cache hit runs no adapter (counting adapter) and takes 0.09 s on reitit, one changed file changes the key, an older schema version is ignored and rebuilt. Also closed WP1.3's leftover: no usable clj-kondo exits 5 with the doctor hint. **Decision: workspace `rust-version` raised from 1.85 to 1.89** so `rusqlite` 0.42 can bundle SQLite 3.54, which fixes RUSTSEC-2026-0459 (`cargo deny` failed on 0.40); the bump also enabled clippy's let-chain and `as_chunks` lints, applied with `clippy --fix`. Choices: nodes are stored as JSON blobs with indexed `node_id`/`kind`, edges as columns with integer node references (traversal-friendly for Phase 9); `analysis_result` and `file` tables exist but are unused; a corrupt snapshot counts as a miss; `dirty` is always false: `git status`/`diff` can run clean filters from a hostile `.git/config`, and the key already covers the working tree. Found on reitit and fixed test first: `%` in `#(…)` gives local usages without `id`/`name`; `cond->>` gives var usages without position (now edges without sites, from `from-var`, counted as `positionless`); clj-kondo records are now parsed one by one, so an odd record is skipped and reported instead of failing the unit. reitit: 37 units, 130 namespaces, about 7,900 calls, 10 s cold (debug build). **Debt:** the key does not change when Al Dente's code changes; `aldente-clj::adapter::VERSION` must be bumped whenever resolver output changes (bumped to 3 today). Consider a build ID in the key for dev builds.
 - 2026-11-11 WP1.5: `aldente-adapter` (trait, `FactBatch`, `AnalyzeCtx`), `aldente-clj::{resolve, adapter}` (R1–R4), `aldente-graph::{build, rollup, pipeline}`; testkit's `run_pipeline` now runs the real pipeline (needs clj-kondo on PATH). Goldens: clj-mini symbol and namespace, mono-mini namespace and unit, reviewed row by row against EXPECTED.md; the review found three bugs (refers, reader macros, `#(…)` call sites), fixed test first. Model additions: `Edge::{count, by_certainty}` for rolled-up edges, `BlindSpot`, `SymbolFlag::Service` (unit nodes), `Ord` for `NodeId` (by string form). Choices where the plan was silent:
   - All Clojure-family IDs use the `clj` prefix (`clj:.//shop.ui.views/init` for a cljs namespace), as EXPECTED.md already assumed.
   - Cross-unit linking happens in the build: adapters point at `ext:clj//ns/name` for namespaces their unit does not define; the build re-targets to the unit that defines it. Several candidate units: an edge to each, `possible`, `name-match`.

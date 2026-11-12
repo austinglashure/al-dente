@@ -200,6 +200,43 @@ fn hostile_1_target_clj_kondo_config_is_ignored() {
     );
 }
 
+/// Found on metosin/reitit: `%` inside `#(…)` gives local usages without
+/// `id` or `name`, which used to fail the whole unit.
+#[test]
+fn anonymous_fn_args_do_not_break_parsing() {
+    let root = scratch("anon-args");
+    fs::write(
+        root.join("a.clj"),
+        "(ns a) (defn g [] #(inc %)) (defn h [] #(:body %))",
+    )
+    .unwrap();
+    let run = kondo("anon-args")
+        .analyze(&root, &[RepoPath::parse("a.clj").unwrap()])
+        .unwrap();
+    assert!(run.analysis.var_definitions.iter().any(|d| d.name == "h"));
+}
+
+/// Found on metosin/reitit: `cond->>` makes clj-kondo report usages of
+/// `->>`, `if` and `let` without a position.
+#[test]
+fn positionless_usages_are_kept() {
+    let root = scratch("positionless");
+    fs::write(
+        root.join("a.cljc"),
+        "(ns a) (defn f [xs] (cond->> xs true (map inc)))",
+    )
+    .unwrap();
+    let run = kondo("positionless")
+        .analyze(&root, &[RepoPath::parse("a.cljc").unwrap()])
+        .unwrap();
+    assert!(
+        run.analysis
+            .var_usages
+            .iter()
+            .any(|u| u.name == "->>" && u.row.is_none())
+    );
+}
+
 #[test]
 fn a_missing_binary_is_reported_as_missing() {
     let k = Kondo::new(

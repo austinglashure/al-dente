@@ -375,7 +375,7 @@ impl Ctx<'_> {
                 "regex_lit" => self.literal(node, LiteralKind::Regex, ix),
                 "syn_quoting_lit" => ix.quoted.push(self.span(node)),
                 "read_cond_lit" | "splicing_read_cond_lit" => {
-                    for pair in values(node).chunks_exact(2) {
+                    for pair in values(node).as_chunks::<2>().0 {
                         ix.branches.push(CondBranch {
                             span: self.span(pair[1]),
                             feature: self.text(pair[0]).to_owned(),

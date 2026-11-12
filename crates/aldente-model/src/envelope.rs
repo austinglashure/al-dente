@@ -84,6 +84,8 @@ pub struct ErrorBody {
 #[serde(rename_all = "kebab-case")]
 pub enum WarningCode {
     Truncated,
+    /// The result is good but the snapshot could not be saved to the cache.
+    NotCached,
 }
 
 /// A non-fatal note attached to a result.

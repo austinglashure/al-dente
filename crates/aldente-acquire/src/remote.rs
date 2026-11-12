@@ -114,11 +114,11 @@ pub fn parse_url(url: &str) -> Result<RemoteUrl, UrlError> {
         check_segment(segment)?;
         segments.push(segment.to_owned());
     }
-    if let Some(last) = segments.last_mut() {
-        if let Some(stripped) = last.strip_suffix(".git") {
-            check_segment(stripped)?;
-            *last = stripped.to_owned();
-        }
+    if let Some(last) = segments.last_mut()
+        && let Some(stripped) = last.strip_suffix(".git")
+    {
+        check_segment(stripped)?;
+        *last = stripped.to_owned();
     }
     if segments.len() < 2 {
         return Err(UrlError::Shape);

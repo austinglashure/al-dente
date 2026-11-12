@@ -28,6 +28,8 @@ pub struct Opened {
     /// Canonical root directory.
     pub root: PathBuf,
     pub git: bool,
+    /// The URL for remote targets, the canonical root for local ones.
+    pub origin: String,
     /// Problems found while acquiring (e.g. submodules not fetched).
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -72,6 +74,7 @@ pub fn open(args: &TargetArgs) -> Result<Opened, Failure> {
         eprintln!("aldente: no git repository found; using the target directory as the root");
     }
     Ok(Opened {
+        origin: target.root.display().to_string(),
         root: target.root,
         git: target.git,
         diagnostics: Vec::new(),
@@ -112,6 +115,7 @@ fn open_remote(url: &str, git_ref: Option<&str>) -> Result<Opened, Failure> {
     Ok(Opened {
         root,
         git: true,
+        origin: url.url.clone(),
         diagnostics: acquired.diagnostics,
     })
 }

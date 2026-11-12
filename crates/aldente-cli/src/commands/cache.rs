@@ -19,7 +19,7 @@ pub struct CacheArgs {
 enum CacheAction {
     /// List remote clones and snapshots with their sizes.
     Ls,
-    /// Remove temporary files.
+    /// Remove temporary files and all but the newest 5 snapshots per repository.
     Gc,
     /// Remove every clone, snapshot and temporary file.
     Clear,
@@ -60,7 +60,7 @@ pub fn run(args: &CacheArgs, json: bool) -> anyhow::Result<ExitCode> {
         }
         CacheAction::Gc | CacheAction::Clear => {
             let result = if matches!(args.action, CacheAction::Gc) {
-                layout.gc()
+                gc(&layout)
             } else {
                 layout.clear()
             };
@@ -82,6 +82,22 @@ pub fn run(args: &CacheArgs, json: bool) -> anyhow::Result<ExitCode> {
         }
     }
     Ok(ExitCode::Success)
+}
+
+/// Snapshots kept per repository by `gc` (`02-architecture.md`).
+const KEEP_SNAPSHOTS: usize = 5;
+
+/// `gc`: empties `tmp` and keeps the newest snapshots per repository.
+///
+/// Example: with 7 snapshots of one repository, removes the 2 oldest.
+fn gc(layout: &Layout) -> std::io::Result<CacheRemoval> {
+    let mut removal = layout.gc()?;
+    let (names, bytes) = aldente_graph::snapshot::prune(&layout.snapshots, KEEP_SNAPSHOTS)
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    removal.removed.extend(names);
+    removal.removed.sort();
+    removal.bytes += bytes;
+    Ok(removal)
 }
 
 /// Text form of `cache ls`.

@@ -19,6 +19,8 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Build or reuse the snapshot and print counts.
+    Analyze(commands::analyze::AnalyzeArgs),
     /// Manage remote clones and snapshots in the cache.
     Cache(commands::cache::CacheArgs),
     /// Check that git, clj-kondo and the cache directory are usable.
@@ -36,6 +38,7 @@ enum Command {
 fn main() -> std::process::ExitCode {
     let cli = Cli::parse();
     let result = match &cli.command {
+        Command::Analyze(args) => commands::analyze::run(args, cli.json),
         Command::Cache(args) => commands::cache::run(args, cli.json),
         Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),

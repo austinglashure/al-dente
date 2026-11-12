@@ -155,10 +155,10 @@ fn drafts(files: &[WalkedFile]) -> BTreeMap<RepoPath, Draft> {
         }
     }
     for file in files {
-        if let (FileKind::Dockerfile, Some(dir)) = (file.kind, file.path.parent()) {
-            if let Some(draft) = drafts.get_mut(&dir) {
-                draft.dockerfile = true;
-            }
+        if let (FileKind::Dockerfile, Some(dir)) = (file.kind, file.path.parent())
+            && let Some(draft) = drafts.get_mut(&dir)
+        {
+            draft.dockerfile = true;
         }
     }
     for draft in drafts.values_mut() {

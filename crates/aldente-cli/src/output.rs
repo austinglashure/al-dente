@@ -58,6 +58,16 @@ pub fn fail(
     Ok(failure.code.exit_code())
 }
 
+/// The JSON string form of a model enum value.
+///
+/// Example: `token(&EdgeKind::Calls)` is `"calls"`.
+pub fn token<T: serde::Serialize>(value: &T) -> String {
+    match serde_json::to_value(value) {
+        Ok(serde_json::Value::String(s)) => s,
+        other => format!("{other:?}"),
+    }
+}
+
 /// Whether `err` means the reader of stdout went away (e.g. `aldente … | head`).
 /// That is not a failure of the command, so `main` exits quietly.
 ///

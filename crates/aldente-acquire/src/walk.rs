@@ -237,15 +237,14 @@ fn builder(root: &Path, skipped: Arc<Mutex<Vec<Diagnostic>>>) -> WalkBuilder {
         if !is_dir || !DENY_DIRS.contains(&name.as_ref()) {
             return true;
         }
-        if name != ".git" {
-            if let (Some(path), Ok(mut list)) = (relative(&root, entry.path()).ok(), skipped.lock())
-            {
-                list.push(Diagnostic::new(
-                    Some(path),
-                    DiagnosticCode::SkippedDir,
-                    "deny-listed directory, not entered",
-                ));
-            }
+        if name != ".git"
+            && let (Some(path), Ok(mut list)) = (relative(&root, entry.path()).ok(), skipped.lock())
+        {
+            list.push(Diagnostic::new(
+                Some(path),
+                DiagnosticCode::SkippedDir,
+                "deny-listed directory, not entered",
+            ));
         }
         false
     });
