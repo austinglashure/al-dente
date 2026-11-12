@@ -181,6 +181,14 @@ fn call_arguments_carry_kind_text_and_map_entries() {
 }
 
 #[test]
+fn extend_protocol_to_nil_names_the_type_nil() {
+    let src = "(extend-protocol P nil (m [_] 0) Object (m [_] 1))";
+    let ix = index_source(RepoPath::parse("a.clj").unwrap(), src);
+    let types: Vec<Option<&str>> = ix.impls.iter().map(|i| i.type_name.as_deref()).collect();
+    assert_eq!(types, [Some("nil"), Some("Object")]);
+}
+
+#[test]
 fn syntax_quotes_are_recorded() {
     let src = "(defmacro m [x] `(let [t# 1] (f ~x)))";
     let ix = index_source(RepoPath::parse("m.clj").unwrap(), src);

@@ -23,7 +23,7 @@ node ext:clj//clojure.test external
 node ext:clj//re-frame.core external
 node ext:clj//react external
 node js:console.log platform
-# edges 55
+# edges 56
 edge clj:.//shop.audit -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.inventory x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.model x1 [certain:1]
@@ -32,6 +32,7 @@ edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.plugins x1 [certain:1
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.pricing x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.util x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> ext:clj//clojure.core x4 [certain:4]
+edge clj:.//shop.core -dispatches(likely protocol-dispatch)-> clj:.//shop.payment x5 [possible:4 likely:1]
 edge clj:.//shop.core -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing x4 [possible:4]
 edge clj:.//shop.core -requires-> clj:.//shop.inventory @ src/shop/core.clj:3:14
 edge clj:.//shop.core -requires-> clj:.//shop.model @ src/shop/core.clj:4:14

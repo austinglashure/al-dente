@@ -1,0 +1,133 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 41
+node clj:.//pr.shapes namespace langs:clj
+node clj:.//pr.shapes/->Circle symbol/fn langs:clj
+node clj:.//pr.shapes/->Square symbol/fn langs:clj
+node clj:.//pr.shapes/->Tri symbol/fn langs:clj
+node clj:.//pr.shapes/Circle symbol/record langs:clj
+node clj:.//pr.shapes/Shape symbol/protocol langs:clj
+node clj:.//pr.shapes/Square symbol/type langs:clj
+node clj:.//pr.shapes/Tri symbol/record langs:clj
+node clj:.//pr.shapes/area symbol/protocol-method langs:clj
+node clj:.//pr.shapes/area@Circle impl langs:clj
+node clj:.//pr.shapes/area@Object impl langs:clj
+node clj:.//pr.shapes/area@Square impl langs:clj
+node clj:.//pr.shapes/area@Tri impl langs:clj
+node clj:.//pr.shapes/area@java.util.Map impl langs:clj
+node clj:.//pr.shapes/area@nil impl langs:clj
+node clj:.//pr.shapes/area@reify:L36 impl langs:clj
+node clj:.//pr.shapes/blob symbol/fn langs:clj
+node clj:.//pr.shapes/label symbol/protocol-method langs:clj
+node clj:.//pr.shapes/label@Circle impl langs:clj
+node clj:.//pr.shapes/label@Object impl langs:clj
+node clj:.//pr.shapes/label@Square impl langs:clj
+node clj:.//pr.shapes/label@Tri impl langs:clj
+node clj:.//pr.shapes/label@java.util.Map impl langs:clj
+node clj:.//pr.shapes/label@nil impl langs:clj
+node clj:.//pr.shapes/label@reify:L36 impl langs:clj
+node clj:.//pr.shapes/map->Circle symbol/fn langs:clj
+node clj:.//pr.shapes/map->Tri symbol/fn langs:clj
+node clj:.//pr.use namespace langs:clj
+node clj:.//pr.use/any-area symbol/fn langs:clj
+node clj:.//pr.use/blob-label symbol/fn langs:clj
+node clj:.//pr.use/circle-area symbol/fn langs:clj
+node clj:.//pr.use/square-area symbol/fn langs:clj
+node clj:.//pr.use/tri-area symbol/fn langs:clj
+node ext:clj//clojure.core/* external
+node ext:clj//clojure.core// external
+node ext:clj//clojure.core/get external
+node ext:clj//clojure.core/inc external
+node ext:clj//clojure.core/let external
+node ext:clj//clojure.core/reify external
+node ext:clj//clojure.core/str external
+node unit:. unit langs:clj
+# edges 85
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/->Circle
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/->Square
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/->Tri
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/Circle
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/Square
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/Tri
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/area
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/blob
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/label
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/map->Circle
+edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/map->Tri
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@Circle
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@Object
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@Square
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@Tri
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@java.util.Map
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@nil
+edge clj:.//pr.shapes/area -contains-> clj:.//pr.shapes/area@reify:L36
+edge clj:.//pr.shapes/area@Circle -calls(certain direct)-> ext:clj//clojure.core/* @ src/pr/shapes.clj:9:13
+edge clj:.//pr.shapes/area@Circle -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/area@Object -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/area@Square -calls(certain direct)-> ext:clj//clojure.core/* @ src/pr/shapes.clj:14:13
+edge clj:.//pr.shapes/area@Square -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/area@Tri -calls(certain direct)-> ext:clj//clojure.core/* @ src/pr/shapes.clj:21:16
+edge clj:.//pr.shapes/area@Tri -calls(certain direct)-> ext:clj//clojure.core// @ src/pr/shapes.clj:21:13
+edge clj:.//pr.shapes/area@Tri -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/area@java.util.Map -calls(certain direct)-> ext:clj//clojure.core/get @ src/pr/shapes.clj:32:13
+edge clj:.//pr.shapes/area@java.util.Map -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/area@nil -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/area@reify:L36 -calls(certain direct)-> ext:clj//clojure.core/inc @ src/pr/shapes.clj:37:15
+edge clj:.//pr.shapes/area@reify:L36 -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/blob -calls(certain direct)-> ext:clj//clojure.core/reify @ src/pr/shapes.clj:36:3
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@Circle
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@Object
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@Square
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@Tri
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@java.util.Map
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@nil
+edge clj:.//pr.shapes/label -contains-> clj:.//pr.shapes/label@reify:L36
+edge clj:.//pr.shapes/label@Circle -calls(certain direct)-> ext:clj//clojure.core/str @ src/pr/shapes.clj:10:14
+edge clj:.//pr.shapes/label@Circle -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/label@Object -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/label@Square -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/label@Tri -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/label@java.util.Map -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/label@nil -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.shapes/label@reify:L36 -implements-> clj:.//pr.shapes/Shape
+edge clj:.//pr.use -contains-> clj:.//pr.use/any-area
+edge clj:.//pr.use -contains-> clj:.//pr.use/blob-label
+edge clj:.//pr.use -contains-> clj:.//pr.use/circle-area
+edge clj:.//pr.use -contains-> clj:.//pr.use/square-area
+edge clj:.//pr.use -contains-> clj:.//pr.use/tri-area
+edge clj:.//pr.use -requires-> clj:.//pr.shapes @ src/pr/use.clj:2:14
+edge clj:.//pr.use/any-area -calls(certain direct)-> clj:.//pr.shapes/area @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@Circle @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@Object @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@Square @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@Tri @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@java.util.Map @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@nil @ src/pr/use.clj:16:3
+edge clj:.//pr.use/any-area -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/area@reify:L36 @ src/pr/use.clj:16:3
+edge clj:.//pr.use/blob-label -calls(certain direct)-> clj:.//pr.shapes/blob @ src/pr/use.clj:19:11
+edge clj:.//pr.use/blob-label -calls(certain direct)-> clj:.//pr.shapes/label @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -calls(certain direct)-> ext:clj//clojure.core/let @ src/pr/use.clj:19:3
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@Circle @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@Object @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@Square @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@Tri @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@java.util.Map @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@nil @ src/pr/use.clj:20:5
+edge clj:.//pr.use/blob-label -dispatches(possible protocol-dispatch)-> clj:.//pr.shapes/label@reify:L36 @ src/pr/use.clj:20:5
+edge clj:.//pr.use/circle-area -calls(certain direct)-> clj:.//pr.shapes/->Circle @ src/pr/use.clj:5:11
+edge clj:.//pr.use/circle-area -calls(certain direct)-> clj:.//pr.shapes/area @ src/pr/use.clj:6:5
+edge clj:.//pr.use/circle-area -calls(certain direct)-> ext:clj//clojure.core/let @ src/pr/use.clj:5:3
+edge clj:.//pr.use/circle-area -dispatches(likely protocol-dispatch)-> clj:.//pr.shapes/area@Circle @ src/pr/use.clj:6:5
+edge clj:.//pr.use/square-area -calls(certain direct)-> clj:.//pr.shapes/->Square @ src/pr/use.clj:9:11
+edge clj:.//pr.use/square-area -calls(certain direct)-> clj:.//pr.shapes/area @ src/pr/use.clj:9:3
+edge clj:.//pr.use/square-area -dispatches(likely protocol-dispatch)-> clj:.//pr.shapes/area@Square @ src/pr/use.clj:9:3
+edge clj:.//pr.use/tri-area -calls(certain direct)-> clj:.//pr.shapes/area @ src/pr/use.clj:13:5
+edge clj:.//pr.use/tri-area -calls(certain direct)-> clj:.//pr.shapes/map->Tri @ src/pr/use.clj:12:11
+edge clj:.//pr.use/tri-area -calls(certain direct)-> ext:clj//clojure.core/let @ src/pr/use.clj:12:3
+edge clj:.//pr.use/tri-area -dispatches(likely protocol-dispatch)-> clj:.//pr.shapes/area@Tri @ src/pr/use.clj:13:5
+edge unit:. -contains-> clj:.//pr.shapes
+edge unit:. -contains-> clj:.//pr.use
+# truncated false

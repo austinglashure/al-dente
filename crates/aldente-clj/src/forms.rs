@@ -59,6 +59,8 @@ pub struct ImplBody {
     pub type_name: Option<String>,
     pub protocol: Option<String>,
     pub method: String,
+    /// The line of the form that holds it (names `reify` impls).
+    pub owner_line: u32,
 }
 
 /// A list whose head is a symbol or keyword: a call site candidate.
@@ -79,7 +81,8 @@ pub struct ArgInfo {
     /// The source text, cut at [`MAX_ARG_CHARS`] characters (symbols
     /// without metadata).
     pub text: String,
-    /// For a map literal: `(key, value)` source texts of its entries.
+    /// For a map literal: `(key, value)` source texts of its entries; for a
+    /// vector: consecutive pairs (a binding vector's names and values).
     pub entries: Vec<(String, String)>,
 }
 
@@ -436,7 +439,7 @@ impl Ctx<'_> {
         });
         let owner = local_name(&head);
         if IMPL_OWNERS.contains(&owner) {
-            self.impl_bodies(owner, &vals, ix);
+            self.impl_bodies(owner, &vals, span.start.line, ix);
         }
     }
 
@@ -445,7 +448,7 @@ impl Ctx<'_> {
     ///
     /// Example: `(defrecord Card [n] Chargeable (charge [c a] a))` gives one
     /// body: type `Card`, protocol `Chargeable`, method `charge`.
-    fn impl_bodies(&self, owner: &str, vals: &[Node<'_>], ix: &mut FileIndex) {
+    fn impl_bodies(&self, owner: &str, vals: &[Node<'_>], owner_line: u32, ix: &mut FileIndex) {
         let (fixed, rest) = match owner {
             "extend-type" | "extend-protocol" => {
                 (vals.get(1).and_then(|n| self.sym(*n)), vals.get(2..))
@@ -457,6 +460,8 @@ impl Ctx<'_> {
         for node in rest.unwrap_or_default() {
             match node.kind() {
                 "sym_lit" => current = self.sym(*node),
+                // `(extend-protocol P nil …)` extends the protocol to nil.
+                "nil_lit" => current = Some("nil".to_owned()),
                 "list_lit" => {
                     let Some(method) = values(*node).first().and_then(|n| self.sym(*n)) else {
                         continue;
@@ -467,6 +472,7 @@ impl Ctx<'_> {
                         (fixed.clone(), current.clone())
                     };
                     ix.impls.push(ImplBody {
+                        owner_line,
                         span: self.span(*node),
                         owner: owner.to_owned(),
                         type_name,
@@ -485,7 +491,9 @@ impl Ctx<'_> {
     fn arg_info(&self, node: Node<'_>) -> ArgInfo {
         let cut = |s: &str| s.chars().take(MAX_ARG_CHARS).collect::<String>();
         let text = self.sym(node).unwrap_or_else(|| cut(self.text(node)));
-        let entries = if node.kind() == "map_lit" {
+        // Maps give key/value pairs; vectors give name/value pairs, which is
+        // what `let`-style binding vectors are.
+        let entries = if matches!(node.kind(), "map_lit" | "vec_lit") {
             values(node)
                 .as_chunks::<2>()
                 .0

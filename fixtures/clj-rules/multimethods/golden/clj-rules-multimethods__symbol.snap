@@ -37,7 +37,7 @@ node ext:clj//clojure.core/println external
 node ext:clj//clojure.core/str external
 node ext:clj//clojure.core/type external
 node unit:. unit langs:clj
-# edges 64
+# edges 74
 edge clj:.//mm.more -requires-> clj:.//mm.shapes @ src/mm/more.clj:3:14
 edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/<top>@L25
 edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/area
@@ -50,22 +50,32 @@ edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:default
 edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:square
 edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:triangle
 edge clj:.//mm.shapes/area@:circle -calls(certain direct)-> ext:clj//clojure.core/* @ src/mm/shapes.clj:7:39
+edge clj:.//mm.shapes/area@:circle -implements-> clj:.//mm.shapes/area
+edge clj:.//mm.shapes/area@:default -implements-> clj:.//mm.shapes/area
 edge clj:.//mm.shapes/area@:square -calls(certain direct)-> ext:clj//clojure.core/* @ src/mm/shapes.clj:9:39
+edge clj:.//mm.shapes/area@:square -implements-> clj:.//mm.shapes/area
 edge clj:.//mm.shapes/area@:triangle -calls(certain direct)-> ext:clj//clojure.core/* @ src/mm/more.clj:5:53
 edge clj:.//mm.shapes/area@:triangle -calls(certain direct)-> ext:clj//clojure.core// @ src/mm/more.clj:5:50
+edge clj:.//mm.shapes/area@:triangle -implements-> clj:.//mm.shapes/area
 edge clj:.//mm.shapes/describe -calls(certain direct)-> ext:clj//clojure.core/fn @ src/mm/shapes.clj:13:20
 edge clj:.//mm.shapes/describe -calls(certain direct)-> ext:clj//clojure.core/type @ src/mm/shapes.clj:13:31 src/mm/shapes.clj:13:40
 edge clj:.//mm.shapes/describe -contains-> clj:.//mm.shapes/describe@:default
 edge clj:.//mm.shapes/describe -contains-> clj:.//mm.shapes/describe@[String String]
+edge clj:.//mm.shapes/describe@:default -implements-> clj:.//mm.shapes/describe
 edge clj:.//mm.shapes/describe@[String String] -calls(certain direct)-> ext:clj//clojure.core/str @ src/mm/shapes.clj:15:43
+edge clj:.//mm.shapes/describe@[String String] -implements-> clj:.//mm.shapes/describe
 edge clj:.//mm.shapes/greet -calls(certain direct)-> ext:clj//clojure.core/fn @ src/mm/shapes.clj:19:17
 edge clj:.//mm.shapes/greet -contains-> clj:.//mm.shapes/greet@:en
 edge clj:.//mm.shapes/greet -contains-> clj:.//mm.shapes/greet@:fr
 edge clj:.//mm.shapes/greet@:en -calls(certain direct)-> ext:clj//clojure.core/str @ src/mm/shapes.clj:21:26
+edge clj:.//mm.shapes/greet@:en -implements-> clj:.//mm.shapes/greet
 edge clj:.//mm.shapes/greet@:fr -calls(certain direct)-> ext:clj//clojure.core/str @ src/mm/shapes.clj:23:26
+edge clj:.//mm.shapes/greet@:fr -implements-> clj:.//mm.shapes/greet
 edge clj:.//mm.shapes/speak -contains-> clj:.//mm.shapes/speak@:default
 edge clj:.//mm.shapes/speak -contains-> clj:.//mm.shapes/speak@:mm.shapes/dog
+edge clj:.//mm.shapes/speak@:default -implements-> clj:.//mm.shapes/speak
 edge clj:.//mm.shapes/speak@:mm.shapes/dog -calls(certain direct)-> ext:clj//clojure.core/println @ src/mm/shapes.clj:29:37
+edge clj:.//mm.shapes/speak@:mm.shapes/dog -implements-> clj:.//mm.shapes/speak
 edge clj:.//mm.use -contains-> clj:.//mm.use/as-value
 edge clj:.//mm.use -contains-> clj:.//mm.use/circle-area
 edge clj:.//mm.use -contains-> clj:.//mm.use/french

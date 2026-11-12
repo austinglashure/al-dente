@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 109
+# nodes 110
 node clj:.//shop.audit namespace langs:clj
 node clj:.//shop.audit/record! symbol/fn langs:clj
 node clj:.//shop.core namespace langs:clj
@@ -31,6 +31,7 @@ node clj:.//shop.payment/charge symbol/protocol-method langs:clj
 node clj:.//shop.payment/charge@Card impl langs:clj
 node clj:.//shop.payment/charge@String impl langs:clj
 node clj:.//shop.payment/charge@Voucher impl langs:clj
+node clj:.//shop.payment/charge@reify:L25 impl langs:clj
 node clj:.//shop.payment/free-charger symbol/fn langs:clj
 node clj:.//shop.payment/map->Card symbol/fn langs:clj
 node clj:.//shop.payment/map->Voucher symbol/fn langs:clj
@@ -112,7 +113,7 @@ node ext:clj//react external
 node ext:clj//react/createElement external
 node js:console.log platform
 node unit:. unit langs:clj,cljs
-# edges 174
+# edges 188
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -130,6 +131,7 @@ edge clj:.//shop.core/-main -calls(certain direct)-> clj:.//shop.payment/charge 
 edge clj:.//shop.core/-main -calls(certain direct)-> clj:.//shop.plugins/audit-hook @ src/shop/core.clj:22:3
 edge clj:.//shop.core/-main -calls(certain direct)-> ext:clj//clojure.core/let @ src/shop/core.clj:23:3
 edge clj:.//shop.core/-main -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/core.clj:25:3
+edge clj:.//shop.core/-main -dispatches(likely protocol-dispatch)-> clj:.//shop.payment/charge@Card @ src/shop/core.clj:24:5
 edge clj:.//shop.core/<top>@L10 -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/core.clj:10:1
 edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.inventory/reserve! @ src/shop/core.clj:17:7
 edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.model/order-summary @ src/shop/core.clj:19:7
@@ -141,6 +143,10 @@ edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:
 edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:default @ src/shop/core.clj:16:17
 edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:food @ src/shop/core.clj:16:17
 edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:gift @ src/shop/core.clj:16:17
+edge clj:.//shop.core/checkout -dispatches(possible protocol-dispatch)-> clj:.//shop.payment/charge@Card @ src/shop/core.clj:18:7
+edge clj:.//shop.core/checkout -dispatches(possible protocol-dispatch)-> clj:.//shop.payment/charge@String @ src/shop/core.clj:18:7
+edge clj:.//shop.core/checkout -dispatches(possible protocol-dispatch)-> clj:.//shop.payment/charge@Voucher @ src/shop/core.clj:18:7
+edge clj:.//shop.core/checkout -dispatches(possible protocol-dispatch)-> clj:.//shop.payment/charge@reify:L25 @ src/shop/core.clj:18:7
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/new-id
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/now-ms
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/shout
@@ -186,8 +192,13 @@ edge clj:.//shop.payment -contains-> clj:.//shop.payment/map->Voucher
 edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@Card
 edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@String
 edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@Voucher
+edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@reify:L25
+edge clj:.//shop.payment/charge@Card -implements-> clj:.//shop.payment/Chargeable
+edge clj:.//shop.payment/charge@String -implements-> clj:.//shop.payment/Chargeable
 edge clj:.//shop.payment/charge@Voucher -calls(certain direct)-> ext:clj//clojure.core/- @ src/shop/payment.clj:15:46
 edge clj:.//shop.payment/charge@Voucher -calls(certain direct)-> ext:clj//clojure.core/max @ src/shop/payment.clj:15:39
+edge clj:.//shop.payment/charge@Voucher -implements-> clj:.//shop.payment/Chargeable
+edge clj:.//shop.payment/charge@reify:L25 -implements-> clj:.//shop.payment/Chargeable
 edge clj:.//shop.payment/free-charger -calls(certain direct)-> ext:clj//clojure.core/reify @ src/shop/payment.clj:25:3
 edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/audit-hook
 edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/load-plugin
@@ -221,8 +232,12 @@ edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:default
 edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:food
 edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:gift
 edge clj:.//shop.pricing/price@:book -calls(certain direct)-> clj:.//shop.util/apply-discount @ src/shop/pricing.clj:13:3
+edge clj:.//shop.pricing/price@:book -implements-> clj:.//shop.pricing/price
 edge clj:.//shop.pricing/price@:book -references(likely value-ref)-> clj:.//shop.pricing/half-off @ src/shop/pricing.clj:13:24
+edge clj:.//shop.pricing/price@:default -implements-> clj:.//shop.pricing/price
 edge clj:.//shop.pricing/price@:food -calls(certain direct)-> ext:clj//clojure.core/* @ src/shop/pricing.clj:16:3
+edge clj:.//shop.pricing/price@:food -implements-> clj:.//shop.pricing/price
+edge clj:.//shop.pricing/price@:gift -implements-> clj:.//shop.pricing/price
 edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L14
 edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L5
 edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L9

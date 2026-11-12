@@ -10,13 +10,17 @@ clj:.//shop.core/checkout  symbol/fn
   doc Prices, reserves and charges one order. Returns a summary string.
 callers (1)
   certain  calls direct  clj:.//shop.core/-main  src/shop/core.clj:25:12
-callees (10)
+callees (14)
   certain  calls direct  clj:.//shop.inventory/reserve!  src/shop/core.clj:17:7
   certain  calls direct  clj:.//shop.model/order-summary  src/shop/core.clj:19:7
   certain  calls direct  clj:.//shop.payment/charge  src/shop/core.clj:18:7
   certain  calls direct  clj:.//shop.pricing/price  src/shop/core.clj:16:17
   certain  calls direct  clj:.//shop.util/with-timing  src/shop/core.clj:15:3
   certain  calls direct  ext:clj//clojure.core/let  src/shop/core.clj:16:5
+  possible  dispatches protocol-dispatch  clj:.//shop.payment/charge@Card  src/shop/core.clj:18:7
+  possible  dispatches protocol-dispatch  clj:.//shop.payment/charge@String  src/shop/core.clj:18:7
+  possible  dispatches protocol-dispatch  clj:.//shop.payment/charge@Voucher  src/shop/core.clj:18:7
+  possible  dispatches protocol-dispatch  clj:.//shop.payment/charge@reify:L25  src/shop/core.clj:18:7
   possible  dispatches multimethod-dispatch  clj:.//shop.pricing/price@:book  src/shop/core.clj:16:17
   possible  dispatches multimethod-dispatch  clj:.//shop.pricing/price@:default  src/shop/core.clj:16:17
   possible  dispatches multimethod-dispatch  clj:.//shop.pricing/price@:food  src/shop/core.clj:16:17

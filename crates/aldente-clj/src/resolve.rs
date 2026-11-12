@@ -119,6 +119,7 @@ pub fn resolve(unit: &UnitInfo, run: &KondoRun, indexes: &[FileIndex]) -> Resolv
     r.requires();
     r.usages();
     r.multimethod_dispatch();
+    r.protocol_dispatch();
     r.macro_blind_spots();
     r.finish()
 }
@@ -145,6 +146,10 @@ struct Resolver<'a> {
     multi_impls: BTreeMap<NodeId, Vec<(NodeId, String)>>,
     /// Usages of multimethods, for R5 dispatch edges.
     multi_uses: Vec<MultiUse>,
+    /// Each protocol method's impls with their type discriminators.
+    method_impls: BTreeMap<NodeId, Vec<(NodeId, String)>>,
+    /// Usages of protocol methods, for R6 dispatch edges.
+    method_uses: Vec<MultiUse>,
 }
 
 /// One usage of a multimethod: who uses it, where, and how.
@@ -182,6 +187,8 @@ impl<'a> Resolver<'a> {
             protocol_impls: Vec::new(),
             multi_impls: BTreeMap::new(),
             multi_uses: Vec::new(),
+            method_impls: BTreeMap::new(),
+            method_uses: Vec::new(),
         }
     }
 
@@ -345,6 +352,7 @@ impl<'a> Resolver<'a> {
                 else {
                     continue;
                 };
+                self.implements(id.clone(), &multi_ns, &multi);
                 if let Some(multi_sym) = self.sym_id(&multi_ns, &multi) {
                     self.multi_impls
                         .entry(NodeId::Symbol(multi_sym))
@@ -354,27 +362,42 @@ impl<'a> Resolver<'a> {
                 self.defmethod_impls
                     .insert((file.to_owned(), form.span.start), id);
             }
-            for body in ix.impls.iter().filter(|b| b.owner != "reify") {
+            for body in &ix.impls {
                 let Some(ns) = ns.clone() else { continue };
-                let protocol_ns = self
-                    .run
-                    .analysis
-                    .protocol_impls
-                    .iter()
-                    .find(|p| {
-                        p.filename == file
-                            && body.span.contains(Pos {
-                                line: p.row,
-                                col: p.col,
-                            })
-                    })
+                let entry = self.run.analysis.protocol_impls.iter().find(|p| {
+                    p.filename == file
+                        && body.span.contains(Pos {
+                            line: p.row,
+                            col: p.col,
+                        })
+                });
+                let protocol_ns = entry
                     .map(|p| p.protocol_ns.clone())
                     .unwrap_or_else(|| ns.clone());
-                let disc = body.type_name.clone().unwrap_or_else(|| "?".to_owned());
-                if let Some(id) =
+                let protocol = entry
+                    .map(|p| p.protocol_name.clone())
+                    .or_else(|| body.protocol.clone());
+                let disc = match (&body.type_name, body.owner.as_str()) {
+                    (Some(t), _) => t.clone(),
+                    (None, "reify") => format!("reify:L{}", body.owner_line),
+                    (None, _) => "?".to_owned(),
+                };
+                let Some(id) =
                     self.impl_node(&ns, &protocol_ns, &body.method, &disc, file, body.span)
-                {
-                    self.protocol_impls.push((file.to_owned(), body.span, id));
+                else {
+                    continue;
+                };
+                self.protocol_impls
+                    .push((file.to_owned(), body.span, id.clone()));
+                if let Some(method) = self.sym_id(&protocol_ns, &body.method) {
+                    self.method_impls
+                        .entry(NodeId::Symbol(method))
+                        .or_default()
+                        .push((id.clone(), disc));
+                }
+                if let Some(p) = protocol {
+                    let p = local(Some(&p)).to_owned();
+                    self.implements(id, &protocol_ns, &p);
                 }
             }
         }
@@ -527,12 +550,17 @@ impl<'a> Resolver<'a> {
             let lang = u.lang.as_deref().and_then(Lang::from_token);
             let site = site_of(u);
             self.stats.sites += 1;
-            if self
-                .nodes
-                .get(&to)
-                .is_some_and(|n| n.subkind == Some(SymbolSubkind::Multimethod))
-            {
-                self.multi_uses.push(MultiUse {
+            let subkind = self.nodes.get(&to).and_then(|n| n.subkind);
+            if matches!(
+                subkind,
+                Some(SymbolSubkind::Multimethod | SymbolSubkind::ProtocolMethod)
+            ) {
+                let uses = if subkind == Some(SymbolSubkind::Multimethod) {
+                    &mut self.multi_uses
+                } else {
+                    &mut self.method_uses
+                };
+                uses.push(MultiUse {
                     scope: scope.clone(),
                     multi: to.clone(),
                     file: u.filename.clone(),
@@ -882,6 +910,103 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    /// R6: `dispatches` edges from each caller of a protocol method to its
+    /// impls. A receiver (first argument) that is a constructor call, or a
+    /// local bound to one in an enclosing `let`-style form (`->Rec`,
+    /// `map->Rec`, `Rec.`), selects that type's impl, `likely`; anything else,
+    /// and a usage as a value, links every impl, `possible`.
+    ///
+    /// Example: `(let [c (->Circle 2)] (area c))` gives `area@Circle` likely.
+    fn protocol_dispatch(&mut self) {
+        let uses = std::mem::take(&mut self.method_uses);
+        for u in &uses {
+            let Some(impls) = self.method_impls.get(&u.multi).cloned() else {
+                continue;
+            };
+            let receiver = if u.is_call {
+                self.receiver_type(&u.file, u.pos)
+            } else {
+                None
+            };
+            let hit = receiver.and_then(|t| impls.iter().find(|(_, d)| *d == t).cloned());
+            let targets: Vec<(NodeId, Certainty)> = match hit {
+                Some((id, _)) => vec![(id, Certainty::Likely)],
+                None => impls
+                    .iter()
+                    .map(|(id, _)| (id.clone(), Certainty::Possible))
+                    .collect(),
+            };
+            for (target, certainty) in targets {
+                self.edge(
+                    u.scope.clone(),
+                    target,
+                    EdgeKind::Dispatches,
+                    Some(certainty),
+                    Some(Reason::ProtocolDispatch),
+                    u.lang,
+                    u.site.clone(),
+                );
+            }
+        }
+    }
+
+    /// The type a call's first argument is known to have: a constructor call,
+    /// or a local bound to one by the innermost enclosing binding form.
+    ///
+    /// Example: in `(let [c (s/->Circle 2)] (s/area c))`, the call to `area`
+    /// gives `Some("Circle")`.
+    fn receiver_type(&self, file: &str, pos: Pos) -> Option<String> {
+        let ix = self.indexes.get(file)?;
+        let call = ix.calls.iter().find(|c| c.span.start == pos)?;
+        let first = call.arg_info.first()?;
+        match first.kind.as_str() {
+            "list_lit" => constructor_type(&first.text),
+            "sym_lit" => ix
+                .calls
+                .iter()
+                .filter(|c| {
+                    matches!(
+                        local(Some(&c.head)),
+                        "let"
+                            | "when-let"
+                            | "if-let"
+                            | "loop"
+                            | "binding"
+                            | "when-some"
+                            | "if-some"
+                    ) && c.span.contains(pos)
+                })
+                .max_by_key(|c| c.span.start_byte)
+                .and_then(|c| c.arg_info.first())
+                .and_then(|v| v.entries.iter().rev().find(|(name, _)| *name == first.text))
+                .and_then(|(_, init)| constructor_type(init)),
+            _ => None,
+        }
+    }
+
+    /// Adds `impl implements target`, where the target is this unit's symbol
+    /// or, for a protocol or multimethod defined elsewhere, an external.
+    ///
+    /// Example: `implements(area@Circle, "pr.shapes", "Shape")`.
+    fn implements(&mut self, impl_id: NodeId, target_ns: &str, name: &str) {
+        let target = if self.local_ns.contains(target_ns) {
+            self.sym_id(target_ns, name).map(NodeId::Symbol)
+        } else {
+            self.external(target_ns, Some(name))
+        };
+        if let Some(target) = target {
+            self.edge(
+                impl_id,
+                target,
+                EdgeKind::Implements,
+                None,
+                None,
+                None,
+                None,
+            );
+        }
+    }
+
     /// Keywords that appear as the child in a `(derive child parent)` call
     /// (or `(derive h child parent)`) anywhere in this unit.
     ///
@@ -1182,6 +1307,27 @@ fn location(
         end_line: end_line.unwrap_or(line),
         end_col: end_col.unwrap_or(col),
     })
+}
+
+/// The record or type a constructor call builds: `(->Rec …)`,
+/// `(map->Rec …)` and `(Rec. …)` give `Rec`; anything else `None`.
+///
+/// Example: `constructor_type("(s/->Circle 2)")` is `Some("Circle")`.
+fn constructor_type(text: &str) -> Option<String> {
+    let inner = text.strip_prefix('(')?;
+    let head: String = inner
+        .chars()
+        .take_while(|c| !c.is_whitespace() && *c != ')')
+        .collect();
+    let name = local(Some(&head));
+    if let Some(t) = name
+        .strip_prefix("map->")
+        .or_else(|| name.strip_prefix("->"))
+    {
+        return (!t.is_empty()).then(|| t.to_owned());
+    }
+    let t = head.strip_suffix('.')?;
+    (!t.is_empty()).then(|| t.to_owned())
 }
 
 /// A usage's position, if clj-kondo gave one.
