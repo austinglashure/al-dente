@@ -16,7 +16,7 @@ use thiserror::Error;
 use crate::build::Graph;
 
 /// Bump when the tables or the meaning of stored data change.
-pub const SCHEMA_VERSION: &str = "1";
+pub const SCHEMA_VERSION: &str = "2";
 
 /// A stored analysis.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +32,9 @@ pub struct Snapshot {
     /// Al Dente's version.
     pub analyzer: String,
     pub units: Vec<UnitInfo>,
+    /// Every analyzed source file with its content hash, sorted. `/source`
+    /// serves only these.
+    pub files: Vec<(RepoPath, String)>,
     pub graph: Graph,
 }
 
@@ -57,7 +60,7 @@ CREATE TABLE edge (id INTEGER PRIMARY KEY, src INTEGER NOT NULL REFERENCES node(
                    certainty TEXT, reason TEXT, lang TEXT);
 CREATE TABLE site (id INTEGER PRIMARY KEY, edge INTEGER NOT NULL REFERENCES edge(id),
                    file TEXT NOT NULL, line INTEGER NOT NULL, col INTEGER NOT NULL);
-CREATE TABLE file (path TEXT PRIMARY KEY);
+CREATE TABLE file (path TEXT PRIMARY KEY, hash TEXT NOT NULL);
 CREATE TABLE literal (id INTEGER PRIMARY KEY, file TEXT NOT NULL, line INTEGER NOT NULL,
                       col INTEGER NOT NULL, kind TEXT NOT NULL, text TEXT NOT NULL);
 CREATE TABLE diagnostic (id INTEGER PRIMARY KEY, json TEXT NOT NULL);
@@ -117,6 +120,12 @@ fn write_file(path: &Path, snap: &Snapshot) -> Result<(), StoreError> {
         tx.execute(
             "INSERT INTO meta (key, value) VALUES (?1, ?2)",
             params![k, v],
+        )?;
+    }
+    for (path, hash) in &snap.files {
+        tx.execute(
+            "INSERT INTO file (path, hash) VALUES (?1, ?2)",
+            params![path.as_str(), hash],
         )?;
     }
     for unit in &snap.units {
@@ -216,8 +225,18 @@ pub fn load(path: &Path) -> Result<Option<Snapshot>, StoreError> {
         git: get("git")? == "true",
         analyzer: get("analyzer")?,
         units: Vec::new(),
+        files: Vec::new(),
         graph: Graph::default(),
     };
+    let mut stmt = conn.prepare("SELECT path, hash FROM file ORDER BY path")?;
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+        let (path, hash) = row?;
+        snap.files.push((
+            RepoPath::parse(&path).map_err(|e| StoreError::Bad(e.to_string()))?,
+            hash,
+        ));
+    }
+    drop(stmt);
     for json in column(&conn, "SELECT json FROM unit ORDER BY id")? {
         snap.units.push(serde_json::from_str(&json)?);
     }
@@ -491,6 +510,7 @@ mod tests {
             git: true,
             analyzer: "0.1.0".into(),
             units: Vec::new(),
+            files: vec![(RepoPath::parse("a.clj").unwrap(), "00".into())],
             graph,
         }
     }

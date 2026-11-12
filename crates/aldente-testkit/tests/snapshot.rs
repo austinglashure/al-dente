@@ -16,6 +16,12 @@ fn clj_mini_round_trips_through_sqlite() {
         git: false,
         analyzer: "test".into(),
         units: analyzed.discovery.report.units.clone(),
+        files: analyzed
+            .discovery
+            .analyzed
+            .iter()
+            .map(|f| (f.path.clone(), f.hash.clone()))
+            .collect(),
         graph: analyzed.graph,
     };
     let dir = std::env::temp_dir().join(format!("aldente-testkit-snap-{}", std::process::id()));

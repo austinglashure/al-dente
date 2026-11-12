@@ -32,6 +32,8 @@ enum Command {
     Find(commands::find::FindArgs),
     /// Print a graph or a neighborhood (text, JSON, DOT, Mermaid, GraphML).
     Graph(commands::graph::GraphArgs),
+    /// Start the local GUI and API (127.0.0.1 only).
+    Serve(commands::serve::ServeArgs),
     /// Show a node with its callers and callees.
     Show(commands::show::ShowArgs),
     /// Print JSON Schemas for the envelope and data shapes.
@@ -51,6 +53,7 @@ fn main() -> std::process::ExitCode {
         Command::Blindspots(args) => commands::blindspots::run(args, cli.json),
         Command::Find(args) => commands::find::run(args, cli.json),
         Command::Graph(args) => commands::graph::run(args, cli.json),
+        Command::Serve(args) => commands::serve::run(args, cli.json),
         Command::Show(args) => commands::show::run(args, cli.json),
         Command::Cache(args) => commands::cache::run(args, cli.json),
         Command::Doctor(args) => commands::doctor::run(args, cli.json),

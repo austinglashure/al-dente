@@ -13,7 +13,7 @@ Each case is a small repository that tries to make Al Dente execute code, escape
 | 6a | local repository whose `.git/config` sets `diff.external`, a textconv driver and `core.pager` | WP1.6 (rev-parse) / later (diff, log) | partial: `rev-parse HEAD` with a hostile repo config runs nothing (`crates/aldente-acquire/src/local_git.rs`); `diff` and `log` get their test when a feature first runs them |
 | 7 | symbol name crafted as a SQL fragment and as a regex | WP1.6 | todo |
 | 8 | 50 MB single-line file and a deeply nested form | WP1.1 / WP1.4 | done: file part generated in `crates/aldente-acquire/tests/walk.rs`; nesting in `crates/aldente-clj/tests/forms.rs` (100,000 levels on a 256 KB stack) |
-| 9 | server requests with a wrong `Host`, a missing token and a foreign `Origin` | WP1.8 | todo |
+| 9 | server requests with a wrong `Host`, a missing token and a foreign `Origin` | WP1.8 | done: `crates/aldente-server/src/tests.rs` (`hostile_9_…`), over a real socket |
 
 "Added by" is a best guess from the phase files; move a case if another work package needs it first.
 

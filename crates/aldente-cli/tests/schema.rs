@@ -55,7 +55,7 @@ fn schema_without_name_lists_names() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "analyze\nblindspots\ncache\ncache-removal\ndoctor\nenvelope\nfind\ngraph\nshow\nunits\n"
+        "analyze\nblindspots\ncache\ncache-removal\ndoctor\nenvelope\nfind\ngraph\nserve\nshow\nsnapshot\nunits\n"
     );
 
     let output = run(&["schema", "--json"]);
@@ -70,7 +70,9 @@ fn schema_without_name_lists_names() {
             "envelope",
             "find",
             "graph",
+            "serve",
             "show",
+            "snapshot",
             "units"
         ])
     );

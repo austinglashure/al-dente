@@ -127,6 +127,11 @@ pub fn analyze_cached(
         });
     }
     let units = discovery.report.units.clone();
+    let files = discovery
+        .analyzed
+        .iter()
+        .map(|f| (f.path.clone(), f.hash.clone()))
+        .collect();
     let analyzed = analyze_discovered(root, discovery, adapters)?;
     let snap = Snapshot {
         key,
@@ -135,6 +140,7 @@ pub fn analyze_cached(
         git,
         analyzer: ctx.inputs.analyzer.clone(),
         units,
+        files,
         graph: analyzed.graph,
     };
     let store_error = snapshot::write(&path, &snap).err().map(|e| e.to_string());

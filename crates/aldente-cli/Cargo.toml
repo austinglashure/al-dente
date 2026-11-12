@@ -15,6 +15,7 @@ aldente-acquire.workspace = true
 aldente-adapter.workspace = true
 aldente-clj.workspace = true
 aldente-graph.workspace = true
+aldente-server.workspace = true
 aldente-model.workspace = true
 anyhow.workspace = true
 clap.workspace = true

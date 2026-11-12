@@ -1,13 +1,16 @@
 //! Lookups shared by the CLI and the server: resolving short symbol names,
 //! searching, direct neighbors, and neighborhoods.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::str::FromStr;
 
 use aldente_model::query::Neighbor;
-use aldente_model::{Edge, EdgeKind, GraphPayload, Node, NodeId, NodeKind};
+use aldente_model::{
+    Aggregation, AggregationLevel, Certainty, Edge, EdgeKind, GraphPayload, Node, NodeId, NodeKind,
+};
 
 use crate::build::Graph;
+use crate::rollup::{MAX_EDGES, MAX_NODES, roll};
 
 /// Edge kinds that count as invocation for callers and callees.
 const INVOCATION: &[EdgeKind] = &[EdgeKind::Calls, EdgeKind::References, EdgeKind::Dispatches];
@@ -184,6 +187,172 @@ pub fn neighborhood(
     }
 }
 
+/// Narrows a graph for the API.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Filter {
+    /// Drop edges weaker than this (edges without a certainty are kept).
+    pub min_certainty: Option<Certainty>,
+    /// Keep only these edge kinds (all when empty).
+    pub kinds: Vec<EdgeKind>,
+    /// Keep only nodes of this unit, plus the targets of their edges.
+    pub unit: Option<NodeId>,
+}
+
+/// Applies `filter` to a payload.
+///
+/// Example: `min_certainty: Some(Likely)` drops `possible` edges.
+pub fn filter(graph: &Graph, payload: GraphPayload, filter: &Filter) -> GraphPayload {
+    let keep_edge = |e: &Edge| {
+        filter
+            .min_certainty
+            .is_none_or(|min| e.certainty.is_none_or(|c| c >= min))
+            && (filter.kinds.is_empty() || filter.kinds.contains(&e.kind))
+    };
+    let mut edges: Vec<Edge> = payload.edges.into_iter().filter(keep_edge).collect();
+    let mut nodes = payload.nodes;
+    if let Some(unit) = &filter.unit {
+        let in_unit = |id: &NodeId| id == unit || graph.unit_of(id).as_ref() == Some(unit);
+        edges.retain(|e| in_unit(&e.from));
+        let targets: BTreeSet<NodeId> = edges.iter().map(|e| e.to.clone()).collect();
+        nodes.retain(|n| in_unit(&n.id) || targets.contains(&n.id));
+    }
+    GraphPayload {
+        nodes,
+        edges,
+        truncated: payload.truncated,
+        aggregated: payload.aggregated,
+    }
+}
+
+/// The graph at `level` (filtered) if it fits the payload cap; otherwise the
+/// next coarser level that fits (marked by `aggregated`); if even the unit
+/// level does not fit, its best-connected nodes up to the cap, `truncated`.
+///
+/// Example: a 50,000-symbol repository asked at `Symbol` level gets its
+/// namespace graph with `aggregated: namespace`.
+pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> GraphPayload {
+    let order = [
+        AggregationLevel::Symbol,
+        AggregationLevel::Namespace,
+        AggregationLevel::Unit,
+    ];
+    let start = order.iter().position(|l| *l == level).unwrap_or(1);
+    let mut last = GraphPayload::default();
+    for l in &order[start..] {
+        let mut p = filter(graph, graph.payload(*l), f);
+        if p.nodes.len() <= MAX_NODES && p.edges.len() <= MAX_EDGES {
+            if *l != level {
+                p.aggregated = Some(Aggregation { level: *l });
+            }
+            return p;
+        }
+        last = p;
+    }
+    cap(last)
+}
+
+/// Keeps the best-connected nodes up to the cap and the edges among them,
+/// marking the payload truncated. Payloads within the cap are unchanged.
+///
+/// Example: 3,000 nodes become the 2,000 with the highest degree.
+pub fn cap(mut p: GraphPayload) -> GraphPayload {
+    if p.nodes.len() <= MAX_NODES && p.edges.len() <= MAX_EDGES {
+        return p;
+    }
+    let mut degree: BTreeMap<&NodeId, usize> = BTreeMap::new();
+    for e in &p.edges {
+        *degree.entry(&e.from).or_default() += 1;
+        *degree.entry(&e.to).or_default() += 1;
+    }
+    let mut ranked: Vec<(usize, NodeId)> = p
+        .nodes
+        .iter()
+        .map(|n| (degree.get(&n.id).copied().unwrap_or(0), n.id.clone()))
+        .collect();
+    ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    let keep: BTreeSet<NodeId> = ranked
+        .into_iter()
+        .take(MAX_NODES)
+        .map(|(_, id)| id)
+        .collect();
+    p.nodes.retain(|n| keep.contains(&n.id));
+    p.edges
+        .retain(|e| keep.contains(&e.from) && keep.contains(&e.to));
+    p.edges.truncate(MAX_EDGES);
+    p.truncated = true;
+    p
+}
+
+/// Children of an aggregate (unit → namespaces, namespace → its symbols and
+/// impls, multimethod or protocol method → impls), best-connected first, at
+/// most `limit`, plus invocation and `requires` edges from or to them. An
+/// edge end that is not a child is shown as itself if `visible`, else as its
+/// namespace or unit if that is visible (rolled up with a count), else dropped.
+///
+/// Example: expanding `clj:.//shop.pricing` with `shop.util` visible gives
+/// `half-off`, `price` and the four `price@…` impls, with
+/// `price@:book -calls-> shop.util` rolled up.
+pub fn expand(graph: &Graph, id: &NodeId, visible: &[NodeId], limit: usize) -> GraphPayload {
+    let mut children: Vec<NodeId> = graph
+        .edges
+        .iter()
+        .filter(|e| e.kind == EdgeKind::Contains && &e.from == id)
+        .map(|e| e.to.clone())
+        .collect();
+    let degree = |n: &NodeId| {
+        graph
+            .edges
+            .iter()
+            .filter(|e| INVOCATION.contains(&e.kind) && (&e.from == n || &e.to == n))
+            .count()
+    };
+    children.sort_by(|a, b| degree(b).cmp(&degree(a)).then_with(|| a.cmp(b)));
+    let truncated = limit > 0 && children.len() > limit;
+    if truncated {
+        children.truncate(limit);
+    }
+    let kids: BTreeSet<&NodeId> = children.iter().collect();
+    let shown: BTreeSet<&NodeId> = visible.iter().collect();
+    let place = |n: &NodeId| -> Option<NodeId> {
+        if kids.contains(n) || shown.contains(n) {
+            return Some(n.clone());
+        }
+        [graph.namespace_of(n), graph.unit_of(n)]
+            .into_iter()
+            .flatten()
+            .find(|g| shown.contains(g))
+    };
+    let mut groups: BTreeMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = BTreeMap::new();
+    for e in graph
+        .edges
+        .iter()
+        .filter(|e| INVOCATION.contains(&e.kind) || e.kind == EdgeKind::Requires)
+    {
+        if !kids.contains(&e.from) && !kids.contains(&e.to) {
+            continue;
+        }
+        let (Some(from), Some(to)) = (place(&e.from), place(&e.to)) else {
+            continue;
+        };
+        if from != to {
+            groups.entry((from, to, e.kind)).or_default().push(e);
+        }
+    }
+    let edges = groups
+        .into_iter()
+        .map(|((from, to, kind), members)| match members.as_slice() {
+            [one] if one.from == from && one.to == to => (*one).clone(),
+            _ => roll(from, to, kind, &members),
+        })
+        .collect();
+    GraphPayload {
+        nodes: children.iter().map(|c| graph.group_node(c)).collect(),
+        edges,
+        truncated,
+        aggregated: None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,6 +453,54 @@ mod tests {
         let (all, truncated) = search(&g, "charge", &[], 0);
         assert_eq!(all.len(), 2);
         assert!(!truncated);
+    }
+
+    #[test]
+    fn filters_and_expand() {
+        let g = graph();
+        let p = g.payload(AggregationLevel::Symbol);
+        let strong = filter(
+            &g,
+            p.clone(),
+            &Filter {
+                min_certainty: Some(Certainty::Certain),
+                ..Filter::default()
+            },
+        );
+        assert_eq!(strong.edges.len(), 2, "contains has no certainty and stays");
+        let only_calls = filter(
+            &g,
+            p,
+            &Filter {
+                kinds: vec![EdgeKind::Calls],
+                ..Filter::default()
+            },
+        );
+        assert_eq!(only_calls.edges.len(), 1);
+        let ns = NodeId::from_str("clj:services/orders//orders.core").unwrap();
+        let e = expand(&g, &ns, &[], 10);
+        assert_eq!(e.nodes.len(), 1, "orders.core contains total");
+        assert!(e.edges.is_empty(), "charge! is neither a child nor visible");
+        let charge = NodeId::from_str("clj:services/orders//orders.core/charge!").unwrap();
+        let e = expand(&g, &ns, std::slice::from_ref(&charge), 10);
+        assert_eq!(e.edges.len(), 1);
+        assert_eq!(e.edges[0].count, None, "a single raw edge is kept as is");
+        assert!(expand(&g, &ns, &[], 0).nodes.len() == 1);
+    }
+
+    #[test]
+    fn fit_keeps_small_graphs_and_cap_trims_big_ones() {
+        let g = graph();
+        let p = fit(&g, AggregationLevel::Symbol, &Filter::default());
+        assert!(!p.truncated);
+        assert_eq!(p.aggregated, None);
+        let mut big = GraphPayload::default();
+        for i in 0..(MAX_NODES + 5) {
+            big.nodes.push(node(&format!("clj:.//n/x{i}")));
+        }
+        let capped = cap(big);
+        assert!(capped.truncated);
+        assert_eq!(capped.nodes.len(), MAX_NODES);
     }
 
     #[test]

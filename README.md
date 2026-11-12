@@ -17,6 +17,7 @@ cargo run -- units PATH|URL      # build units and source roots of a repository 
 cargo run -- analyze PATH|URL    # build (or reuse) the snapshot and print counts
 cargo run -- show charge! PATH    # a symbol with its callers and callees
 cargo run -- graph --format dot PATH | dot -Tsvg > g.svg
+cargo run -- serve PATH|URL      # the GUI on 127.0.0.1 (prints the URL)
 cargo run -- cache ls            # clones and snapshots in the cache
 cargo run -- schema envelope     # JSON Schema of the output envelope
 ```

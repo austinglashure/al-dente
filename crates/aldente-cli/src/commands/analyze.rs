@@ -1,8 +1,6 @@
 //! `aldente analyze [TARGET] [--no-cache]`: builds or reuses the snapshot and
 //! prints counts.
 
-use std::collections::BTreeMap;
-
 use aldente_model::analyze::AnalyzeSummary;
 use aldente_model::{Envelope, ExitCode};
 use clap::Args;
@@ -44,35 +42,11 @@ pub fn run(args: &AnalyzeArgs, json: bool) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::Success)
 }
 
-/// Counts nodes, edges and blind spots by kind.
+/// Counts for the loaded snapshot, including diagnostics from acquiring it.
 ///
 /// Example: clj-mini gives `units: 1, files: 13, nodes: {namespace: 13, …}`.
 fn summarize(loaded: &Loaded) -> AnalyzeSummary {
-    let snap = &loaded.outcome.snapshot;
-    let mut nodes = BTreeMap::new();
-    for n in snap.graph.nodes.values() {
-        *nodes.entry(n.kind).or_default() += 1;
-    }
-    let mut edges = BTreeMap::new();
-    for e in &snap.graph.edges {
-        *edges.entry(e.kind).or_default() += 1;
-    }
-    let mut blindspots = BTreeMap::new();
-    for b in &snap.graph.blindspots {
-        *blindspots.entry(b.category).or_default() += 1;
-    }
-    let mut diagnostics = snap.graph.diagnostics.clone();
-    diagnostics.extend(loaded.target.diagnostics.iter().cloned());
-    diagnostics.sort();
-    diagnostics.dedup();
-    AnalyzeSummary {
-        units: snap.units.len(),
-        files: snap.units.iter().map(|u| u.files).sum(),
-        nodes,
-        edges,
-        blindspots,
-        diagnostics,
-    }
+    aldente_graph::summary::summarize(&loaded.outcome.snapshot, &loaded.target.diagnostics)
 }
 
 /// The text form.

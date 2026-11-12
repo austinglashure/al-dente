@@ -109,7 +109,7 @@ impl Graph {
     ///
     /// Example: `clj:.//shop.core/checkout` gives `clj:.//shop.core`;
     /// `ext:clj//clojure.core/map` gives `ext:clj//clojure.core`.
-    fn namespace_of(&self, id: &NodeId) -> Option<NodeId> {
+    pub fn namespace_of(&self, id: &NodeId) -> Option<NodeId> {
         match id {
             NodeId::Namespace(_) | NodeId::Platform(_) => Some(id.clone()),
             NodeId::External(ext) => ExternalId::namespace(ext.lang(), ext.ns())
@@ -131,7 +131,7 @@ impl Graph {
     /// The unit a node belongs to; externals and platforms have none yet.
     ///
     /// Example: `clj:services/orders//orders.core/total` gives `unit:services/orders`.
-    fn unit_of(&self, id: &NodeId) -> Option<NodeId> {
+    pub fn unit_of(&self, id: &NodeId) -> Option<NodeId> {
         match id {
             NodeId::Unit(_) => Some(id.clone()),
             _ => self.nodes.get(id)?.unit.clone(),
@@ -142,7 +142,7 @@ impl Graph {
     /// synthesized namespace-level external.
     ///
     /// Example: `ext:clj//clojure.core` gives an external node named `clojure.core`.
-    fn group_node(&self, id: &NodeId) -> Node {
+    pub(crate) fn group_node(&self, id: &NodeId) -> Node {
         self.nodes.get(id).cloned().unwrap_or_else(|| Node {
             id: id.clone(),
             kind: id.kind(),
@@ -166,7 +166,7 @@ impl Graph {
 ///
 /// Example: three `calls` edges (2 certain, 1 likely) give `count: 3`,
 /// `certainty: certain`, `by_certainty: {certain: 2, likely: 1}`.
-fn roll(from: NodeId, to: NodeId, kind: EdgeKind, members: &[&Edge]) -> Edge {
+pub(crate) fn roll(from: NodeId, to: NodeId, kind: EdgeKind, members: &[&Edge]) -> Edge {
     let mut by_certainty: BTreeMap<Certainty, u64> = BTreeMap::new();
     let mut reasons: BTreeMap<Reason, u64> = BTreeMap::new();
     for e in members {

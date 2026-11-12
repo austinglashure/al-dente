@@ -9,6 +9,7 @@ pub mod graph;
 pub mod loaded;
 pub mod query;
 pub mod schema;
+pub mod serve;
 pub mod show;
 pub mod target;
 pub mod units;
