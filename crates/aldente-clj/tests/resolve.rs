@@ -321,8 +321,16 @@ fn no_usage_is_dropped() {
                 .edges
                 .iter()
                 .filter(|e| matches!(e.kind, EdgeKind::Calls | EdgeKind::References))
-                // Derived edges (R7 param-flow) are not var usages.
-                .filter(|e| e.reason != Some(Reason::ParamFlow))
+                // Only reasons that come straight from a var usage; derived
+                // edges (param-flow, quoted-resolve, dynamic) are not usages.
+                .filter(|e| {
+                    matches!(
+                        e.reason,
+                        Some(
+                            Reason::Direct | Reason::ValueRef | Reason::Interop | Reason::MacroBody
+                        )
+                    )
+                })
                 .map(|e| e.sites.len())
                 .sum();
             assert_eq!(sites + s.merged_duplicates, s.sites, "{fixture}: {s:?}");

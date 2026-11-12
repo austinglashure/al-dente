@@ -337,3 +337,18 @@ pub async fn search(State(s): St, RawQuery(q): RawQuery) -> Response {
         query::search(&s.snapshot.graph, p.get("q").unwrap_or(""), &kinds, limit);
     ok(&s, "find", FindResult { matches, truncated })
 }
+
+/// `GET /blindspots`: blind spots and diagnostics (the CLI's `blindspots`).
+///
+/// Example: for clj-mini, two holes and one `macro-generated` entry.
+pub async fn blindspots(State(s): St) -> Response {
+    let mut diagnostics = s.snapshot.graph.diagnostics.clone();
+    diagnostics.extend(s.summary.diagnostics.iter().cloned());
+    diagnostics.sort();
+    diagnostics.dedup();
+    let report = aldente_model::query::BlindspotReport {
+        blindspots: s.snapshot.graph.blindspots.clone(),
+        diagnostics,
+    };
+    ok(&s, "blindspots", report)
+}

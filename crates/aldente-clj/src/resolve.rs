@@ -571,7 +571,178 @@ impl<'a> Resolver<'a> {
                     site: site.clone(),
                 });
             }
-            self.edge(scope, to, kind, Some(certainty), Some(reason), lang, site);
+            let core_call =
+                is_call && matches!(u.to.as_deref(), Some("clojure.core" | "cljs.core"));
+            self.edge(
+                scope.clone(),
+                to,
+                kind,
+                Some(certainty),
+                Some(reason),
+                lang,
+                site,
+            );
+            if core_call {
+                self.dynamic_code(&scope, u, pos);
+            }
+        }
+    }
+
+    /// R8 for a call to a core function: quoted-literal resolution becomes a
+    /// `likely` `quoted-resolve` call to the named var; resolution of
+    /// anything else, and evaluation, becomes a hole with a certain `dynamic`
+    /// call and a blind spot; `intern`, `alter-var-root` and `with-redefs`
+    /// flag their target var `dynamic`.
+    ///
+    /// Example: `(requiring-resolve 'a.b/c)` gives `calls(likely quoted-resolve) a.b/c`;
+    /// `(eval x)` gives `calls(certain dynamic) hole:dynamic-eval@…`.
+    fn dynamic_code(&mut self, scope: &NodeId, u: &VarUsage, pos: Pos) {
+        let Some(ix) = self.indexes.get(u.filename.as_str()) else {
+            return;
+        };
+        let Some(call) = ix.calls.iter().find(|c| c.span.start == pos).cloned() else {
+            return;
+        };
+        let quoted = |i: usize| {
+            call.arg_info
+                .get(i)
+                .filter(|a| a.kind == "quoting_lit")
+                .map(|a| a.text.trim_start_matches('\'').to_owned())
+        };
+        match u.name.as_str() {
+            "resolve" | "requiring-resolve" | "find-var" | "ns-resolve" => {
+                let named = if u.name == "ns-resolve" {
+                    quoted(0).zip(quoted(1)).map(|(ns, name)| (ns, name))
+                } else {
+                    quoted(0)
+                        .and_then(|s| s.split_once('/').map(|(a, b)| (a.to_owned(), b.to_owned())))
+                };
+                match named {
+                    Some((ns, name)) => {
+                        let target = if self.local_ns.contains(&ns) {
+                            self.symbol_or_placeholder(&ns, &name, u)
+                        } else {
+                            self.external(&ns, Some(&name))
+                        };
+                        if let Some(target) = target {
+                            let lang = u.lang.as_deref().and_then(Lang::from_token);
+                            self.edge(
+                                scope.clone(),
+                                target,
+                                EdgeKind::Calls,
+                                Some(Certainty::Likely),
+                                Some(Reason::QuotedResolve),
+                                lang,
+                                site_of(u),
+                            );
+                        }
+                    }
+                    None => self.hole(scope, u, pos, BlindSpotCategory::DynamicResolve),
+                }
+            }
+            "eval" | "load-string" | "load-file" | "load-reader" | "load" => {
+                self.hole(scope, u, pos, BlindSpotCategory::DynamicEval);
+            }
+            "alter-var-root" | "intern" | "with-redefs" => self.flag_dynamic(u, &call),
+            _ => {}
+        }
+    }
+
+    /// A hole node at the call, a certain `dynamic` call from `scope` to it,
+    /// and a blind spot of the same category.
+    ///
+    /// Example: `(eval x)` at 16:20 gives `hole:dynamic-eval@src/dyn/core.clj:16:20`.
+    fn hole(&mut self, scope: &NodeId, u: &VarUsage, pos: Pos, category: BlindSpotCategory) {
+        let Ok(file) = RepoPath::parse(&u.filename) else {
+            return;
+        };
+        let id = NodeId::Hole(aldente_model::HoleId::new(
+            category, file, pos.line, pos.col,
+        ));
+        let lang = lang_of(u.lang.as_deref(), &u.filename);
+        let node = self.nodes.entry(id.clone()).or_insert_with(|| Node {
+            id: id.clone(),
+            kind: NodeKind::Hole,
+            subkind: None,
+            name: format!("{} ({})", u.name, category.as_str()),
+            namespace: Some(u.from.clone()),
+            unit: Some(NodeId::Unit(self.unit.dir.clone())),
+            langs: BTreeSet::new(),
+            flags: BTreeSet::new(),
+            loc: location(&u.filename, pos.line, pos.col, None, None),
+            doc: None,
+            signature: None,
+        });
+        node.langs.insert(lang);
+        self.blindspots.push(BlindSpot {
+            category,
+            node: Some(id.clone()),
+            site: site_of(u),
+            message: format!(
+                "{} with a computed argument: the target cannot be known statically",
+                u.name
+            ),
+        });
+        let edge_lang = u.lang.as_deref().and_then(Lang::from_token);
+        self.edge(
+            scope.clone(),
+            id,
+            EdgeKind::Calls,
+            Some(Certainty::Certain),
+            Some(Reason::Dynamic),
+            edge_lang,
+            site_of(u),
+        );
+    }
+
+    /// Flags the var an `alter-var-root`, `intern` or `with-redefs` changes as
+    /// `dynamic`: the var usage inside the first argument (`#'a/b`, the
+    /// binding names of `with-redefs`), or `intern`'s quoted namespace and name.
+    ///
+    /// Example: `(alter-var-root #'t/counter inc)` flags `dyn.target/counter`.
+    fn flag_dynamic(&mut self, u: &VarUsage, call: &crate::forms::CallSite) {
+        let mut targets: Vec<NodeId> = Vec::new();
+        if u.name == "intern" {
+            let q = |i: usize| {
+                call.arg_info
+                    .get(i)
+                    .filter(|a| a.kind == "quoting_lit")
+                    .map(|a| a.text.trim_start_matches('\'').to_owned())
+            };
+            if let (Some(ns), Some(name)) = (q(0), q(1))
+                && self.local_ns.contains(&ns)
+                && let Some(id) = self.symbol_or_placeholder(&ns, &name, u)
+            {
+                targets.push(id);
+            }
+        } else if let Some(span) = call.args.first() {
+            let names: Vec<String> = match call.arg_info.first() {
+                Some(a) if a.kind == "vec_lit" => a
+                    .entries
+                    .iter()
+                    .map(|(k, _)| local(Some(k)).to_owned())
+                    .collect(),
+                _ => Vec::new(),
+            };
+            let inside: Vec<VarUsage> = self
+                .run
+                .analysis
+                .var_usages
+                .iter()
+                .filter(|v| v.filename == u.filename && upos(v).is_some_and(|p| span.contains(p)))
+                .filter(|v| u.name != "with-redefs" || names.contains(&v.name))
+                .cloned()
+                .collect();
+            for v in inside {
+                if let Some((NodeId::Symbol(s), _)) = self.target(&v) {
+                    targets.push(NodeId::Symbol(s));
+                }
+            }
+        }
+        for id in targets {
+            if let Some(node) = self.nodes.get_mut(&id) {
+                node.flags.insert(SymbolFlag::Dynamic);
+            }
         }
     }
 

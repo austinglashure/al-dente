@@ -311,6 +311,7 @@ fn responses_match_the_cli_schemas() {
         ),
         ("/api/v1/node?id=g", "show", "aldente/show/v1"),
         ("/api/v1/search?q=f", "find", "aldente/find/v1"),
+        ("/api/v1/blindspots", "blindspots", "aldente/blindspots/v1"),
     ] {
         let (status, _, body) = s.ok_get(path);
         assert_eq!(status, 200, "{path}: {body}");

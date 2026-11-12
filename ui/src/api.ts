@@ -2,7 +2,7 @@
 // opened (`/?token=…`); it is kept in sessionStorage, removed from the
 // address bar, and sent as a header on every API call.
 
-import type { Envelope, FindResult, Payload, ShowResult, SnapshotOverview } from './types';
+import type { BlindspotReport, Envelope, FindResult, Payload, ShowResult, SnapshotOverview } from './types';
 
 const TOKEN_KEY = 'aldente-token';
 
@@ -81,4 +81,5 @@ export class Api {
   node = (id: string) => this.json<ShowResult>('node', { id });
   search = (q: string) => this.json<FindResult>('search', { q, limit: 20 });
   source = (id: string) => this.text('source', { id, context: 2 });
+  blindspots = () => this.json<BlindspotReport>('blindspots');
 }

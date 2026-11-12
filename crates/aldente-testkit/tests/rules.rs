@@ -204,3 +204,79 @@ fn r7_layer_2_param_flow_matches_expected() {
 fn higher_order_golden() {
     assert_graph_snapshot("clj-rules/higher-order", AggregationLevel::Symbol);
 }
+
+#[test]
+fn r8_dynamic_code_matches_expected() {
+    use aldente_model::Reason;
+    let g = analyze_fixture(&fixture_dir("clj-rules/dynamic")).graph;
+    let short = |id: &NodeId| id.to_string().trim_start_matches("clj:.//").to_owned();
+    let interesting: BTreeSet<(String, String, Option<Certainty>, Option<Reason>)> = g
+        .edges
+        .iter()
+        .filter(|e| matches!(e.reason, Some(Reason::QuotedResolve | Reason::Dynamic)))
+        .map(|e| (short(&e.from), short(&e.to), e.certainty, e.reason))
+        .collect();
+    let q = |f: &str, t: &str| {
+        (
+            format!("dyn.core/{f}"),
+            format!("dyn.target/{t}"),
+            Some(Certainty::Likely),
+            Some(Reason::QuotedResolve),
+        )
+    };
+    let h = |f: &str, cat: &str, at: &str| {
+        (
+            format!("dyn.core/{f}"),
+            format!("hole:{cat}@src/dyn/core.clj:{at}"),
+            Some(Certainty::Certain),
+            Some(Reason::Dynamic),
+        )
+    };
+    let expected: BTreeSet<_> = [
+        q("by-resolve", "handler"),
+        q("by-requiring-resolve", "other"),
+        q("by-ns-resolve", "handler"),
+        q("by-find-var", "other"),
+        h("computed", "dynamic-resolve", "12:23"),
+        h("computed-ns", "dynamic-resolve", "14:28"),
+        h("evaluate", "dynamic-eval", "16:20"),
+        h("load-it", "dynamic-eval", "18:19"),
+        h("load-a-file", "dynamic-eval", "20:26"),
+        h("load-reader-it", "dynamic-eval", "22:26"),
+        h("load-lib", "dynamic-eval", "24:19"),
+    ]
+    .into_iter()
+    .collect();
+    assert_eq!(interesting, expected);
+    let holes = g
+        .nodes
+        .values()
+        .filter(|n| n.kind == aldente_model::NodeKind::Hole)
+        .count();
+    assert_eq!(holes, 7);
+    let hole_spots = g
+        .blindspots
+        .iter()
+        .filter(|b| {
+            matches!(
+                b.category,
+                aldente_model::BlindSpotCategory::DynamicEval
+                    | aldente_model::BlindSpotCategory::DynamicResolve
+            )
+        })
+        .count();
+    assert_eq!(hole_spots, 7, "every hole is a blind spot");
+    for var in ["counter", "made", "handler"] {
+        let id: NodeId = format!("clj:.//dyn.target/{var}").parse().unwrap();
+        let node = g.nodes.get(&id).unwrap_or_else(|| panic!("no node {var}"));
+        assert!(
+            node.flags.contains(&aldente_model::SymbolFlag::Dynamic),
+            "{var} not flagged dynamic"
+        );
+    }
+}
+
+#[test]
+fn dynamic_golden() {
+    assert_graph_snapshot("clj-rules/dynamic", AggregationLevel::Symbol);
+}

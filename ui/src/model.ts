@@ -103,7 +103,7 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
       label: labelFor(n),
       x: base.x + (random() - 0.5) * 10,
       y: base.y + (random() - 0.5) * 10,
-      size: n.kind === 'unit' || n.kind === 'namespace' ? 8 : 4,
+      size: n.kind === 'unit' || n.kind === 'namespace' ? 8 : n.kind === 'hole' ? 7 : 4,
       color: kindColor(n.kind),
       node: n,
     });
@@ -134,6 +134,7 @@ export function dropNodes(g: CanvasGraph, ids: string[]): void {
  *  the repository root), everything else by name.
  *  Example: `labelFor({kind: 'unit', name: 'modules/reitit-core'})` is `'reitit-core'`. */
 export function labelFor(n: GNode): string {
+  if (n.kind === 'hole') return `⚠ ${n.name}`;
   if (n.kind !== 'unit') return n.name;
   if (n.name === '.') return '(root)';
   return n.name.split('/').pop() ?? n.name;

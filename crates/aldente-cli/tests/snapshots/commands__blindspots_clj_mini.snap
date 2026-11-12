@@ -1,8 +1,10 @@
 ---
 source: crates/aldente-cli/tests/commands.rs
-assertion_line: 163
+assertion_line: 222
 expression: "env.text(&[\"blindspots\"])"
 ---
-blind spots (1):
+blind spots (3):
+  dynamic-eval  src/shop/plugins.clj:12:3  eval with a computed argument: the target cannot be known statically
+  dynamic-resolve  src/shop/plugins.clj:8:11  requiring-resolve with a computed argument: the target cannot be known statically
   macro-generated  src/shop/util.clj:16:1  calls made by expansions of shop.util/with-timing are not visible
 diagnostics (0):

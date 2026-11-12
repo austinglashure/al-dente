@@ -75,7 +75,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/expand", get(api::expand))
         .route("/api/v1/node", get(api::node))
         .route("/api/v1/source", get(api::source))
-        .route("/api/v1/search", get(api::search));
+        .route("/api/v1/search", get(api::search))
+        .route("/api/v1/blindspots", get(api::blindspots));
     #[cfg(test)]
     let api = api.route("/api/v1/__panic", get(tests::panics));
     api.fallback(asset)

@@ -42,3 +42,8 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .swatch-certain { border-top-width: 3px; }
 .swatch-likely { border-top-width: 2px; }
 .swatch-possible { border-top-width: 1px; }
+.blindspots { margin: 8px 0; }
+.blindspots summary { cursor: pointer; font-weight: 600; }
+.blindspots li { font-size: 0.85rem; margin: 2px 0; }
+.badge { display: inline-block; border-radius: 3px; padding: 0 4px; font-size: 0.75rem; background: #fee0d2; color: #a50f15; }
+.small-print { font-size: 0.8rem; margin: 2px 0 4px; }

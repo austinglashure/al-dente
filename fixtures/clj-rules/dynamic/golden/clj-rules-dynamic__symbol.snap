@@ -1,0 +1,108 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 46
+node clj:.//dyn.core namespace langs:clj
+node clj:.//dyn.core/bump symbol/fn langs:clj
+node clj:.//dyn.core/by-find-var symbol/fn langs:clj
+node clj:.//dyn.core/by-ns-resolve symbol/fn langs:clj
+node clj:.//dyn.core/by-requiring-resolve symbol/fn langs:clj
+node clj:.//dyn.core/by-resolve symbol/fn langs:clj
+node clj:.//dyn.core/computed symbol/fn langs:clj
+node clj:.//dyn.core/computed-ns symbol/fn langs:clj
+node clj:.//dyn.core/evaluate symbol/fn langs:clj
+node clj:.//dyn.core/load-a-file symbol/fn langs:clj
+node clj:.//dyn.core/load-it symbol/fn langs:clj
+node clj:.//dyn.core/load-lib symbol/fn langs:clj
+node clj:.//dyn.core/load-reader-it symbol/fn langs:clj
+node clj:.//dyn.core/make-var symbol/fn langs:clj
+node clj:.//dyn.core/spread symbol/fn langs:clj
+node clj:.//dyn.core/stubbed symbol/fn langs:clj
+node clj:.//dyn.target namespace langs:clj
+node clj:.//dyn.target/*config* symbol/var [dynamic] langs:clj
+node clj:.//dyn.target/counter symbol/var [dynamic] langs:clj
+node clj:.//dyn.target/handler symbol/fn [dynamic] langs:clj
+node clj:.//dyn.target/made symbol/var [dynamic] langs:clj
+node clj:.//dyn.target/other symbol/fn langs:clj
+node ext:clj//clojure.core/alter-var-root external
+node ext:clj//clojure.core/apply external
+node ext:clj//clojure.core/constantly external
+node ext:clj//clojure.core/eval external
+node ext:clj//clojure.core/find-var external
+node ext:clj//clojure.core/inc external
+node ext:clj//clojure.core/intern external
+node ext:clj//clojure.core/load external
+node ext:clj//clojure.core/load-file external
+node ext:clj//clojure.core/load-reader external
+node ext:clj//clojure.core/load-string external
+node ext:clj//clojure.core/ns-resolve external
+node ext:clj//clojure.core/read-string external
+node ext:clj//clojure.core/requiring-resolve external
+node ext:clj//clojure.core/resolve external
+node ext:clj//clojure.core/with-redefs external
+node hole:dynamic-eval@src/dyn/core.clj:16:20 hole langs:clj
+node hole:dynamic-eval@src/dyn/core.clj:18:19 hole langs:clj
+node hole:dynamic-eval@src/dyn/core.clj:20:26 hole langs:clj
+node hole:dynamic-eval@src/dyn/core.clj:22:26 hole langs:clj
+node hole:dynamic-eval@src/dyn/core.clj:24:19 hole langs:clj
+node hole:dynamic-resolve@src/dyn/core.clj:12:23 hole langs:clj
+node hole:dynamic-resolve@src/dyn/core.clj:14:28 hole langs:clj
+node unit:. unit langs:clj
+# edges 55
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/bump
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/by-find-var
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/by-ns-resolve
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/by-requiring-resolve
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/by-resolve
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/computed
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/computed-ns
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/evaluate
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/load-a-file
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/load-it
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/load-lib
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/load-reader-it
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/make-var
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/spread
+edge clj:.//dyn.core -contains-> clj:.//dyn.core/stubbed
+edge clj:.//dyn.core -requires-> clj:.//dyn.target @ src/dyn/core.clj:2:14
+edge clj:.//dyn.core/bump -calls(certain direct)-> ext:clj//clojure.core/alter-var-root @ src/dyn/core.clj:28:15
+edge clj:.//dyn.core/bump -references(likely value-ref)-> clj:.//dyn.target/counter @ src/dyn/core.clj:28:33
+edge clj:.//dyn.core/bump -references(likely value-ref)-> ext:clj//clojure.core/inc @ src/dyn/core.clj:28:43
+edge clj:.//dyn.core/by-find-var -calls(certain direct)-> ext:clj//clojure.core/find-var @ src/dyn/core.clj:10:22
+edge clj:.//dyn.core/by-find-var -calls(likely quoted-resolve)-> clj:.//dyn.target/other @ src/dyn/core.clj:10:22
+edge clj:.//dyn.core/by-ns-resolve -calls(certain direct)-> ext:clj//clojure.core/ns-resolve @ src/dyn/core.clj:8:25
+edge clj:.//dyn.core/by-ns-resolve -calls(likely quoted-resolve)-> clj:.//dyn.target/handler @ src/dyn/core.clj:8:25
+edge clj:.//dyn.core/by-requiring-resolve -calls(certain direct)-> ext:clj//clojure.core/requiring-resolve @ src/dyn/core.clj:6:32
+edge clj:.//dyn.core/by-requiring-resolve -calls(likely quoted-resolve)-> clj:.//dyn.target/other @ src/dyn/core.clj:6:32
+edge clj:.//dyn.core/by-resolve -calls(certain direct)-> ext:clj//clojure.core/resolve @ src/dyn/core.clj:4:22
+edge clj:.//dyn.core/by-resolve -calls(likely quoted-resolve)-> clj:.//dyn.target/handler @ src/dyn/core.clj:4:22
+edge clj:.//dyn.core/computed -calls(certain direct)-> ext:clj//clojure.core/requiring-resolve @ src/dyn/core.clj:12:23
+edge clj:.//dyn.core/computed -calls(certain dynamic)-> hole:dynamic-resolve@src/dyn/core.clj:12:23 @ src/dyn/core.clj:12:23
+edge clj:.//dyn.core/computed-ns -calls(certain direct)-> ext:clj//clojure.core/ns-resolve @ src/dyn/core.clj:14:28
+edge clj:.//dyn.core/computed-ns -calls(certain dynamic)-> hole:dynamic-resolve@src/dyn/core.clj:14:28 @ src/dyn/core.clj:14:28
+edge clj:.//dyn.core/evaluate -calls(certain direct)-> ext:clj//clojure.core/eval @ src/dyn/core.clj:16:20
+edge clj:.//dyn.core/evaluate -calls(certain direct)-> ext:clj//clojure.core/read-string @ src/dyn/core.clj:16:26
+edge clj:.//dyn.core/evaluate -calls(certain dynamic)-> hole:dynamic-eval@src/dyn/core.clj:16:20 @ src/dyn/core.clj:16:20
+edge clj:.//dyn.core/load-a-file -calls(certain direct)-> ext:clj//clojure.core/load-file @ src/dyn/core.clj:20:26
+edge clj:.//dyn.core/load-a-file -calls(certain dynamic)-> hole:dynamic-eval@src/dyn/core.clj:20:26 @ src/dyn/core.clj:20:26
+edge clj:.//dyn.core/load-it -calls(certain direct)-> ext:clj//clojure.core/load-string @ src/dyn/core.clj:18:19
+edge clj:.//dyn.core/load-it -calls(certain dynamic)-> hole:dynamic-eval@src/dyn/core.clj:18:19 @ src/dyn/core.clj:18:19
+edge clj:.//dyn.core/load-lib -calls(certain direct)-> ext:clj//clojure.core/load @ src/dyn/core.clj:24:19
+edge clj:.//dyn.core/load-lib -calls(certain dynamic)-> hole:dynamic-eval@src/dyn/core.clj:24:19 @ src/dyn/core.clj:24:19
+edge clj:.//dyn.core/load-reader-it -calls(certain direct)-> ext:clj//clojure.core/load-reader @ src/dyn/core.clj:22:26
+edge clj:.//dyn.core/load-reader-it -calls(certain dynamic)-> hole:dynamic-eval@src/dyn/core.clj:22:26 @ src/dyn/core.clj:22:26
+edge clj:.//dyn.core/make-var -calls(certain direct)-> ext:clj//clojure.core/intern @ src/dyn/core.clj:30:19
+edge clj:.//dyn.core/spread -calls(certain direct)-> ext:clj//clojure.core/apply @ src/dyn/core.clj:26:23
+edge clj:.//dyn.core/stubbed -calls(certain direct)-> clj:.//dyn.target/handler @ src/dyn/core.clj:32:62
+edge clj:.//dyn.core/stubbed -calls(certain direct)-> ext:clj//clojure.core/constantly @ src/dyn/core.clj:32:42
+edge clj:.//dyn.core/stubbed -calls(certain direct)-> ext:clj//clojure.core/with-redefs @ src/dyn/core.clj:32:18
+edge clj:.//dyn.core/stubbed -references(likely value-ref)-> clj:.//dyn.target/handler @ src/dyn/core.clj:32:32
+edge clj:.//dyn.target -contains-> clj:.//dyn.target/*config*
+edge clj:.//dyn.target -contains-> clj:.//dyn.target/counter
+edge clj:.//dyn.target -contains-> clj:.//dyn.target/handler
+edge clj:.//dyn.target -contains-> clj:.//dyn.target/made
+edge clj:.//dyn.target -contains-> clj:.//dyn.target/other
+edge unit:. -contains-> clj:.//dyn.core
+edge unit:. -contains-> clj:.//dyn.target
+# truncated false

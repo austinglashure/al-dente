@@ -204,3 +204,23 @@ test.describe('certainty', () => {
     }
   });
 });
+
+test.describe('blind spots', () => {
+  test('holes are listed and link to the graph', async ({ page }) => {
+    const server = await startServer('clj-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      const list = page.getByTestId('blindspots');
+      await expect(list).toContainText('dynamic-resolve');
+      await expect(list).toContainText('dynamic-eval');
+      await expect(list).toContainText('macro-generated');
+      await list.locator('[data-node-id="hole:dynamic-eval@src/shop/plugins.clj:12:3"]').click();
+      const details = page.getByTestId('details');
+      await expect(details).toContainText('hole');
+      await expect(details).toContainText('run-script');
+    } finally {
+      server.close();
+    }
+  });
+});

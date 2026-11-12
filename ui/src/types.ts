@@ -105,3 +105,15 @@ export interface Envelope<T> {
   warnings: { code: string; message: string }[];
   error: { code: string; message: string; candidates?: string[] | null } | null;
 }
+
+export interface BlindSpot {
+  category: string;
+  node: string | null;
+  site: Site | null;
+  message: string;
+}
+
+export interface BlindspotReport {
+  blindspots: BlindSpot[];
+  diagnostics: { path: string | null; code: string; message: string }[];
+}

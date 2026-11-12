@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 110
+# nodes 112
 node clj:.//shop.audit namespace langs:clj
 node clj:.//shop.audit/record! symbol/fn langs:clj
 node clj:.//shop.core namespace langs:clj
@@ -111,9 +111,11 @@ node ext:clj//re-frame.core/reg-sub external
 node ext:clj//re-frame.core/subscribe external
 node ext:clj//react external
 node ext:clj//react/createElement external
+node hole:dynamic-eval@src/shop/plugins.clj:12:3 hole langs:clj
+node hole:dynamic-resolve@src/shop/plugins.clj:8:11 hole langs:clj
 node js:console.log platform
 node unit:. unit langs:clj,cljs
-# edges 189
+# edges 192
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -204,11 +206,14 @@ edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/audit-hook
 edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/load-plugin
 edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/run-script
 edge clj:.//shop.plugins/audit-hook -calls(certain direct)-> ext:clj//clojure.core/requiring-resolve @ src/shop/plugins.clj:5:4
+edge clj:.//shop.plugins/audit-hook -calls(likely quoted-resolve)-> clj:.//shop.audit/record! @ src/shop/plugins.clj:5:4
 edge clj:.//shop.plugins/load-plugin -calls(certain direct)-> ext:clj//clojure.core/let @ src/shop/plugins.clj:8:3
 edge clj:.//shop.plugins/load-plugin -calls(certain direct)-> ext:clj//clojure.core/requiring-resolve @ src/shop/plugins.clj:8:11
 edge clj:.//shop.plugins/load-plugin -calls(certain direct)-> ext:clj//clojure.core/symbol @ src/shop/plugins.clj:8:30
+edge clj:.//shop.plugins/load-plugin -calls(certain dynamic)-> hole:dynamic-resolve@src/shop/plugins.clj:8:11 @ src/shop/plugins.clj:8:11
 edge clj:.//shop.plugins/run-script -calls(certain direct)-> ext:clj//clojure.core/eval @ src/shop/plugins.clj:12:3
 edge clj:.//shop.plugins/run-script -calls(certain direct)-> ext:clj//clojure.core/read-string @ src/shop/plugins.clj:12:9
+edge clj:.//shop.plugins/run-script -calls(certain dynamic)-> hole:dynamic-eval@src/shop/plugins.clj:12:3 @ src/shop/plugins.clj:12:3
 edge clj:.//shop.pricing -contains-> clj:.//shop.pricing/half-off
 edge clj:.//shop.pricing -contains-> clj:.//shop.pricing/price
 edge clj:.//shop.pricing -requires-> clj:.//shop.util @ src/shop/pricing.clj:3:14

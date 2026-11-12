@@ -9,7 +9,7 @@ import { GraphView } from './GraphView';
 import { layout } from './layout';
 import { certaintyColor, edgeShown, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
-import type { GNode, Payload, ShowResult, UnitInfo } from './types';
+import type { BlindSpot, GNode, Payload, ShowResult, UnitInfo } from './types';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
 interface Crumb {
@@ -34,6 +34,7 @@ export function App() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
   const [panels, setPanels] = usePanels();
+  const [spots, setSpots] = useState<BlindSpot[]>([]);
   const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
@@ -72,6 +73,10 @@ export function App() {
     api
       .snapshot()
       .then((s) => setUnits(new Map(s.units.map((u) => [u.id, u]))))
+      .catch(fail);
+    api
+      .blindspots()
+      .then((r) => setSpots(r.blindspots))
       .catch(fail);
     const repo: Crumb = {
       label: 'Repository',
@@ -287,6 +292,24 @@ export function App() {
             {error}
           </p>
         )}
+        <details className="blindspots" data-testid="blindspots" open={spots.length > 0 && spots.length <= 20}>
+          <summary>Blind spots ({spots.length})</summary>
+          <p className="muted small-print">What the analyzer cannot see through. Click one to show it.</p>
+          <ul>
+            {spots.map((b, i) => (
+              <li key={`${b.category}-${b.node ?? ''}-${i}`}>
+                <span className={`badge badge-${b.category}`}>{b.category}</span>{' '}
+                {b.node ? (
+                  <button type="button" data-node-id={b.node} onClick={() => b.node && follow(b.node)} title={b.message}>
+                    {b.site ? `${b.site.file}:${b.site.line}` : b.node}
+                  </button>
+                ) : (
+                  <span title={b.message}>{b.site ? `${b.site.file}:${b.site.line}` : '–'}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
         <h2>On the canvas ({visible.length})</h2>
         <ul className="nodes" data-testid="node-list">
           {visible.map((n) => (
