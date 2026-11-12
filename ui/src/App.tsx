@@ -8,6 +8,7 @@ import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
 import { layout } from './layout';
 import { hidden, isAggregate, labelFor, mergePayload, newGraph } from './model';
+import { Splitter, usePanels } from './panels';
 import type { GNode, Payload, ShowResult, UnitInfo } from './types';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
@@ -32,6 +33,7 @@ export function App() {
   const [hideExternals, setHideExternals] = useState(true);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
+  const [panels, setPanels] = usePanels();
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   const relayout = useCallback(() => layout(graph, redraw), [graph, redraw]);
@@ -86,6 +88,20 @@ export function App() {
     },
     [api, fail],
   );
+
+  const deselect = useCallback(() => {
+    setSelected(null);
+    setDetails(null);
+    setSource(null);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') deselect();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [deselect]);
 
   /** Opens a unit (its namespaces) or a namespace (its functions, with the
    *  namespaces it talks to as context) on a canvas of its own. */
@@ -180,7 +196,13 @@ export function App() {
   };
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      style={{
+        gridTemplateColumns: `${panels.leftOpen ? `${panels.left}px 5px` : ''} 1fr ${panels.rightOpen ? `5px ${panels.right}px` : ''}`,
+      }}
+    >
+      {panels.leftOpen && (
       <aside className="left">
         <form onSubmit={runSearch} className="search">
           <input data-testid="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search functions…" aria-label="Search" />
@@ -246,6 +268,8 @@ export function App() {
           ))}
         </ul>
       </aside>
+      )}
+      {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}
       <main className="center">
         <nav className="breadcrumb" data-testid="breadcrumb" aria-label="What is open">
           {crumbs.map((c, i) => (
@@ -260,12 +284,34 @@ export function App() {
               )}
             </span>
           ))}
+          <span className="panel-toggles">
+            <button
+              type="button"
+              data-testid="toggle-left"
+              aria-pressed={panels.leftOpen}
+              onClick={() => setPanels({ leftOpen: !panels.leftOpen })}
+              title={panels.leftOpen ? 'Hide the list' : 'Show the list'}
+            >
+              {panels.leftOpen ? '◀ list' : '▶ list'}
+            </button>
+            <button
+              type="button"
+              data-testid="toggle-right"
+              aria-pressed={panels.rightOpen}
+              onClick={() => setPanels({ rightOpen: !panels.rightOpen })}
+              title={panels.rightOpen ? 'Hide details' : 'Show details'}
+            >
+              {panels.rightOpen ? 'details ▶' : 'details ◀'}
+            </button>
+          </span>
         </nav>
-        <GraphView graph={graph} version={version} selected={selected} isHidden={isHidden} onSelect={select} onDoubleClick={onDoubleClick} />
+        <GraphView graph={graph} version={version} selected={selected} isHidden={isHidden} onSelect={select} onDoubleClick={onDoubleClick} onDeselect={deselect} />
       </main>
+      {panels.rightOpen && <Splitter side="right" width={panels.right} onResize={(right) => setPanels({ right })} />}
+      {panels.rightOpen && (
       <aside className="right">
         {details ? (
-          <Details d={details} unit={units.get(details.node.id)} tools={tools} />
+          <Details d={details} unit={units.get(details.node.id)} tools={tools} onClose={deselect} />
         ) : (
           <div className="muted" data-testid="hint">
             <p>Click a node to see what it is, what it contains and what it is connected to.</p>
@@ -280,6 +326,7 @@ export function App() {
           </section>
         )}
       </aside>
+      )}
     </div>
   );
 }

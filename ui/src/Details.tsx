@@ -27,13 +27,18 @@ function childNoun(kind: string): string {
 
 /** The details panel with its tools.
  *  Example: `<Details d={show} unit={info} tools={tools} />`. */
-export function Details({ d, unit, tools }: { d: ShowResult; unit: UnitInfo | undefined; tools: Tools }) {
+export function Details({ d, unit, tools, onClose }: { d: ShowResult; unit: UnitInfo | undefined; tools: Tools; onClose: () => void }) {
   const n = d.node;
   const aggregate = n.kind === 'unit' || n.kind === 'namespace';
   const relations = aggregate ? ['Used by', 'Depends on'] : ['Callers', 'Callees'];
   return (
     <section data-testid="details">
-      <h2 title={n.id}>{labelFor(n)}</h2>
+      <div className="details-head">
+        <h2 title={n.id}>{labelFor(n)}</h2>
+        <button type="button" className="close" data-action="close" onClick={onClose} title="Deselect (Esc)" aria-label="Deselect">
+          ×
+        </button>
+      </div>
       <p className="muted">
         {n.kind}
         {n.subkind ? ` / ${n.subkind}` : ''}

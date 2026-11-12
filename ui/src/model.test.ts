@@ -61,3 +61,15 @@ describe('labels', () => {
     expect(labelFor(node('clj:.//a/f'))).toBe('f');
   });
 });
+
+import { clampWidth, parsePanels } from './panels';
+
+describe('panels', () => {
+  it('clamps widths and survives bad saved data', () => {
+    expect(clampWidth(10)).toBe(180);
+    expect(clampWidth(5000)).toBe(720);
+    expect(parsePanels('{"left": 300, "rightOpen": false}')).toEqual({ left: 300, right: 360, leftOpen: true, rightOpen: false });
+    expect(parsePanels('not json').left).toBe(280);
+    expect(parsePanels(null).rightOpen).toBe(true);
+  });
+});

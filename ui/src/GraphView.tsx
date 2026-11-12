@@ -13,16 +13,18 @@ interface Props {
   isHidden: (id: string) => boolean;
   onSelect: (id: string) => void;
   onDoubleClick: (id: string) => void;
+  /** Called when the empty canvas is clicked. */
+  onDeselect: () => void;
 }
 
 /** Renders `graph`; click selects, double-click expands or loads neighbors.
  *  Example: `<GraphView graph={g} version={v} selected={id} … />`. */
-export function GraphView({ graph, version, selected, isHidden, onSelect, onDoubleClick }: Props) {
+export function GraphView({ graph, version, selected, isHidden, onSelect, onDoubleClick, onDeselect }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const sigma = useRef<Sigma<NodeAttrs, EdgeAttrs> | null>(null);
-  const handlers = useRef({ onSelect, onDoubleClick, isHidden, selected });
+  const handlers = useRef({ onSelect, onDoubleClick, onDeselect, isHidden, selected });
   useLayoutEffect(() => {
-    handlers.current = { onSelect, onDoubleClick, isHidden, selected };
+    handlers.current = { onSelect, onDoubleClick, onDeselect, isHidden, selected };
   });
 
   useEffect(() => {
@@ -43,8 +45,16 @@ export function GraphView({ graph, version, selected, isHidden, onSelect, onDoub
       e.preventSigmaDefault();
       handlers.current.onDoubleClick(e.node);
     });
+    s.on('clickStage', () => handlers.current.onDeselect());
+    // Panels can be resized or hidden, which changes the canvas size.
+    const observer = new ResizeObserver(() => {
+      s.resize();
+      s.refresh();
+    });
+    observer.observe(container.current);
     sigma.current = s;
     return () => {
+      observer.disconnect();
       s.kill();
       sigma.current = null;
     };

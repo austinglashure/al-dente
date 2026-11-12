@@ -131,3 +131,53 @@ test.describe('opening units and namespaces', () => {
     }
   });
 });
+
+test.describe('panels', () => {
+  let server: Server;
+  test.beforeAll(async () => {
+    server = await startServer('clj-mini');
+  });
+  test.afterAll(() => server.close());
+
+  test('Escape and the close button deselect', async ({ page }) => {
+    guardNetwork(page);
+    await page.goto(server.url);
+    await listed(page, 'clj:.//shop.core').click();
+    await expect(page.getByTestId('details')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('hint')).toBeVisible();
+    await expect(page.getByTestId('details')).toHaveCount(0);
+    await listed(page, 'clj:.//shop.core').click();
+    await page.locator('[data-action="close"]').click();
+    await expect(page.getByTestId('hint')).toBeVisible();
+  });
+
+  test('panels can be hidden and resized, and remember it', async ({ page }) => {
+    guardNetwork(page);
+    await page.goto(server.url);
+    await expect(page.getByTestId('node-list')).toBeVisible();
+    await page.getByTestId('toggle-left').click();
+    await expect(page.getByTestId('node-list')).toBeHidden();
+    await page.getByTestId('toggle-left').click();
+    await expect(page.getByTestId('node-list')).toBeVisible();
+    await page.getByTestId('toggle-right').click();
+    await expect(page.getByTestId('hint')).toBeHidden();
+    await page.getByTestId('toggle-right').click();
+
+    const right = page.locator('aside.right');
+    const before = (await right.boundingBox())?.width ?? 0;
+    const handle = page.getByTestId('resize-right');
+    const box = await handle.boundingBox();
+    if (!box) throw new Error('no resize handle');
+    await page.mouse.move(box.x + box.width / 2, box.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 120, box.y + 100, { steps: 5 });
+    await page.mouse.up();
+    const after = (await right.boundingBox())?.width ?? 0;
+    expect(after).toBeGreaterThan(before + 80);
+
+    await page.reload();
+    const reloaded = (await page.locator('aside.right').boundingBox())?.width ?? 0;
+    expect(Math.abs(reloaded - after)).toBeLessThan(5);
+  });
+});
