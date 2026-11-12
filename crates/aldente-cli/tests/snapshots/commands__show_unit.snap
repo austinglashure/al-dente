@@ -1,9 +1,10 @@
 ---
 source: crates/aldente-cli/tests/commands.rs
-assertion_line: 131
+assertion_line: 136
 expression: "env.text(&[\"show\", \"unit:.\"])"
 ---
 unit:.  unit
+  flags service
   langs clj cljs
 callers (0)
 callees (0)

@@ -11,7 +11,7 @@ node clj:.//shop.model namespace langs:clj,cljs
 node clj:.//shop.payment namespace langs:clj
 node clj:.//shop.plugins namespace langs:clj
 node clj:.//shop.pricing namespace langs:clj
-node clj:.//shop.pricing-test namespace langs:clj
+node clj:.//shop.pricing-test namespace [test] langs:clj
 node clj:.//shop.ui.events namespace langs:cljs
 node clj:.//shop.ui.subs namespace langs:cljs
 node clj:.//shop.ui.views namespace langs:cljs

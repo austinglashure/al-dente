@@ -2,11 +2,11 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 116
+# nodes 121
 node clj:.//shop.audit namespace langs:clj
 node clj:.//shop.audit/record! symbol/fn langs:clj
 node clj:.//shop.core namespace langs:clj
-node clj:.//shop.core/-main symbol/fn langs:clj
+node clj:.//shop.core/-main symbol/fn [entry-point] langs:clj
 node clj:.//shop.core/<top>@L10 impl langs:clj
 node clj:.//shop.core/checkout symbol/fn langs:clj
 node clj:.//shop.interop namespace langs:clj
@@ -40,9 +40,9 @@ node clj:.//shop.plugins/audit-hook symbol/fn langs:clj
 node clj:.//shop.plugins/load-plugin symbol/fn langs:clj
 node clj:.//shop.plugins/run-script symbol/fn langs:clj
 node clj:.//shop.pricing namespace langs:clj
-node clj:.//shop.pricing-test namespace langs:clj
-node clj:.//shop.pricing-test/book-is-half-off symbol/test langs:clj
-node clj:.//shop.pricing-test/food-is-taxed symbol/test langs:clj
+node clj:.//shop.pricing-test namespace [test] langs:clj
+node clj:.//shop.pricing-test/book-is-half-off symbol/test [test entry-point] langs:clj
+node clj:.//shop.pricing-test/food-is-taxed symbol/test [test entry-point] langs:clj
 node clj:.//shop.pricing/half-off symbol/fn langs:clj
 node clj:.//shop.pricing/price symbol/multimethod langs:clj
 node clj:.//shop.pricing/price@:book impl langs:clj
@@ -57,13 +57,14 @@ node clj:.//shop.ui.subs namespace langs:cljs
 node clj:.//shop.ui.subs/reg-sub@:cart/items impl langs:cljs
 node clj:.//shop.ui.views namespace langs:cljs
 node clj:.//shop.ui.views/cart-view symbol/fn langs:cljs
-node clj:.//shop.ui.views/init symbol/fn langs:cljs
+node clj:.//shop.ui.views/init symbol/fn [entry-point] langs:cljs
 node clj:.//shop.ui.views/submit-button symbol/fn langs:cljs
 node clj:.//shop.util namespace langs:clj
 node clj:.//shop.util/apply-discount symbol/fn langs:clj
 node clj:.//shop.util/clamp symbol/fn [private] langs:clj
 node clj:.//shop.util/log-timing symbol/fn langs:clj
 node clj:.//shop.util/with-timing symbol/macro langs:clj
+node ext:clj//cljs.core external
 node ext:clj//cljs.core/assoc external
 node ext:clj//cljs.core/count external
 node ext:clj//cljs.core/deref external
@@ -74,6 +75,7 @@ node ext:clj//cljs.core/inc external
 node ext:clj//cljs.core/let external
 node ext:clj//cljs.core/str external
 node ext:clj//cljs.core/update-in external
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/* external
 node ext:clj//clojure.core/+ external
 node ext:clj//clojure.core/- external
@@ -117,9 +119,12 @@ node java:java.lang.System#currentTimeMillis platform
 node java:java.util.UUID platform
 node java:java.util.UUID#randomUUID platform
 node js:console.log platform
+node lib:maven:org.clojure/clojure library
+node lib:maven:org.clojure/clojurescript library
+node lib:maven:re-frame/re-frame library
 node lib:npm:react library
-node unit:. unit langs:clj,cljs
-# edges 197
+node unit:. unit [service] langs:clj,cljs
+# edges 202
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -303,6 +308,11 @@ edge clj:.//shop.util/with-timing -references(possible macro-body)-> clj:.//shop
 edge clj:.//shop.util/with-timing -references(possible macro-body)-> clj:.//shop.util/log-timing @ src/shop/util.clj:21:7
 edge clj:.//shop.util/with-timing -references(possible macro-body)-> ext:clj//clojure.core/- @ src/shop/util.clj:21:26
 edge clj:.//shop.util/with-timing -references(possible macro-body)-> ext:clj//clojure.core/let @ src/shop/util.clj:19:5
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.string
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.test
+edge lib:maven:org.clojure/clojurescript -provides(certain direct)-> ext:clj//cljs.core
+edge lib:maven:re-frame/re-frame -provides(likely name-match)-> ext:clj//re-frame.core
 edge lib:npm:react -provides(certain direct)-> ext:clj//react
 edge unit:. -contains-> clj:.//shop.audit
 edge unit:. -contains-> clj:.//shop.core

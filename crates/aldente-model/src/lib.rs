@@ -34,4 +34,4 @@ pub use id::{
 };
 pub use kinds::{BlindSpotCategory, EdgeKind, Lang, NodeKind, SymbolFlag, SymbolSubkind};
 pub use path::{PathError, PathStyle, RepoPath};
-pub use units::{RootKind, SourceRoot, UnitInfo, UnitsReport};
+pub use units::{DeclaredDep, RootKind, SourceRoot, UnitInfo, UnitsReport};

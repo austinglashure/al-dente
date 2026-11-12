@@ -1,6 +1,6 @@
 ---
 source: crates/aldente-testkit/src/golden.rs
-assertion_line: 65
+assertion_line: 66
 ---
 # nodes 8
 node clj:libs/common//common.util namespace langs:clj
@@ -8,7 +8,7 @@ node clj:services/billing//billing.core namespace langs:clj
 node clj:services/billing//config namespace langs:clj
 node clj:services/orders//config namespace langs:clj
 node clj:services/orders//orders.core namespace langs:clj
-node clj:services/orders//orders.core-test namespace langs:clj
+node clj:services/orders//orders.core-test namespace [test] langs:clj
 node ext:clj//clojure.core external
 node ext:clj//clojure.test external
 # edges 15

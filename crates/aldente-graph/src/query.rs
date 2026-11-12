@@ -7,6 +7,7 @@ use std::str::FromStr;
 use aldente_model::query::{Child, Neighbor};
 use aldente_model::{
     Aggregation, AggregationLevel, Certainty, Edge, EdgeKind, GraphPayload, Node, NodeId, NodeKind,
+    SymbolFlag, SymbolSubkind,
 };
 
 use crate::build::Graph;
@@ -62,6 +63,32 @@ fn suffix_match(id: &str, query: &str) -> bool {
     start == 0 || matches!(id.as_bytes().get(start - 1), Some(b'/' | b':'))
 }
 
+/// Which nodes a search returns besides the pattern.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SearchFilter {
+    /// Node kinds; with `subkinds`, a node matching either is kept. Both
+    /// empty means symbols, impls and namespaces.
+    pub kinds: Vec<NodeKind>,
+    pub subkinds: Vec<SymbolSubkind>,
+    /// Flags a node must all have.
+    pub flags: Vec<SymbolFlag>,
+}
+
+impl SearchFilter {
+    /// Whether `n` passes the kind and flag filters.
+    ///
+    /// Example: `{subkinds: [test]}` keeps `deftest` vars only.
+    fn keeps(&self, n: &Node) -> bool {
+        let default = [NodeKind::Symbol, NodeKind::Impl, NodeKind::Namespace];
+        let kind = if self.kinds.is_empty() && self.subkinds.is_empty() {
+            default.contains(&n.kind)
+        } else {
+            self.kinds.contains(&n.kind) || n.subkind.is_some_and(|s| self.subkinds.contains(&s))
+        };
+        kind && self.flags.iter().all(|f| n.flags.contains(f))
+    }
+}
+
 /// Nodes whose name or ID contains `pattern` (case-insensitive), of the
 /// given kinds (symbols, impls and namespaces when `kinds` is empty), sorted
 /// by ID, at most `limit` (0 = no limit). Returns whether more matched.
@@ -69,13 +96,29 @@ fn suffix_match(id: &str, query: &str) -> bool {
 /// Example: `search(g, "charge", &[], 50)` on clj-mini gives `shop.payment/charge`
 /// and its impls.
 pub fn search(graph: &Graph, pattern: &str, kinds: &[NodeKind], limit: usize) -> (Vec<Node>, bool) {
+    let filter = SearchFilter {
+        kinds: kinds.to_vec(),
+        ..SearchFilter::default()
+    };
+    search_filtered(graph, pattern, &filter, limit)
+}
+
+/// [`search`] with subkind and flag filters. An empty pattern matches every
+/// node the filter keeps.
+///
+/// Example: `search_filtered(g, "", &{flags: [entry-point]}, 0)` lists the
+/// entry points.
+pub fn search_filtered(
+    graph: &Graph,
+    pattern: &str,
+    filter: &SearchFilter,
+    limit: usize,
+) -> (Vec<Node>, bool) {
     let needle = pattern.to_lowercase();
-    let default = [NodeKind::Symbol, NodeKind::Impl, NodeKind::Namespace];
-    let kinds: &[NodeKind] = if kinds.is_empty() { &default } else { kinds };
     let mut hits: Vec<Node> = graph
         .nodes
         .values()
-        .filter(|n| kinds.contains(&n.kind))
+        .filter(|n| filter.keeps(n))
         .filter(|n| {
             n.name.to_lowercase().contains(&needle)
                 || n.id.to_string().to_lowercase().contains(&needle)

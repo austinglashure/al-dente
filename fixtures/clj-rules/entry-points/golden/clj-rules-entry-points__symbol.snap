@@ -1,0 +1,92 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 37
+node clj:.//app.core namespace langs:clj
+node clj:.//app.core/-main symbol/fn [entry-point] langs:clj
+node clj:.//app.core/app symbol/fn [entry-point] langs:clj
+node clj:.//app.core/exported symbol/fn [entry-point] langs:clj
+node clj:.//app.core/helper symbol/fn langs:clj
+node clj:.//app.core/other-handler symbol/fn [entry-point] langs:clj
+node clj:.//app.core/serve-other symbol/fn langs:clj
+node clj:.//app.core/start symbol/fn [entry-point] langs:clj
+node clj:.//app.helpers namespace [test] langs:clj
+node clj:.//app.helpers/make-req symbol/fn langs:clj
+node clj:.//app.latest namespace langs:clj
+node clj:.//app.latest/newest symbol/fn langs:clj
+node clj:.//app.midje-facts namespace [test] langs:clj
+node clj:.//app.midje-facts/<top>@L5 impl [test entry-point] langs:clj
+node clj:.//app.thing-test namespace [test] langs:clj
+node clj:.//app.thing-test/fixture-helper symbol/fn langs:clj
+node clj:.//app.thing-test/helper-is-two symbol/test [test entry-point] langs:clj
+node clj:.//app.thing-test/newest-is-stable symbol/test [test entry-point] langs:clj
+node ext:clj//clojure.core external
+node ext:clj//clojure.core/= external
+node ext:clj//clojure.test external
+node ext:clj//clojure.test.check.clojure-test external
+node ext:clj//clojure.test.check.clojure-test/defspec external
+node ext:clj//clojure.test.check.generators external
+node ext:clj//clojure.test.check.generators/nat external
+node ext:clj//clojure.test.check.properties external
+node ext:clj//clojure.test.check.properties/for-all external
+node ext:clj//clojure.test/is external
+node ext:clj//midje.sweet external
+node ext:clj//midje.sweet/=> external
+node ext:clj//midje.sweet/fact external
+node ext:clj//ring.adapter.jetty external
+node ext:clj//ring.adapter.jetty/run-jetty external
+node lib:maven:org.clojure/clojure library
+node lib:maven:org.clojure/test.check library
+node lib:unknown library
+node unit:. unit [service] langs:clj
+# edges 48
+edge clj:.//app.core -contains-> clj:.//app.core/-main
+edge clj:.//app.core -contains-> clj:.//app.core/app
+edge clj:.//app.core -contains-> clj:.//app.core/exported
+edge clj:.//app.core -contains-> clj:.//app.core/helper
+edge clj:.//app.core -contains-> clj:.//app.core/other-handler
+edge clj:.//app.core -contains-> clj:.//app.core/serve-other
+edge clj:.//app.core -contains-> clj:.//app.core/start
+edge clj:.//app.core -requires-> ext:clj//ring.adapter.jetty @ src/app/core.clj:2:14
+edge clj:.//app.core/-main -calls(certain direct)-> clj:.//app.core/start @ src/app/core.clj:15:3
+edge clj:.//app.core/serve-other -calls(certain direct)-> ext:clj//ring.adapter.jetty/run-jetty @ src/app/core.clj:12:3
+edge clj:.//app.core/serve-other -references(likely value-ref)-> clj:.//app.core/other-handler @ src/app/core.clj:12:20
+edge clj:.//app.core/start -calls(certain direct)-> ext:clj//ring.adapter.jetty/run-jetty @ src/app/core.clj:9:3
+edge clj:.//app.core/start -references(likely value-ref)-> clj:.//app.core/app @ src/app/core.clj:9:22
+edge clj:.//app.helpers -contains-> clj:.//app.helpers/make-req
+edge clj:.//app.latest -contains-> clj:.//app.latest/newest
+edge clj:.//app.midje-facts -contains-> clj:.//app.midje-facts/<top>@L5
+edge clj:.//app.midje-facts -requires-> clj:.//app.core @ test/app/midje_facts.clj:3:14
+edge clj:.//app.midje-facts -requires-> ext:clj//midje.sweet @ test/app/midje_facts.clj:2:14
+edge clj:.//app.midje-facts/<top>@L5 -calls(certain direct)-> clj:.//app.core/helper @ test/app/midje_facts.clj:6:3
+edge clj:.//app.midje-facts/<top>@L5 -calls(certain direct)-> ext:clj//midje.sweet/fact @ test/app/midje_facts.clj:5:1
+edge clj:.//app.midje-facts/<top>@L5 -references(likely value-ref)-> ext:clj//midje.sweet/=> @ test/app/midje_facts.clj:6:17
+edge clj:.//app.thing-test -contains-> clj:.//app.thing-test/fixture-helper
+edge clj:.//app.thing-test -contains-> clj:.//app.thing-test/helper-is-two
+edge clj:.//app.thing-test -contains-> clj:.//app.thing-test/newest-is-stable
+edge clj:.//app.thing-test -requires-> clj:.//app.core @ src/app/thing_test.clj:7:14
+edge clj:.//app.thing-test -requires-> ext:clj//clojure.test @ src/app/thing_test.clj:3:14
+edge clj:.//app.thing-test -requires-> ext:clj//clojure.test.check.clojure-test @ src/app/thing_test.clj:4:14
+edge clj:.//app.thing-test -requires-> ext:clj//clojure.test.check.generators @ src/app/thing_test.clj:6:14
+edge clj:.//app.thing-test -requires-> ext:clj//clojure.test.check.properties @ src/app/thing_test.clj:5:14
+edge clj:.//app.thing-test/helper-is-two -calls(certain direct)-> clj:.//app.core/helper @ src/app/thing_test.clj:10:12
+edge clj:.//app.thing-test/helper-is-two -calls(certain direct)-> ext:clj//clojure.core/= @ src/app/thing_test.clj:10:7
+edge clj:.//app.thing-test/helper-is-two -calls(certain direct)-> ext:clj//clojure.test/is @ src/app/thing_test.clj:10:3
+edge clj:.//app.thing-test/newest-is-stable -calls(certain direct)-> ext:clj//clojure.core/= @ src/app/thing_test.clj:13:29
+edge clj:.//app.thing-test/newest-is-stable -calls(certain direct)-> ext:clj//clojure.test.check.clojure-test/defspec @ src/app/thing_test.clj:12:1
+edge clj:.//app.thing-test/newest-is-stable -calls(certain direct)-> ext:clj//clojure.test.check.properties/for-all @ src/app/thing_test.clj:13:3
+edge clj:.//app.thing-test/newest-is-stable -references(likely value-ref)-> ext:clj//clojure.test.check.generators/nat @ src/app/thing_test.clj:13:20
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.test
+edge lib:maven:org.clojure/test.check -provides(likely name-match)-> ext:clj//clojure.test.check.clojure-test
+edge lib:maven:org.clojure/test.check -provides(likely name-match)-> ext:clj//clojure.test.check.generators
+edge lib:maven:org.clojure/test.check -provides(likely name-match)-> ext:clj//clojure.test.check.properties
+edge lib:unknown -provides(possible name-match)-> ext:clj//midje.sweet
+edge lib:unknown -provides(possible name-match)-> ext:clj//ring.adapter.jetty
+edge unit:. -contains-> clj:.//app.core
+edge unit:. -contains-> clj:.//app.helpers
+edge unit:. -contains-> clj:.//app.latest
+edge unit:. -contains-> clj:.//app.midje-facts
+edge unit:. -contains-> clj:.//app.thing-test
+# truncated false

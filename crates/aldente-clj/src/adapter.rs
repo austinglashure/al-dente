@@ -5,16 +5,19 @@ use aldente_model::{Lang, UnitInfo};
 
 use crate::forms::index_files;
 use crate::kondo::{Kondo, KondoError};
-use crate::resolve::resolve;
+use crate::resolve::{Context, resolve};
 
 /// The adapter's version, part of the snapshot key. Bump it whenever the
 /// resolver's output for the same input changes.
-pub const VERSION: &str = "11";
+pub const VERSION: &str = "12";
 
 /// The `clj` adapter for Clojure, ClojureScript and `.cljc`.
 #[derive(Debug, Clone)]
 pub struct CljAdapter {
     kondo: Kondo,
+    /// The local Maven repository to read jar listings from (R10); `None`
+    /// reads none, which keeps tests independent of the machine.
+    maven_repo: Option<std::path::PathBuf>,
 }
 
 impl CljAdapter {
@@ -22,7 +25,20 @@ impl CljAdapter {
     ///
     /// Example: `CljAdapter::new(Kondo::new(path, empty_dir))`.
     pub fn new(kondo: Kondo) -> CljAdapter {
-        CljAdapter { kondo }
+        CljAdapter {
+            kondo,
+            maven_repo: None,
+        }
+    }
+
+    /// The same adapter reading jar listings from `repo`.
+    ///
+    /// Example: `CljAdapter::new(k).with_maven_repo(maven::default_repository())`.
+    pub fn with_maven_repo(self, repo: Option<std::path::PathBuf>) -> CljAdapter {
+        CljAdapter {
+            maven_repo: repo,
+            ..self
+        }
     }
 }
 
@@ -60,8 +76,10 @@ impl Adapter for CljAdapter {
                 other => AdapterError::Failed(other.to_string()),
             })?;
         let indexes = index_files(ctx.root, ctx.files);
-        let catalog = aldente_rules::keyword_dispatch::builtin()
-            .map_err(|e| AdapterError::Failed(e.to_string()))?;
-        Ok(resolve(unit, &run, &indexes, &catalog).batch)
+        let mut ctx = Context::builtin().map_err(|e| AdapterError::Failed(e.to_string()))?;
+        if let Some(repo) = &self.maven_repo {
+            ctx.jars = aldente_acquire::maven::jar_namespaces(repo, &unit.deps);
+        }
+        Ok(resolve(unit, &run, &indexes, &ctx).batch)
     }
 }

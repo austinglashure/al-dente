@@ -283,6 +283,17 @@ impl LibraryId {
         })
     }
 
+    /// `lib:unknown`: what an external namespace no library claims belongs to
+    /// (R10 rule 5).
+    ///
+    /// Example: `LibraryId::unknown()` formats as `lib:unknown`.
+    pub fn unknown() -> LibraryId {
+        LibraryId {
+            ecosystem: "unknown".to_owned(),
+            coordinate: String::new(),
+        }
+    }
+
     /// The ecosystem, e.g. `maven`.
     pub fn ecosystem(&self) -> &str {
         &self.ecosystem
@@ -488,6 +499,7 @@ impl fmt::Display for NodeId {
                     None => Ok(()),
                 }
             }
+            NodeId::Library(l) if l.coordinate.is_empty() => write!(f, "lib:{}", l.ecosystem),
             NodeId::Library(l) => write!(f, "lib:{}:{}", l.ecosystem, l.coordinate),
             NodeId::Platform(PlatformId::Java {
                 class,
@@ -622,6 +634,7 @@ impl FromStr for NodeId {
             "repo" => Err(malformed("repo", s, "the only repo ID is `repo:.`")),
             "unit" => Ok(NodeId::Unit(RepoPath::parse(rest)?)),
             "ext" => parse_external(s, rest),
+            "lib" if rest == "unknown" => Ok(NodeId::Library(LibraryId::unknown())),
             "lib" => {
                 let (eco, coord) = rest
                     .split_once(':')
@@ -744,6 +757,7 @@ mod tests {
                 NodeId::Library(LibraryId::new("npm", "react").unwrap()),
                 "lib:npm:react",
             ),
+            (NodeId::Library(LibraryId::unknown()), "lib:unknown"),
             (
                 NodeId::Platform(PlatformId::java("java.net.Socket", Some("connect")).unwrap()),
                 "java:java.net.Socket#connect",

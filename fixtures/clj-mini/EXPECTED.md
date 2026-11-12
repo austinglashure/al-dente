@@ -4,7 +4,7 @@ Hand-written. Golden snapshots are reviewed against this file, never the other w
 
 ## Notation
 
-- One unit, the root: `unit:.`. A bare name such as `shop.core/checkout` means `clj:.//shop.core/checkout`. `ext:` names are externals: `ext:clojure.core/map` means `ext:clj//clojure.core/map`. ClojureScript core is `ext:cljs.core/…` (the `clj` prefix covers the whole Clojure family).
+- One unit, the root: `unit:.`, flagged `service` (Phase 2, R13: `shop.core/-main` and `^:export` `shop.ui.views/init` are entry points that are not tests). A bare name such as `shop.core/checkout` means `clj:.//shop.core/checkout`. `ext:` names are externals: `ext:clojure.core/map` means `ext:clj//clojure.core/map`. ClojureScript core is `ext:cljs.core/…` (the `clj` prefix covers the whole Clojure family).
 - Locations are `file:line:col`, 1-based, relative to `fixtures/clj-mini/`.
 - **Phase** is when the row must first hold: `1` = rules R1–R4 (WP1.5), `2` = the Phase 2 work package named in the note.
 - Certainty `C` = certain, `L` = likely, `P` = possible. Reasons are the snake-free names from `03-graph-model.md`.

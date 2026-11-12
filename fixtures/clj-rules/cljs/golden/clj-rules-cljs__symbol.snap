@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 19
+# nodes 22
 node clj:.//app.macros namespace langs:clj
 node clj:.//app.macros/when-dev symbol/macro langs:clj
 node clj:.//app.main namespace langs:cljs
@@ -13,6 +13,7 @@ node clj:.//app.shared/now symbol/fn langs:clj,cljs
 node clj:.//app.ui namespace langs:clj,cljs
 node clj:.//app.ui/render symbol/fn [entry-point] langs:cljs
 node clj:.//app.ui/widget symbol/macro langs:clj
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/when external
 node ext:clj//react external
 node ext:clj//react/createElement external
@@ -20,9 +21,11 @@ node ext:clj//reagent.core external
 node ext:clj//reagent.core/atom external
 node java:java.lang.System#currentTimeMillis platform
 node js:Date.now platform
+node lib:maven:org.clojure/clojure library
 node lib:npm:react library
+node lib:unknown library
 node unit:. unit [service] langs:clj,cljs
-# edges 25
+# edges 27
 edge clj:.//app.macros -contains-> clj:.//app.macros/when-dev
 edge clj:.//app.macros/when-dev -references(possible macro-body)-> ext:clj//clojure.core/when @ src/app/macros.clj:4:5
 edge clj:.//app.main -contains-> clj:.//app.main/init
@@ -43,7 +46,9 @@ edge clj:.//app.ui -contains-> clj:.//app.ui/render
 edge clj:.//app.ui -contains-> clj:.//app.ui/widget
 edge clj:.//app.ui -requires-> clj:.//app.ui @ src/app/ui.cljs:2:21
 edge clj:.//app.ui/render -calls(certain direct)-> clj:.//app.ui/widget @ src/app/ui.cljs:5:3
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
 edge lib:npm:react -provides(certain direct)-> ext:clj//react
+edge lib:unknown -provides(possible name-match)-> ext:clj//reagent.core
 edge unit:. -contains-> clj:.//app.macros
 edge unit:. -contains-> clj:.//app.main
 edge unit:. -contains-> clj:.//app.shared

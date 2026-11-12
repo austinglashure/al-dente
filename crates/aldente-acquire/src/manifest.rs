@@ -1,7 +1,7 @@
 //! Reading source roots and service hints from Clojure build manifests, as
 //! data only (`07-safety.md`, "Build files are data").
 
-use aldente_model::RootKind;
+use aldente_model::{DeclaredDep, RootKind};
 
 use crate::edn::{Edn, read_all};
 use crate::walk::Manifest;
@@ -30,6 +30,8 @@ pub struct ManifestInfo {
     pub service: bool,
     /// Entry-point symbols as written (`app.main/init`), sorted (R13).
     pub entry_points: Vec<String>,
+    /// Declared Maven dependencies, sorted and deduplicated (R10).
+    pub deps: Vec<DeclaredDep>,
 }
 
 /// Parses `src` as the given manifest.
@@ -70,6 +72,8 @@ fn parse_deps(map: &Edn) -> ManifestInfo {
         Some(paths) => strings(paths, None, RootKind::Source),
         None => vec![default_root("src", RootKind::Source)],
     };
+    let mut deps = deps_map(map.get_kw("deps"));
+    let mut entry_points = Vec::new();
     if let Some(Edn::Map(aliases)) = map.get_kw("aliases") {
         for (name, body) in aliases {
             let Some(alias) = keyword_name(name) else {
@@ -80,14 +84,107 @@ fn parse_deps(map: &Edn) -> ManifestInfo {
                     roots.extend(strings(paths, Some(alias), RootKind::Source));
                 }
             }
+            for key in ["deps", "extra-deps", "replace-deps"] {
+                deps.extend(deps_map(body.get_kw(key)));
+            }
+            if !alias.contains("test") {
+                entry_points.extend(alias_entry_points(body));
+            }
         }
     }
     ManifestInfo {
         roots,
         declares_roots: true,
         service: false,
-        entry_points: Vec::new(),
+        entry_points: sorted(entry_points),
+        deps: sorted(deps),
     }
+}
+
+/// R13 entry points of one deps.edn alias: `:exec-fn` and the namespace
+/// after `-m`/`--main` in `:main-opts` (its `-main`).
+///
+/// Example: `{:main-opts ["-m" "app.main"]}` gives `["app.main/-main"]`.
+fn alias_entry_points(alias: &Edn) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(Edn::Symbol(f)) = alias.get_kw("exec-fn") {
+        out.push(f.clone());
+    }
+    let opts: Vec<&str> = alias
+        .get_kw("main-opts")
+        .and_then(Edn::items)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(Edn::as_str)
+        .collect();
+    for pair in opts.windows(2) {
+        if matches!(pair[0], "-m" | "--main") {
+            out.push(format!("{}/-main", pair[1]));
+        }
+    }
+    out
+}
+
+/// A deps.edn-style dependency map: `{group/artifact {:mvn/version "v"}}`.
+///
+/// Example: `{reagent {:mvn/version "1.2.0"}}` gives `reagent/reagent` 1.2.0.
+fn deps_map(deps: Option<&Edn>) -> Vec<DeclaredDep> {
+    let Some(Edn::Map(entries)) = deps else {
+        return Vec::new();
+    };
+    entries
+        .iter()
+        .filter_map(|(k, v)| match k {
+            Edn::Symbol(name) => Some(DeclaredDep {
+                coord: coordinate(name),
+                version: v
+                    .get_kw("mvn/version")
+                    .and_then(Edn::as_str)
+                    .map(str::to_owned),
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A Leiningen/shadow-cljs dependency vector: `[[group/artifact "v" …] …]`.
+///
+/// Example: `[[ring "1.9.0" :exclusions [x]]]` gives `ring/ring` 1.9.0.
+fn deps_vector(deps: Option<&Edn>) -> Vec<DeclaredDep> {
+    deps.and_then(Edn::items)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|d| match d.items()? {
+            [Edn::Symbol(name), rest @ ..] => Some(DeclaredDep {
+                coord: coordinate(name),
+                version: rest.first().and_then(Edn::as_str).map(str::to_owned),
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A Maven coordinate from a dependency symbol: a bare name is its own
+/// group, and a deps.edn `$classifier` is dropped.
+///
+/// Example: `coordinate("reagent")` is `"reagent/reagent"`;
+/// `coordinate("org.lwjgl/lwjgl$natives-linux")` is `"org.lwjgl/lwjgl"`.
+fn coordinate(name: &str) -> String {
+    let name = name.split('$').next().unwrap_or(name);
+    if name.contains('/') {
+        name.to_owned()
+    } else {
+        format!("{name}/{name}")
+    }
+}
+
+/// Sorted and deduplicated.
+///
+/// Example: `sorted(vec![2, 1, 2])` is `[1, 2]`.
+fn sorted<T: Ord>(mut v: Vec<T>) -> Vec<T> {
+    v.sort();
+    v.dedup();
+    v
 }
 
 /// project.clj: the `defproject` form's `:source-paths` (default `["src"]`),
@@ -126,11 +223,22 @@ fn parse_project(forms: &[Edn]) -> Result<ManifestInfo, String> {
         }
     }
     roots.extend(cljsbuild_paths(&options));
+    let mut deps = deps_vector(options.get_kw("dependencies"));
+    if let Some(Edn::Map(profiles)) = options.get_kw("profiles") {
+        for (_, body) in profiles {
+            deps.extend(deps_vector(body.get_kw("dependencies")));
+        }
+    }
+    let entry_points = match options.get_kw("main") {
+        Some(Edn::Symbol(ns)) => vec![format!("{ns}/-main")],
+        _ => Vec::new(),
+    };
     Ok(ManifestInfo {
         roots,
         declares_roots: true,
         service: options.get_kw("main").is_some(),
-        entry_points: Vec::new(),
+        entry_points,
+        deps: sorted(deps),
     })
 }
 
@@ -204,6 +312,7 @@ fn parse_shadow(map: &Edn) -> ManifestInfo {
         declares_roots: paths.is_some(),
         service,
         entry_points: shadow_entry_points(map),
+        deps: sorted(deps_vector(map.get_kw("dependencies"))),
     }
 }
 
@@ -250,6 +359,7 @@ fn parse_bb(map: &Edn) -> ManifestInfo {
         declares_roots: paths.is_some(),
         service: false,
         entry_points: Vec::new(),
+        deps: sorted(deps_map(map.get_kw("deps"))),
     }
 }
 
@@ -450,6 +560,84 @@ mod tests {
             map_form.roots,
             [root("src-cljs", Source, Some("cljsbuild"))]
         );
+    }
+
+    fn dep(coord: &str, version: Option<&str>) -> DeclaredDep {
+        DeclaredDep {
+            coord: coord.into(),
+            version: version.map(Into::into),
+        }
+    }
+
+    #[test]
+    fn deps_edn_declared_deps_and_entry_points() {
+        let info = parse(
+            Manifest::DepsEdn,
+            r#"{:deps {org.clojure/clojure {:mvn/version "1.12.0"}
+                       reagent {:mvn/version "1.2.0"}
+                       io.github.x/lib {:git/sha "abc"}
+                       org.lwjgl/lwjgl$natives-linux {:mvn/version "3.3.1"}}
+                :aliases {:run {:exec-fn app.core/start}
+                          :main {:main-opts ["-m" "app.main"]}
+                          :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.9"}}
+                                 :main-opts ["-m" "kaocha.runner"]}}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            info.deps,
+            [
+                dep("io.github.x/lib", None),
+                dep("lambdaisland/kaocha", Some("1.9")),
+                dep("org.clojure/clojure", Some("1.12.0")),
+                dep("org.lwjgl/lwjgl", Some("3.3.1")),
+                dep("reagent/reagent", Some("1.2.0")),
+            ]
+        );
+        // `-m` of a test alias runs a test runner, not the project.
+        assert_eq!(info.entry_points, ["app.core/start", "app.main/-main"]);
+    }
+
+    #[test]
+    fn project_clj_declared_deps_and_main() {
+        let info = parse(
+            Manifest::ProjectClj,
+            r#"(defproject a "1.0"
+                 :dependencies [[org.clojure/clojure "1.11.1"] [ring "1.9.0" :exclusions [x]]]
+                 :profiles {:dev {:dependencies [[midje "1.10.9"]]}}
+                 :main ^:skip-aot a.core)"#,
+        )
+        .unwrap();
+        assert_eq!(
+            info.deps,
+            [
+                dep("midje/midje", Some("1.10.9")),
+                dep("org.clojure/clojure", Some("1.11.1")),
+                dep("ring/ring", Some("1.9.0")),
+            ]
+        );
+        assert_eq!(info.entry_points, ["a.core/-main"]);
+    }
+
+    #[test]
+    fn shadow_and_bb_declared_deps() {
+        let shadow = parse(
+            Manifest::ShadowCljs,
+            r#"{:dependencies [[reagent "1.2.0"] [re-frame/re-frame "1.4.3"]]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            shadow.deps,
+            [
+                dep("re-frame/re-frame", Some("1.4.3")),
+                dep("reagent/reagent", Some("1.2.0"))
+            ]
+        );
+        let bb = parse(
+            Manifest::BbEdn,
+            r#"{:deps {medley/medley {:mvn/version "1.4.0"}}}"#,
+        )
+        .unwrap();
+        assert_eq!(bb.deps, [dep("medley/medley", Some("1.4.0"))]);
     }
 
     #[test]

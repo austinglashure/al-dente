@@ -40,8 +40,22 @@ pub struct UnitInfo {
     pub service: bool,
     /// Entry-point symbols declared in manifests (`app.main/init`), sorted.
     pub entry_points: Vec<String>,
+    /// Declared Maven dependencies of all the unit's manifests, sorted.
+    pub deps: Vec<DeclaredDep>,
     /// Number of source files the unit owns that lie under its roots.
     pub files: usize,
+}
+
+/// A Maven dependency as a manifest declares it (names and version strings
+/// only; the dependency model is Phase 7).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct DeclaredDep {
+    /// `group/artifact`; a bare `reagent` is `reagent/reagent`.
+    pub coord: String,
+    /// `:mvn/version` or the Leiningen version string; null for git and
+    /// local dependencies.
+    pub version: Option<String>,
 }
 
 /// A source or test root of a unit.

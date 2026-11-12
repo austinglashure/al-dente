@@ -1,0 +1,22 @@
+# Tests in Clojure and ClojureScript (R14 in docs/plan/04-clojure-analysis.md).
+
+# A namespace is a test namespace when it lives under a test root, its last
+# name component is one of `namespace_names`, or that component ends with
+# one of `namespace_suffixes` (`shop.latest` is not a test namespace).
+namespace_names = ["test", "tests"]
+namespace_suffixes = ["-test", "-tests"]
+
+# Vars defined by these forms (matched by the defining form's name, so
+# aliases and lint-as forms count) get subkind `test` and the `test` and
+# `entry-point` flags. clj-kondo already marks `deftest`.
+definers = [
+  "deftest",
+  "defspec",
+  "deftest-async",
+  "defflow",
+  "defcard-rg",
+]
+
+# Top-level forms that are tests without defining a var (Midje): their
+# `<top>` impl gets the `test` and `entry-point` flags.
+top_level = ["fact", "facts", "tabular"]

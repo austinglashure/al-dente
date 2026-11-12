@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 52
+# nodes 58
 node clj:.//app.events namespace langs:cljs
 node clj:.//app.events/dispatch-computed symbol/fn langs:cljs
 node clj:.//app.events/dispatch-computed-key symbol/fn langs:cljs
@@ -30,10 +30,12 @@ node clj:.//app.views/submit-button symbol/fn langs:cljs
 node clj:.//integrant.core/halt-key!@:app/db impl langs:clj
 node clj:.//integrant.core/init-key@:app/db impl langs:clj
 node clj:.//integrant.core/init-key@:app/handler impl langs:clj
+node ext:clj//cljs.core external
 node ext:clj//cljs.core/assoc external
 node ext:clj//cljs.core/count external
 node ext:clj//cljs.core/deref external
 node ext:clj//cljs.core/fn external
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/fn external
 node ext:clj//integrant.core external
 node ext:clj//integrant.core/halt-key! external
@@ -54,8 +56,12 @@ node ext:clj//re-frame.core/subscribe external
 node hole:dynamic-resolve@src/app/events.cljs:27:3 hole langs:cljs
 node hole:dynamic-resolve@src/app/events.cljs:30:3 hole langs:cljs
 node hole:dynamic-resolve@src/app/events.cljs:45:6 hole langs:cljs
+node lib:maven:integrant/integrant library
+node lib:maven:org.clojure/clojure library
+node lib:maven:org.clojure/clojurescript library
+node lib:maven:re-frame/re-frame library
 node unit:. unit langs:clj,cljs
-# edges 91
+# edges 96
 edge clj:.//app.events -contains-> clj:.//app.events/dispatch-computed
 edge clj:.//app.events -contains-> clj:.//app.events/dispatch-computed-key
 edge clj:.//app.events -contains-> clj:.//app.events/dispatch-unregistered
@@ -143,6 +149,11 @@ edge clj:.//integrant.core/halt-key!@:app/db -implements-> ext:clj//integrant.co
 edge clj:.//integrant.core/init-key@:app/db -implements-> ext:clj//integrant.core/init-key
 edge clj:.//integrant.core/init-key@:app/handler -calls(certain direct)-> ext:clj//clojure.core/fn @ src/app/system.clj:10:54
 edge clj:.//integrant.core/init-key@:app/handler -implements-> ext:clj//integrant.core/init-key
+edge lib:maven:integrant/integrant -provides(likely name-match)-> ext:clj//integrant.core
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
+edge lib:maven:org.clojure/clojurescript -provides(certain direct)-> ext:clj//cljs.core
+edge lib:maven:re-frame/re-frame -provides(likely name-match)-> ext:clj//re-frame.alpha
+edge lib:maven:re-frame/re-frame -provides(likely name-match)-> ext:clj//re-frame.core
 edge unit:. -contains-> clj:.//app.events
 edge unit:. -contains-> clj:.//app.subs
 edge unit:. -contains-> clj:.//app.system

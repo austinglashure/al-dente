@@ -40,6 +40,8 @@ impl Env {
             .args(args)
             .arg(self.dir.join("repo"))
             .env("ALDENTE_CACHE_DIR", self.dir.join("cache"))
+            // Library attribution must not depend on this machine's ~/.m2.
+            .env("ALDENTE_MAVEN_REPO", "")
             .output()
             .expect("aldente binary should start")
     }
@@ -263,5 +265,48 @@ fn min_certainty_filters_exactly_the_weaker_edges() {
             .as_u64()
             .unwrap()
             >= 4
+    );
+}
+
+/// WP2.9: `find --kind <subkind>` and `--flag <flag>` (an empty pattern
+/// matches everything).
+#[test]
+fn find_by_subkind_and_flag() {
+    let env = Env::new("clj-mini", "find-filters");
+    let ids = |args: &[&str]| -> Vec<String> {
+        let j = env.json(args);
+        assert!(env.valid("find", &j["data"]), "{j:#}");
+        j["data"]["matches"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| n["id"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let tests = [
+        "clj:.//shop.pricing-test/book-is-half-off",
+        "clj:.//shop.pricing-test/food-is-taxed",
+    ];
+    assert_eq!(ids(&["find", "", "--kind", "test"]), tests);
+    let entry = ids(&["find", "", "--flag", "entry-point"]);
+    for id in ["clj:.//shop.core/-main", "clj:.//shop.ui.views/init"]
+        .iter()
+        .chain(&tests)
+    {
+        assert!(entry.contains(&(*id).to_owned()), "{id} in {entry:?}");
+    }
+    assert_eq!(
+        ids(&["find", "", "--kind", "test", "--flag", "entry-point"]),
+        tests
+    );
+    assert_eq!(
+        ids(&["find", "", "--flag", "test", "--kind", "namespace"]),
+        ["clj:.//shop.pricing-test"]
+    );
+    let text = env.text(&["find", "half", "--kind", "fn"]);
+    assert!(text.contains("clj:.//shop.pricing/half-off"), "{text}");
+    assert_eq!(
+        env.run(&["find", "", "--flag", "nonsense"]).status.code(),
+        Some(2)
     );
 }

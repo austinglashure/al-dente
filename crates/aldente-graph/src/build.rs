@@ -71,6 +71,7 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
         g.diagnostics.extend(batch.diagnostics);
         g.literals.extend(batch.literals);
     }
+    mark_services(&mut g.nodes);
     let unit_contains: Vec<Edge> = g
         .nodes
         .values()
@@ -85,12 +86,18 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
     let orphan_externals: Vec<NodeId> = g
         .nodes
         .values()
-        .filter(|n| n.kind == NodeKind::External && !used.contains(&n.id))
+        .filter(|n| matches!(n.kind, NodeKind::External | NodeKind::Library))
+        .filter(|n| !used.contains(&n.id))
         .map(|n| n.id.clone())
         .collect();
     for id in orphan_externals {
         g.nodes.remove(&id);
     }
+    // Blind spots about externals that turned out to be repository code.
+    g.blindspots.retain(|b| match &b.node {
+        Some(id @ NodeId::External(_)) => g.nodes.contains_key(id),
+        _ => true,
+    });
     g.edges = edges.into_values().collect();
     for e in &mut g.edges {
         e.sites.sort();
@@ -158,6 +165,25 @@ fn contains(from: NodeId, to: NodeId) -> Edge {
     }
 }
 
+/// R13: a unit with an entry point that is not a test is a service.
+///
+/// Example: a unit holding `app.core/-main` gets the `service` flag; one
+/// whose only entry points are `deftest`s does not.
+fn mark_services(nodes: &mut BTreeMap<NodeId, Node>) {
+    let units: BTreeSet<NodeId> = nodes
+        .values()
+        .filter(|n| {
+            n.flags.contains(&SymbolFlag::EntryPoint) && !n.flags.contains(&SymbolFlag::Test)
+        })
+        .filter_map(|n| n.unit.clone())
+        .collect();
+    for id in units {
+        if let Some(unit) = nodes.get_mut(&id) {
+            unit.flags.insert(SymbolFlag::Service);
+        }
+    }
+}
+
 /// Re-targets edges into externals that a repository unit defines.
 ///
 /// Example: see [`build`].
@@ -187,6 +213,10 @@ fn link_across_units(
             }
             _ => Vec::new(),
         };
+        // A library does not provide a namespace the repository defines.
+        if edge.kind == EdgeKind::Provides && !candidates.is_empty() {
+            continue;
+        }
         match candidates.len() {
             0 => add_edge(&mut out, edge),
             1 => {
@@ -266,6 +296,7 @@ mod tests {
             roots: vec![],
             service: dir == "b",
             entry_points: Vec::new(),
+            deps: Vec::new(),
             files: 1,
         }
     }

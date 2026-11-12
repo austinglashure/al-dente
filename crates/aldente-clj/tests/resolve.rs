@@ -3,6 +3,7 @@
 // Helpers outside #[test] fns are not covered by clippy.toml's test allowance.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use aldente_acquire::tools::locate;
@@ -10,12 +11,12 @@ use aldente_acquire::units::{Discovery, discover};
 use aldente_acquire::walk::{Limits, walk};
 use aldente_clj::forms::index_files;
 use aldente_clj::kondo::Kondo;
+use aldente_clj::resolve::Context;
 use aldente_clj::resolve::{Resolved, resolve};
 use aldente_model::{
     BlindSpotCategory, Certainty, Edge, EdgeKind, Lang, Node, NodeKind, Reason, RepoPath,
     SymbolFlag, SymbolSubkind,
 };
-use aldente_rules::keyword_dispatch::builtin;
 
 fn fixture(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -46,7 +47,7 @@ fn run(name: &str) -> Vec<Resolved> {
                 .collect();
             let run = kondo.analyze(&root, &files).unwrap();
             let indexes = index_files(&root, &files);
-            resolve(unit, &run, &indexes, &builtin().unwrap())
+            resolve(unit, &run, &indexes, &Context::builtin().unwrap())
         })
         .collect()
 }
@@ -55,6 +56,13 @@ fn run(name: &str) -> Vec<Resolved> {
 ///
 /// Example: `run_files("cond", &[("deps.edn", "{}"), ("src/a.clj", "(ns a)")])`.
 fn run_files(name: &str, files: &[(&str, &str)]) -> Resolved {
+    run_files_with(name, files, None)
+}
+
+/// [`run_files`] with jar listings read from a Maven repository at `maven`.
+///
+/// Example: `run_files_with("libs", &files, Some(&fake_m2))`.
+fn run_files_with(name: &str, files: &[(&str, &str)], maven: Option<&Path>) -> Resolved {
     let root = std::env::temp_dir().join(format!(
         "aldente-resolve-tree-{}-{name}",
         std::process::id()
@@ -75,7 +83,11 @@ fn run_files(name: &str, files: &[(&str, &str)]) -> Resolved {
     let unit = &d.report.units[0];
     let files: Vec<RepoPath> = d.analyzed.iter().map(|f| f.path.clone()).collect();
     let run = kondo.analyze(&root, &files).unwrap();
-    resolve(unit, &run, &index_files(&root, &files), &builtin().unwrap())
+    let mut ctx = Context::builtin().unwrap();
+    if let Some(m2) = maven {
+        ctx.jars = aldente_acquire::maven::jar_namespaces(m2, &unit.deps);
+    }
+    resolve(unit, &run, &index_files(&root, &files), &ctx)
 }
 
 fn node<'a>(r: &'a Resolved, id: &str) -> &'a Node {
@@ -444,4 +456,130 @@ fn reify_of_a_java_interface_implements_the_platform_class() {
         implements.contains(&"java:java.lang.Runnable".to_owned()),
         "{implements:?}"
     );
+}
+
+/// R10: the attribution ladder. A jar in the (fake) Maven cache makes the
+/// match certain; without it the prefix table still attributes at likely;
+/// declared coordinates give prefixes; core namespaces are certain; what is
+/// left goes to `lib:unknown` with a blind spot.
+#[test]
+fn library_attribution_ladder() {
+    let files: &[(&str, &str)] = &[
+        (
+            "deps.edn",
+            r#"{:deps {org.clojure/core.async {:mvn/version "1.6.681"}
+                      metosin/malli {:mvn/version "0.16.0"}}}"#,
+        ),
+        (
+            "src/a.clj",
+            "(ns a (:require [clojure.core.async :as async] [malli.core :as m]\n  [clojure.string :as str] [mystery.lib :as x]))\n(defn f [] (async/chan) (m/schema 1) (str/blank? \"\") (x/y))\n",
+        ),
+    ];
+    let provides = |r: &Resolved| -> BTreeSet<(String, String, Certainty, Reason)> {
+        r.batch
+            .edges
+            .iter()
+            .filter(|e| e.kind == EdgeKind::Provides)
+            .map(|e| {
+                (
+                    e.from.to_string(),
+                    e.to.to_string(),
+                    e.certainty.unwrap(),
+                    e.reason.unwrap(),
+                )
+            })
+            .collect()
+    };
+    let row = |lib: &str, ns: &str, c: Certainty, r: Reason| {
+        (lib.to_owned(), format!("ext:clj//{ns}"), c, r)
+    };
+
+    let m2 = std::env::temp_dir().join(format!("aldente-resolve-m2-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&m2);
+    let dir = m2.join("org/clojure/core.async/1.6.681");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("core.async-1.6.681.jar"),
+        stored_zip(&["clojure/core/async.clj"]),
+    )
+    .unwrap();
+
+    let cached = provides(&run_files_with("libs-cached", files, Some(&m2)));
+    assert!(
+        cached.contains(&row(
+            "lib:maven:org.clojure/core.async",
+            "clojure.core.async",
+            Certainty::Certain,
+            Reason::Direct
+        )),
+        "{cached:#?}"
+    );
+    let r = run_files("libs-plain", files);
+    let plain = provides(&r);
+    let expected: BTreeSet<_> = [
+        row(
+            "lib:maven:org.clojure/core.async",
+            "clojure.core.async",
+            Certainty::Likely,
+            Reason::NameMatch,
+        ),
+        row(
+            "lib:maven:metosin/malli",
+            "malli.core",
+            Certainty::Likely,
+            Reason::NameMatch,
+        ),
+        row(
+            "lib:maven:org.clojure/clojure",
+            "clojure.string",
+            Certainty::Certain,
+            Reason::Direct,
+        ),
+        row(
+            "lib:unknown",
+            "mystery.lib",
+            Certainty::Possible,
+            Reason::NameMatch,
+        ),
+    ]
+    .into_iter()
+    .collect();
+    assert_eq!(plain, expected);
+    assert!(
+        r.batch
+            .blindspots
+            .iter()
+            .any(|b| b.category == BlindSpotCategory::UnresolvedSymbol
+                && b.message.contains("mystery.lib"))
+    );
+}
+
+/// A stored zip with empty entries (the shape of a jar's listing).
+fn stored_zip(names: &[&str]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut central = Vec::new();
+    for name in names {
+        let offset = out.len() as u32;
+        out.extend(0x0403_4b50u32.to_le_bytes());
+        out.extend([0u8; 22]);
+        out.extend((name.len() as u16).to_le_bytes());
+        out.extend(0u16.to_le_bytes());
+        out.extend(name.as_bytes());
+        central.extend(0x0201_4b50u32.to_le_bytes());
+        central.extend([0u8; 24]);
+        central.extend((name.len() as u16).to_le_bytes());
+        central.extend([0u8; 12]);
+        central.extend(offset.to_le_bytes());
+        central.extend(name.as_bytes());
+    }
+    let cd_offset = out.len() as u32;
+    out.extend(&central);
+    out.extend(0x0605_4b50u32.to_le_bytes());
+    out.extend([0u8; 4]);
+    out.extend((names.len() as u16).to_le_bytes());
+    out.extend((names.len() as u16).to_le_bytes());
+    out.extend((central.len() as u32).to_le_bytes());
+    out.extend(cd_offset.to_le_bytes());
+    out.extend(0u16.to_le_bytes());
+    out
 }

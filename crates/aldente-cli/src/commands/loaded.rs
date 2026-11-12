@@ -53,6 +53,18 @@ impl Loaded {
     }
 }
 
+/// The local Maven repository for jar listings: `ALDENTE_MAVEN_REPO` when
+/// set (empty turns jar listing off), else `~/.m2/repository`.
+///
+/// Example: with `ALDENTE_MAVEN_REPO=""` gives `None`.
+fn maven_repo() -> Option<std::path::PathBuf> {
+    match std::env::var_os("ALDENTE_MAVEN_REPO") {
+        Some(v) if v.is_empty() => None,
+        Some(v) => Some(v.into()),
+        None => aldente_acquire::maven::default_repository(),
+    }
+}
+
 /// Opens the target, checks clj-kondo (missing or too old: exit 5 with the
 /// doctor hint), and returns the cached snapshot or a fresh analysis.
 ///
@@ -84,6 +96,7 @@ pub fn load(args: &TargetArgs, no_cache: bool) -> Result<Loaded, Failure> {
     } else {
         None
     };
+    let maven = maven_repo();
     let ctx = CacheContext {
         snapshots: &layout.snapshots,
         inputs: KeyInputs {
@@ -91,7 +104,12 @@ pub fn load(args: &TargetArgs, no_cache: bool) -> Result<Loaded, Failure> {
             schema: SCHEMA_VERSION.to_owned(),
             adapters: vec![("clj".to_owned(), CLJ_VERSION.to_owned())],
             clj_kondo: kondo.version,
-            config: String::new(),
+            // Which Maven cache library attribution read (R10). Its contents
+            // are not in the key: see PROGRESS.md, WP2.9.
+            config: maven
+                .as_ref()
+                .map(|p| format!("maven={}", p.display()))
+                .unwrap_or_default(),
         },
         repo: target.origin.clone(),
         rev,
@@ -100,7 +118,8 @@ pub fn load(args: &TargetArgs, no_cache: bool) -> Result<Loaded, Failure> {
     let adapter = CljAdapter::new(Kondo::new(
         kondo_path.into(),
         layout.tmp.join("kondo-empty"),
-    ));
+    ))
+    .with_maven_repo(maven);
     let outcome =
         analyze_cached(&target.root, target.git, &[&adapter], &ctx).map_err(|e| match e {
             AdapterError::ToolMissing { tool, hint } => {

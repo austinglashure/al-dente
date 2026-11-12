@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 46
+# nodes 48
 node clj:.//dyn.core namespace langs:clj
 node clj:.//dyn.core/bump symbol/fn langs:clj
 node clj:.//dyn.core/by-find-var symbol/fn langs:clj
@@ -25,6 +25,7 @@ node clj:.//dyn.target/counter symbol/var [dynamic] langs:clj
 node clj:.//dyn.target/handler symbol/fn [dynamic] langs:clj
 node clj:.//dyn.target/made symbol/var [dynamic] langs:clj
 node clj:.//dyn.target/other symbol/fn langs:clj
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/alter-var-root external
 node ext:clj//clojure.core/apply external
 node ext:clj//clojure.core/constantly external
@@ -48,8 +49,9 @@ node hole:dynamic-eval@src/dyn/core.clj:22:26 hole langs:clj
 node hole:dynamic-eval@src/dyn/core.clj:24:19 hole langs:clj
 node hole:dynamic-resolve@src/dyn/core.clj:12:23 hole langs:clj
 node hole:dynamic-resolve@src/dyn/core.clj:14:28 hole langs:clj
+node lib:maven:org.clojure/clojure library
 node unit:. unit langs:clj
-# edges 55
+# edges 56
 edge clj:.//dyn.core -contains-> clj:.//dyn.core/bump
 edge clj:.//dyn.core -contains-> clj:.//dyn.core/by-find-var
 edge clj:.//dyn.core -contains-> clj:.//dyn.core/by-ns-resolve
@@ -103,6 +105,7 @@ edge clj:.//dyn.target -contains-> clj:.//dyn.target/counter
 edge clj:.//dyn.target -contains-> clj:.//dyn.target/handler
 edge clj:.//dyn.target -contains-> clj:.//dyn.target/made
 edge clj:.//dyn.target -contains-> clj:.//dyn.target/other
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
 edge unit:. -contains-> clj:.//dyn.core
 edge unit:. -contains-> clj:.//dyn.target
 # truncated false

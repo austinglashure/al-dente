@@ -1,0 +1,145 @@
+# Library attribution for Clojure namespaces (R10 in
+# docs/plan/04-clojure-analysis.md). Order of the ladder: npm string
+# requires, jars in the local Maven cache (certain), this `[[prefix]]` table
+# (likely), `[[core]]` (certain), then prefixes derived from the declared
+# dependencies (likely). The longest matching prefix wins.
+
+# Rule 4: the language's own namespaces. Checked after the table, so
+# `clojure.core.async` goes to its own artifact.
+[[core]]
+prefix = "clojure"
+coord = "org.clojure/clojure"
+
+[[core]]
+prefix = "cljs"
+coord = "org.clojure/clojurescript"
+
+# Rule 3: namespaces whose artifact a prefix of the declared coordinate
+# would not find, or that are commonly used without being declared.
+[[prefix]]
+prefix = "clojure.core.async"
+coord = "org.clojure/core.async"
+
+[[prefix]]
+prefix = "cljs.core.async"
+coord = "org.clojure/core.async"
+
+[[prefix]]
+prefix = "clojure.core.match"
+coord = "org.clojure/core.match"
+
+[[prefix]]
+prefix = "clojure.core.cache"
+coord = "org.clojure/core.cache"
+
+[[prefix]]
+prefix = "clojure.core.memoize"
+coord = "org.clojure/core.memoize"
+
+[[prefix]]
+prefix = "clojure.core.logic"
+coord = "org.clojure/core.logic"
+
+[[prefix]]
+prefix = "clojure.core.specs.alpha"
+coord = "org.clojure/core.specs.alpha"
+
+[[prefix]]
+prefix = "clojure.spec.alpha"
+coord = "org.clojure/spec.alpha"
+
+[[prefix]]
+prefix = "cljs.spec.alpha"
+coord = "org.clojure/clojurescript"
+
+[[prefix]]
+prefix = "clojure.spec.gen.alpha"
+coord = "org.clojure/spec.alpha"
+
+[[prefix]]
+prefix = "clojure.test.check"
+coord = "org.clojure/test.check"
+
+[[prefix]]
+prefix = "clojure.tools.logging"
+coord = "org.clojure/tools.logging"
+
+[[prefix]]
+prefix = "clojure.tools.cli"
+coord = "org.clojure/tools.cli"
+
+[[prefix]]
+prefix = "clojure.tools.reader"
+coord = "org.clojure/tools.reader"
+
+[[prefix]]
+prefix = "cljs.tools.reader"
+coord = "org.clojure/tools.reader"
+
+[[prefix]]
+prefix = "clojure.tools.namespace"
+coord = "org.clojure/tools.namespace"
+
+[[prefix]]
+prefix = "clojure.tools.deps"
+coord = "org.clojure/tools.deps"
+
+[[prefix]]
+prefix = "clojure.data.json"
+coord = "org.clojure/data.json"
+
+[[prefix]]
+prefix = "clojure.data.xml"
+coord = "org.clojure/data.xml"
+
+[[prefix]]
+prefix = "clojure.data.csv"
+coord = "org.clojure/data.csv"
+
+[[prefix]]
+prefix = "clojure.data.priority-map"
+coord = "org.clojure/data.priority-map"
+
+[[prefix]]
+prefix = "clojure.java.jdbc"
+coord = "org.clojure/java.jdbc"
+
+[[prefix]]
+prefix = "clojure.math.combinatorics"
+coord = "org.clojure/math.combinatorics"
+
+[[prefix]]
+prefix = "clojure.math.numeric-tower"
+coord = "org.clojure/math.numeric-tower"
+
+[[prefix]]
+prefix = "ring.util.codec"
+coord = "ring/ring-codec"
+
+[[prefix]]
+prefix = "taoensso.timbre"
+coord = "com.taoensso/timbre"
+
+[[prefix]]
+prefix = "taoensso.encore"
+coord = "com.taoensso/encore"
+
+[[prefix]]
+prefix = "cheshire"
+coord = "cheshire/cheshire"
+
+[[prefix]]
+prefix = "next.jdbc"
+coord = "com.github.seancorfield/next.jdbc"
+
+[[prefix]]
+prefix = "honey.sql"
+coord = "com.github.seancorfield/honeysql"
+
+[[prefix]]
+prefix = "day8.re-frame.http-fx"
+coord = "day8.re-frame/http-fx"
+
+[[prefix]]
+prefix = "ajax"
+coord = "cljs-ajax/cljs-ajax"

@@ -1,0 +1,25 @@
+# Entry points beyond `-main`, manifests and `^:export` (R13 in
+# docs/plan/04-clojure-analysis.md): a var passed as the first argument of a
+# server start call (`(run-jetty #'app opts)`) is a ring handler, flagged
+# `entry-point`.
+
+[[server_start]]
+fn = "ring.adapter.jetty/run-jetty"
+
+[[server_start]]
+fn = "ring.adapter.jetty9/run-jetty"
+
+[[server_start]]
+fn = "org.httpkit.server/run-server"
+
+[[server_start]]
+fn = "aleph.http/start-server"
+
+[[server_start]]
+fn = "immutant.web/run"
+
+[[server_start]]
+fn = "ring.adapter.undertow/run-undertow"
+
+[[server_start]]
+fn = "s-exp.hirundo/start!"

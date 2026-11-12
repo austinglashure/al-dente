@@ -14,9 +14,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use aldente_adapter::{FactBatch, LiteralFact};
 use aldente_model::{
     BlindSpot, BlindSpotCategory, Certainty, Diagnostic, Edge, EdgeKind, ExternalId, ImplId, Lang,
-    Location, NamespaceId, Node, NodeId, NodeKind, PlatformId, Reason, RepoPath, Site, SymbolFlag,
-    SymbolId, SymbolSubkind, UnitInfo,
+    LibraryId, Location, NamespaceId, Node, NodeId, NodeKind, PlatformId, Reason, RepoPath, Site,
+    SymbolFlag, SymbolId, SymbolSubkind, UnitInfo,
 };
+use aldente_rules::RulesError;
+use aldente_rules::clj::{self as rules_clj, EntryPoints, Namespaces, Tests};
 use aldente_rules::keyword_dispatch::{self as kd, Catalog};
 
 use crate::forms::{Arity, FileIndex, LiteralKind, Pos, Shape, Span, TopForm};
@@ -111,17 +113,57 @@ const STATEFUL_INITS: &[&str] = &["atom", "ref", "agent", "volatile!"];
 /// clj-kondo's namespace for symbols it could not resolve.
 const UNKNOWN_NS: &str = "clj-kondo/unknown-namespace";
 
+/// The built-in rule catalogs the resolver applies.
+#[derive(Debug, Clone)]
+pub struct Rules {
+    pub keyword: Catalog,
+    pub namespaces: Namespaces,
+    pub tests: Tests,
+    pub entry_points: EntryPoints,
+}
+
+impl Rules {
+    /// The catalogs compiled into the binary.
+    ///
+    /// Example: `Rules::builtin()?.namespaces.core_for("clojure.set")`.
+    pub fn builtin() -> Result<Rules, RulesError> {
+        Ok(Rules {
+            keyword: kd::builtin()?,
+            namespaces: rules_clj::namespaces()?,
+            tests: rules_clj::tests()?,
+            entry_points: rules_clj::entry_points()?,
+        })
+    }
+}
+
+/// What the resolver needs besides one unit's analysis.
+#[derive(Debug, Clone)]
+pub struct Context {
+    pub rules: Rules,
+    /// Namespace → Maven coordinate from the jars of the unit's declared
+    /// dependencies in the local Maven cache (R10 rule 2); empty when the
+    /// cache is absent or not consulted.
+    pub jars: BTreeMap<String, String>,
+}
+
+impl Context {
+    /// The built-in rules and no jar listings.
+    ///
+    /// Example: `Context::builtin()?.jars.is_empty()` is `true`.
+    pub fn builtin() -> Result<Context, RulesError> {
+        Ok(Context {
+            rules: Rules::builtin()?,
+            jars: BTreeMap::new(),
+        })
+    }
+}
+
 /// Resolves one unit.
 ///
 /// Example: on clj-mini gives `clj:.//shop.core/checkout` (fn) with a
 /// certain `calls` edge to `clj:.//shop.pricing/price` at `src/shop/core.clj:16:17`.
-pub fn resolve(
-    unit: &UnitInfo,
-    run: &KondoRun,
-    indexes: &[FileIndex],
-    catalog: &Catalog,
-) -> Resolved {
-    let mut r = Resolver::new(unit, run, indexes, catalog);
+pub fn resolve(unit: &UnitInfo, run: &KondoRun, indexes: &[FileIndex], ctx: &Context) -> Resolved {
+    let mut r = Resolver::new(unit, run, indexes, ctx);
     r.namespaces();
     r.definitions();
     r.impls();
@@ -134,6 +176,8 @@ pub fn resolve(
     r.param_flow();
     r.interop();
     r.macro_blind_spots();
+    r.libraries();
+    r.server_handlers();
     r.finish()
 }
 
@@ -165,6 +209,8 @@ struct Resolver<'a> {
     method_uses: Vec<MultiUse>,
     /// The R11 keyword-dispatch catalog.
     catalog: &'a Catalog,
+    /// All rule catalogs and the jar listings.
+    ctx: &'a Context,
     /// R11 registration calls `(file, call span, impl)`; code inside is
     /// scoped to the impl.
     reg_impls: Vec<(String, Span, NodeId)>,
@@ -226,7 +272,7 @@ impl<'a> Resolver<'a> {
         unit: &'a UnitInfo,
         run: &'a KondoRun,
         indexes: &'a [FileIndex],
-        catalog: &'a Catalog,
+        ctx: &'a Context,
     ) -> Resolver<'a> {
         Resolver {
             unit,
@@ -248,7 +294,8 @@ impl<'a> Resolver<'a> {
             multi_uses: Vec::new(),
             method_impls: BTreeMap::new(),
             method_uses: Vec::new(),
-            catalog,
+            catalog: &ctx.rules.keyword,
+            ctx,
             reg_impls: Vec::new(),
             handlers: BTreeMap::new(),
             reg_family: BTreeMap::new(),
@@ -280,6 +327,7 @@ impl<'a> Resolver<'a> {
                 continue;
             };
             let lang = lang_of(def.lang.as_deref(), &def.filename);
+            let is_test = self.is_test_namespace(&def.name, &def.filename);
             let id = NodeId::Namespace(id);
             let node = self.nodes.entry(id.clone()).or_insert_with(|| Node {
                 id: id.clone(),
@@ -295,7 +343,37 @@ impl<'a> Resolver<'a> {
                 signature: None,
             });
             node.langs.insert(lang);
+            if is_test {
+                node.flags.insert(SymbolFlag::Test);
+            }
         }
+    }
+
+    /// R14: a namespace in a file under one of the unit's test roots, or
+    /// whose name marks it (`rules/clj-tests.toml`).
+    ///
+    /// Example: `app.thing-test` anywhere, or `app.helpers` in `test/app/helpers.clj`.
+    fn is_test_namespace(&self, ns: &str, file: &str) -> bool {
+        let under_test_root = RepoPath::parse(file).is_ok_and(|f| {
+            self.unit
+                .roots
+                .iter()
+                .any(|r| r.kind == aldente_model::RootKind::Test && f.starts_with(&r.path))
+        });
+        under_test_root || self.ctx.rules.tests.is_test_namespace(ns)
+    }
+
+    /// R14: whether a var is a test: clj-kondo says so, or its defining form
+    /// is in `rules/clj-tests.toml`.
+    ///
+    /// Example: `(defspec p 10 …)` is a test; `(defn f [] …)` is not.
+    fn is_test_var(&self, def: &VarDefinition) -> bool {
+        let by = [def.defined_by_lint_as.as_deref(), def.defined_by.as_deref()];
+        def.test == Some(true)
+            || by.into_iter().flatten().any(|b| {
+                let name = local(Some(b));
+                self.ctx.rules.tests.definers.iter().any(|d| d == name)
+            })
     }
 
     /// R1: one symbol node per var definition, merged across `.cljc`
@@ -310,11 +388,16 @@ impl<'a> Resolver<'a> {
             };
             let lang = lang_of(def.lang.as_deref(), &def.filename);
             let flags = self.flags(def);
+            let sub = if self.is_test_var(def) {
+                SymbolSubkind::Test
+            } else {
+                subkind(def)
+            };
             let id = NodeId::Symbol(sym);
             let node = self.nodes.entry(id.clone()).or_insert_with(|| Node {
                 id: id.clone(),
                 kind: NodeKind::Symbol,
-                subkind: Some(subkind(def)),
+                subkind: Some(sub),
                 name: def.name.clone(),
                 namespace: Some(def.ns.clone()),
                 unit: Some(NodeId::Unit(self.unit.dir.clone())),
@@ -354,9 +437,15 @@ impl<'a> Resolver<'a> {
         if self.is_stateful(def) {
             flags.insert(SymbolFlag::Stateful);
         }
-        // R13: a manifest names this var as an entry point (shadow-cljs).
+        // R13: a manifest names it, it is `-main` or `^:export`, or a test.
         let qualified = format!("{}/{}", def.ns, def.name);
-        if self.unit.entry_points.contains(&qualified) {
+        let export =
+            def.meta.as_ref().and_then(|m| m.get("export")) == Some(&serde_json::Value::Bool(true));
+        if self.unit.entry_points.contains(&qualified) || def.name == "-main" || export {
+            flags.insert(SymbolFlag::EntryPoint);
+        }
+        if self.is_test_var(def) {
+            flags.insert(SymbolFlag::Test);
             flags.insert(SymbolFlag::EntryPoint);
         }
         flags
@@ -777,6 +866,178 @@ impl<'a> Resolver<'a> {
                 .map(|n| format!(":{}/{name}", n.to))
                 .unwrap_or_else(|| kw.to_owned()),
         }
+    }
+
+    /// R13: a var passed as the first argument of a server start call in
+    /// `rules/clj-entry-points.toml` (`(run-jetty #'app opts)`) is a ring
+    /// handler and an entry point.
+    ///
+    /// Example: `(jetty/run-jetty #'app {:port 8080})` flags `app.core/app`.
+    fn server_handlers(&mut self) {
+        let usages: &'a [VarUsage] = &self.run.analysis.var_usages;
+        let mut handlers = Vec::new();
+        for u in usages {
+            let starts =
+                u.to.as_deref()
+                    .is_some_and(|to| self.ctx.rules.entry_points.is_server_start(to, &u.name));
+            if !starts {
+                continue;
+            }
+            let Some(arg) = upos(u)
+                .and_then(|p| self.call_at(&u.filename, p))
+                .and_then(|c| c.args.first())
+            else {
+                continue;
+            };
+            handlers.extend(
+                usages.iter().filter(|v| {
+                    v.filename == u.filename && upos(v).is_some_and(|p| arg.contains(p))
+                }),
+            );
+        }
+        for v in handlers {
+            if let Some((id @ NodeId::Symbol(_), _)) = self.target(v)
+                && let Some(node) = self.nodes.get_mut(&id)
+            {
+                node.flags.insert(SymbolFlag::EntryPoint);
+            }
+        }
+    }
+
+    /// R10: a `provides` edge into every external namespace (created at
+    /// namespace level if only its symbols were used), from the first rung
+    /// of the ladder that matches. npm packages already have theirs.
+    ///
+    /// Example: `ext:clj//clojure.string` gets
+    /// `lib:maven:org.clojure/clojure -provides(certain direct)->`.
+    fn libraries(&mut self) {
+        let provided: BTreeSet<NodeId> = self
+            .edges
+            .values()
+            .filter(|e| e.kind == EdgeKind::Provides)
+            .map(|e| e.to.clone())
+            .collect();
+        let namespaces: BTreeSet<String> = self
+            .nodes
+            .keys()
+            .filter_map(|id| match id {
+                NodeId::External(e) => Some(e.ns().to_owned()),
+                _ => None,
+            })
+            .collect();
+        for ns in namespaces {
+            let Some(ext) = self.external(&ns, None) else {
+                continue;
+            };
+            if provided.contains(&ext) {
+                continue;
+            }
+            let found = self.attribute(&ns);
+            if found.is_empty() {
+                self.provides(
+                    LibraryId::unknown(),
+                    &ext,
+                    Certainty::Possible,
+                    Reason::NameMatch,
+                );
+                self.blindspots.push(BlindSpot {
+                    category: BlindSpotCategory::UnresolvedSymbol,
+                    node: Some(ext.clone()),
+                    site: None,
+                    message: format!(
+                        "no declared dependency or known library provides namespace {ns}"
+                    ),
+                });
+            }
+            for (coord, certainty, reason) in found {
+                if let Ok(lib) = LibraryId::new("maven", &coord) {
+                    self.provides(lib, &ext, certainty, reason);
+                }
+            }
+        }
+    }
+
+    /// The R10 ladder for one namespace: jar listing (certain), the prefix
+    /// table (likely), the core rule (certain), then the declared
+    /// coordinates' prefixes (likely; possible for each of a tie).
+    ///
+    /// Example: `malli.core` with `metosin/malli` declared gives
+    /// `[("metosin/malli", Likely, NameMatch)]`.
+    fn attribute(&self, ns: &str) -> Vec<(String, Certainty, Reason)> {
+        let rules = &self.ctx.rules.namespaces;
+        if let Some(c) = self.ctx.jars.get(ns) {
+            return vec![(c.clone(), Certainty::Certain, Reason::Direct)];
+        }
+        if let Some(c) = rules.table_for(ns) {
+            return vec![(c.to_owned(), Certainty::Likely, Reason::NameMatch)];
+        }
+        if let Some(c) = rules.core_for(ns) {
+            return vec![(c.to_owned(), Certainty::Certain, Reason::Direct)];
+        }
+        let scored: Vec<(usize, &str)> = self
+            .unit
+            .deps
+            .iter()
+            .filter_map(|d| {
+                coordinate_prefixes(&d.coord)
+                    .into_iter()
+                    .filter(|p| rules_clj::prefix_matches(ns, p))
+                    .map(|p| p.len())
+                    .max()
+                    .map(|len| (len, d.coord.as_str()))
+            })
+            .collect();
+        let Some(best) = scored.iter().map(|(len, _)| *len).max() else {
+            return Vec::new();
+        };
+        let winners: BTreeSet<&str> = scored
+            .iter()
+            .filter(|(len, _)| *len == best)
+            .map(|(_, c)| *c)
+            .collect();
+        let certainty = if winners.len() == 1 {
+            Certainty::Likely
+        } else {
+            Certainty::Possible
+        };
+        winners
+            .into_iter()
+            .map(|c| (c.to_owned(), certainty, Reason::NameMatch))
+            .collect()
+    }
+
+    /// A library node and its `provides` edge.
+    ///
+    /// Example: `provides(maven reagent/reagent, ext:clj//reagent.core, Likely, NameMatch)`.
+    fn provides(&mut self, lib: LibraryId, to: &NodeId, certainty: Certainty, reason: Reason) {
+        let name = if lib.coordinate().is_empty() {
+            "unknown".to_owned()
+        } else {
+            lib.coordinate().to_owned()
+        };
+        let id = NodeId::Library(lib);
+        self.nodes.entry(id.clone()).or_insert_with(|| Node {
+            id: id.clone(),
+            kind: NodeKind::Library,
+            subkind: None,
+            name,
+            namespace: None,
+            unit: None,
+            langs: BTreeSet::new(),
+            flags: BTreeSet::new(),
+            loc: None,
+            doc: None,
+            signature: None,
+        });
+        self.edge(
+            id,
+            to.clone(),
+            EdgeKind::Provides,
+            Some(certainty),
+            Some(reason),
+            None,
+            None,
+        );
     }
 
     /// The call site that starts at `pos` in `file`.
@@ -1321,7 +1582,16 @@ impl<'a> Resolver<'a> {
     /// Example: the form on line 10 of shop.core gives `clj:.//shop.core/<top>@L10`.
     fn top_impl(&mut self, ns: &str, file: &str, top: &TopForm) -> Option<NodeId> {
         let disc = format!("L{}", top.span.start.line);
-        self.impl_node(ns, ns, "<top>", &disc, file, top.span)
+        let id = self.impl_node(ns, ns, "<top>", &disc, file, top.span)?;
+        // R14: a top-level test form without a var (Midje `fact`).
+        let head = local(top.head.as_deref());
+        if self.ctx.rules.tests.top_level.iter().any(|t| t == head)
+            && let Some(node) = self.nodes.get_mut(&id)
+        {
+            node.flags.insert(SymbolFlag::Test);
+            node.flags.insert(SymbolFlag::EntryPoint);
+        }
+        Some(id)
     }
 
     /// The symbol `ns/name` in this unit; if clj-kondo names a var that has no
@@ -2365,6 +2635,31 @@ fn subkind(def: &VarDefinition) -> SymbolSubkind {
         _ if def.arglist_strs.as_ref().is_some_and(|a| !a.is_empty()) => SymbolSubkind::Fn,
         _ => SymbolSubkind::Var,
     }
+}
+
+/// Namespace prefixes a Maven coordinate suggests: the artifact, the
+/// artifact with `-` as `.`, the group, and the group's last part joined to
+/// the artifact (both spellings).
+///
+/// Example: `org.clojure/core.async` gives `core.async`, `org.clojure`,
+/// `clojure.core.async`; `metosin/reitit-core` gives `reitit-core`,
+/// `reitit.core`, `metosin`, `metosin.reitit-core`, `metosin.reitit.core`.
+fn coordinate_prefixes(coord: &str) -> Vec<String> {
+    let Some((group, artifact)) = coord.split_once('/') else {
+        return Vec::new();
+    };
+    let dotted = artifact.replace('-', ".");
+    let last = group.rsplit('.').next().unwrap_or(group);
+    let mut out = vec![
+        artifact.to_owned(),
+        dotted.clone(),
+        group.to_owned(),
+        format!("{last}.{artifact}"),
+        format!("{last}.{dotted}"),
+    ];
+    out.sort();
+    out.dedup();
+    out
 }
 
 /// The part of a symbol after its namespace; `""` for `None`.

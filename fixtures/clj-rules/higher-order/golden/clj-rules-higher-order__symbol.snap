@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 22
+# nodes 24
 node clj:.//ho.core namespace langs:clj
 node clj:.//ho.core/apply-it symbol/fn langs:clj
 node clj:.//ho.core/composed symbol/var langs:clj
@@ -18,14 +18,16 @@ node clj:.//ho.core/use-apply symbol/fn langs:clj
 node clj:.//ho.core/use-apply-2 symbol/fn langs:clj
 node clj:.//ho.core/use-twice symbol/fn langs:clj
 node clj:.//ho.core/use-twice-1 symbol/fn langs:clj
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/* external
 node ext:clj//clojure.core/+ external
 node ext:clj//clojure.core/comp external
 node ext:clj//clojure.core/fn external
 node ext:clj//clojure.core/map external
 node ext:clj//clojure.core/partial external
+node lib:maven:org.clojure/clojure library
 node unit:. unit langs:clj
-# edges 40
+# edges 41
 edge clj:.//ho.core -contains-> clj:.//ho.core/apply-it
 edge clj:.//ho.core -contains-> clj:.//ho.core/composed
 edge clj:.//ho.core -contains-> clj:.//ho.core/dbl
@@ -65,5 +67,6 @@ edge clj:.//ho.core/use-twice -calls(certain direct)-> clj:.//ho.core/twice @ sr
 edge clj:.//ho.core/use-twice -references(likely value-ref)-> clj:.//ho.core/dbl @ src/ho/core.clj:20:27
 edge clj:.//ho.core/use-twice-1 -calls(certain direct)-> clj:.//ho.core/twice @ src/ho/core.clj:22:22
 edge clj:.//ho.core/use-twice-1 -references(likely value-ref)-> clj:.//ho.core/inc2 @ src/ho/core.clj:22:29
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
 edge unit:. -contains-> clj:.//ho.core
 # truncated false

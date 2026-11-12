@@ -582,3 +582,151 @@ fn r11_keyword_dispatch_matches_expected() {
                 && b.message.contains(":no/handler"))
     );
 }
+
+/// R10 (WP2.9) on clj-mini: every external namespace has a `provides` edge,
+/// and `lib:unknown` provides nothing.
+#[test]
+fn r10_every_external_namespace_is_provided_in_clj_mini() {
+    let g = analyze_fixture(&fixture_dir("clj-mini")).graph;
+    let provided: BTreeSet<String> = g
+        .edges
+        .iter()
+        .filter(|e| e.kind == EdgeKind::Provides)
+        .map(|e| e.to.to_string())
+        .collect();
+    let external_namespaces: BTreeSet<String> = g
+        .nodes
+        .keys()
+        .filter_map(|id| match id {
+            NodeId::External(e) => Some(format!("ext:clj//{}", e.ns())),
+            _ => None,
+        })
+        .collect();
+    let missing: Vec<_> = external_namespaces.difference(&provided).collect();
+    assert!(missing.is_empty(), "no provides edge: {missing:?}");
+    assert!(
+        !g.edges.iter().any(|e| e.from.to_string() == "lib:unknown"),
+        "lib:unknown provides nothing"
+    );
+    let row = |lib: &str, ns: &str| {
+        g.edges
+            .iter()
+            .find(|e| {
+                e.kind == EdgeKind::Provides
+                    && e.from.to_string() == lib
+                    && e.to.to_string() == format!("ext:clj//{ns}")
+            })
+            .and_then(|e| e.certainty)
+    };
+    assert_eq!(
+        row("lib:maven:org.clojure/clojure", "clojure.string"),
+        Some(Certainty::Certain)
+    );
+    assert_eq!(
+        row("lib:maven:org.clojure/clojurescript", "cljs.core"),
+        Some(Certainty::Certain)
+    );
+    assert_eq!(
+        row("lib:maven:re-frame/re-frame", "re-frame.core"),
+        Some(Certainty::Likely)
+    );
+    assert_eq!(row("lib:npm:react", "react"), Some(Certainty::Certain));
+}
+
+/// R10 across units: a namespace another unit defines is not a library's.
+#[test]
+fn r10_namespaces_of_other_units_get_no_library() {
+    let g = analyze_fixture(&fixture_dir("mono-mini")).graph;
+    for e in g.edges.iter().filter(|e| e.kind == EdgeKind::Provides) {
+        assert!(
+            matches!(e.to, NodeId::External(_)),
+            "provides into a repository node: {} -> {}",
+            e.from,
+            e.to
+        );
+    }
+    assert!(
+        !g.nodes
+            .keys()
+            .any(|id| id.to_string() == "lib:maven:mono/common"),
+        "a library left without edges is dropped"
+    );
+    assert!(
+        !g.blindspots
+            .iter()
+            .any(|b| b.message.contains("common.util")),
+        "common.util is defined by a unit: {:?}",
+        g.blindspots
+    );
+}
+
+#[test]
+fn entry_points_golden() {
+    assert_graph_snapshot("clj-rules/entry-points", AggregationLevel::Symbol);
+}
+
+/// R13 and R14 (WP2.9): `fixtures/clj-rules/entry-points/EXPECTED.md`.
+#[test]
+fn r13_r14_entry_points_and_tests() {
+    use aldente_model::{SymbolFlag, SymbolSubkind};
+    let g = analyze_fixture(&fixture_dir("clj-rules/entry-points")).graph;
+    let node = |id: &str| {
+        g.nodes
+            .get(&format!("clj:.//{id}").parse::<NodeId>().unwrap())
+            .unwrap_or_else(|| panic!("no node {id}"))
+    };
+    let flagged = |flag: SymbolFlag| -> BTreeSet<String> {
+        g.nodes
+            .values()
+            .filter(|n| n.flags.contains(&flag))
+            .map(|n| n.id.to_string().trim_start_matches("clj:.//").to_owned())
+            .collect()
+    };
+    let set = |xs: &[&str]| xs.iter().map(|s| (*s).to_owned()).collect::<BTreeSet<_>>();
+    assert_eq!(
+        flagged(SymbolFlag::EntryPoint),
+        set(&[
+            "app.core/-main",
+            "app.core/app",
+            "app.core/exported",
+            "app.core/other-handler",
+            "app.core/start",
+            "app.midje-facts/<top>@L5",
+            "app.thing-test/helper-is-two",
+            "app.thing-test/newest-is-stable",
+        ])
+    );
+    assert_eq!(
+        flagged(SymbolFlag::Test),
+        set(&[
+            "app.helpers",
+            "app.midje-facts",
+            "app.midje-facts/<top>@L5",
+            "app.thing-test",
+            "app.thing-test/helper-is-two",
+            "app.thing-test/newest-is-stable",
+        ])
+    );
+    assert_eq!(
+        node("app.thing-test/newest-is-stable").subkind,
+        Some(SymbolSubkind::Test)
+    );
+    assert_eq!(
+        node("app.thing-test/fixture-helper").subkind,
+        Some(SymbolSubkind::Fn)
+    );
+    let unit = g.nodes.get(&"unit:.".parse::<NodeId>().unwrap()).unwrap();
+    assert!(
+        unit.flags.contains(&SymbolFlag::Service),
+        "entry points seed the service flag"
+    );
+}
+
+/// A unit whose only entry points are tests is not a service.
+#[test]
+fn tests_alone_do_not_make_a_service() {
+    use aldente_model::SymbolFlag;
+    let g = analyze_fixture(&fixture_dir("clj-rules/multimethods")).graph;
+    let unit = g.nodes.get(&"unit:.".parse::<NodeId>().unwrap()).unwrap();
+    assert!(!unit.flags.contains(&SymbolFlag::Service));
+}

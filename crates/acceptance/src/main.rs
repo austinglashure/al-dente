@@ -135,7 +135,8 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
     let adapter = CljAdapter::new(Kondo::new(
         kondo_path.into(),
         layout.tmp.join("kondo-empty"),
-    ));
+    ))
+    .with_maven_repo(aldente_acquire::maven::default_repository());
     let analyzing = Instant::now();
     let outcome: Outcome =
         analyze_cached(&root, true, &[&adapter], &ctx).map_err(|e| anyhow::anyhow!("{e}"))?;

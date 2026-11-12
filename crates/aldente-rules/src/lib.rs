@@ -3,6 +3,7 @@
 //! The catalogs are compiled into the binary. Nothing is ever read from an
 //! analyzed repository: its configuration is data, not rules.
 
+pub mod clj;
 pub mod keyword_dispatch;
 
 /// A catalog that does not parse. Built-in catalogs are checked by tests, so

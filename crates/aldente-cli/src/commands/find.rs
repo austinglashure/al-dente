@@ -1,8 +1,8 @@
 //! `aldente find <pattern> [TARGET]`: searches symbols, impls and namespaces.
 
-use aldente_graph::query::search;
+use aldente_graph::query::{SearchFilter, search_filtered};
 use aldente_model::query::FindResult;
-use aldente_model::{Envelope, ExitCode, NodeKind};
+use aldente_model::{Envelope, ExitCode, NodeKind, SymbolFlag, SymbolSubkind};
 use clap::Args;
 
 use crate::commands::loaded::load;
@@ -12,13 +12,17 @@ use crate::output::{fail, print_json, print_lines, printable, token};
 /// Arguments for `aldente find`.
 #[derive(Debug, Args)]
 pub struct FindArgs {
-    /// Substring of the name or ID (case-insensitive).
+    /// Substring of the name or ID (case-insensitive); `""` matches all.
     pattern: String,
     #[command(flatten)]
     target: TargetArgs,
-    /// Only these node kinds (repeatable). Default: symbol, impl, namespace.
+    /// Only these node kinds or symbol subkinds (repeatable), e.g.
+    /// `namespace`, `test`, `fn`. Default: symbol, impl, namespace.
     #[arg(long, value_parser = parse_kind)]
-    kind: Vec<NodeKind>,
+    kind: Vec<Kind>,
+    /// Only nodes with all these flags (repeatable), e.g. `entry-point`, `test`.
+    #[arg(long, value_parser = parse_flag)]
+    flag: Vec<SymbolFlag>,
     /// At most this many results; 0 for all.
     #[arg(long, default_value_t = 50)]
     limit: usize,
@@ -27,12 +31,48 @@ pub struct FindArgs {
 /// The envelope `schema` tag for this command's output.
 const TAG: &str = "find";
 
-/// Parses a node kind as written in JSON.
+/// A `--kind` value: a node kind or a symbol subkind (their names differ).
+#[derive(Debug, Clone, Copy)]
+enum Kind {
+    Node(NodeKind),
+    Sub(SymbolSubkind),
+}
+
+/// Parses a node kind or symbol subkind as written in JSON.
 ///
-/// Example: `parse_kind("namespace")` is `Ok(NodeKind::Namespace)`.
-fn parse_kind(s: &str) -> Result<NodeKind, String> {
-    serde_json::from_value(serde_json::Value::String(s.to_owned()))
+/// Example: `parse_kind("namespace")` is `Kind::Node(Namespace)`;
+/// `parse_kind("test")` is `Kind::Sub(Test)`.
+fn parse_kind(s: &str) -> Result<Kind, String> {
+    let v = serde_json::Value::String(s.to_owned());
+    serde_json::from_value(v.clone())
+        .map(Kind::Node)
+        .or_else(|_| serde_json::from_value(v).map(Kind::Sub))
         .map_err(|_| format!("unknown kind {s:?}"))
+}
+
+/// Parses a flag as written in JSON.
+///
+/// Example: `parse_flag("entry-point")` is `Ok(SymbolFlag::EntryPoint)`.
+fn parse_flag(s: &str) -> Result<SymbolFlag, String> {
+    serde_json::from_value(serde_json::Value::String(s.to_owned()))
+        .map_err(|_| format!("unknown flag {s:?}"))
+}
+
+/// The search filter the arguments ask for.
+///
+/// Example: `--kind test --flag entry-point` gives subkinds `[test]`, flags `[entry-point]`.
+fn filter(args: &FindArgs) -> SearchFilter {
+    let mut f = SearchFilter {
+        flags: args.flag.clone(),
+        ..SearchFilter::default()
+    };
+    for k in &args.kind {
+        match k {
+            Kind::Node(n) => f.kinds.push(*n),
+            Kind::Sub(s) => f.subkinds.push(*s),
+        }
+    }
+    f
 }
 
 /// Prints matching nodes.
@@ -43,10 +83,10 @@ pub fn run(args: &FindArgs, json: bool) -> anyhow::Result<ExitCode> {
         Ok(l) => l,
         Err(f) => return fail(TAG, &f, json),
     };
-    let (matches, truncated) = search(
+    let (matches, truncated) = search_filtered(
         &loaded.outcome.snapshot.graph,
         &args.pattern,
-        &args.kind,
+        &filter(args),
         args.limit,
     );
     let result = FindResult { matches, truncated };

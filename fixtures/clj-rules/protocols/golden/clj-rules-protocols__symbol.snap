@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 41
+# nodes 43
 node clj:.//pr.shapes namespace langs:clj
 node clj:.//pr.shapes/->Circle symbol/fn langs:clj
 node clj:.//pr.shapes/->Square symbol/fn langs:clj
@@ -36,6 +36,7 @@ node clj:.//pr.use/blob-label symbol/fn langs:clj
 node clj:.//pr.use/circle-area symbol/fn langs:clj
 node clj:.//pr.use/square-area symbol/fn langs:clj
 node clj:.//pr.use/tri-area symbol/fn langs:clj
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/* external
 node ext:clj//clojure.core// external
 node ext:clj//clojure.core/get external
@@ -43,8 +44,9 @@ node ext:clj//clojure.core/inc external
 node ext:clj//clojure.core/let external
 node ext:clj//clojure.core/reify external
 node ext:clj//clojure.core/str external
+node lib:maven:org.clojure/clojure library
 node unit:. unit langs:clj
-# edges 85
+# edges 86
 edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/->Circle
 edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/->Square
 edge clj:.//pr.shapes -contains-> clj:.//pr.shapes/->Tri
@@ -128,6 +130,7 @@ edge clj:.//pr.use/tri-area -calls(certain direct)-> clj:.//pr.shapes/area @ src
 edge clj:.//pr.use/tri-area -calls(certain direct)-> clj:.//pr.shapes/map->Tri @ src/pr/use.clj:12:11
 edge clj:.//pr.use/tri-area -calls(certain direct)-> ext:clj//clojure.core/let @ src/pr/use.clj:12:3
 edge clj:.//pr.use/tri-area -dispatches(likely protocol-dispatch)-> clj:.//pr.shapes/area@Tri @ src/pr/use.clj:13:5
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
 edge unit:. -contains-> clj:.//pr.shapes
 edge unit:. -contains-> clj:.//pr.use
 # truncated false

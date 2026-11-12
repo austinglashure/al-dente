@@ -16,7 +16,7 @@ use thiserror::Error;
 use crate::build::Graph;
 
 /// Bump when the tables or the meaning of stored data change.
-pub const SCHEMA_VERSION: &str = "2";
+pub const SCHEMA_VERSION: &str = "3";
 
 /// A stored analysis.
 #[derive(Debug, Clone, PartialEq, Eq)]

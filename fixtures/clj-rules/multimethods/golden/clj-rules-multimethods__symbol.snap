@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 34
+# nodes 36
 node clj:.//mm.more namespace langs:clj
 node clj:.//mm.shapes namespace langs:clj
 node clj:.//mm.shapes/<top>@L25 impl langs:clj
@@ -28,6 +28,7 @@ node clj:.//mm.use/pair symbol/fn langs:clj
 node clj:.//mm.use/poodle symbol/fn langs:clj
 node clj:.//mm.use/unknown-area symbol/fn langs:clj
 node clj:.//mm.use/unmatched-area symbol/fn langs:clj
+node ext:clj//clojure.core external
 node ext:clj//clojure.core/* external
 node ext:clj//clojure.core// external
 node ext:clj//clojure.core/derive external
@@ -36,8 +37,9 @@ node ext:clj//clojure.core/map external
 node ext:clj//clojure.core/println external
 node ext:clj//clojure.core/str external
 node ext:clj//clojure.core/type external
+node lib:maven:org.clojure/clojure library
 node unit:. unit langs:clj
-# edges 74
+# edges 75
 edge clj:.//mm.more -requires-> clj:.//mm.shapes @ src/mm/more.clj:3:14
 edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/<top>@L25
 edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/area
@@ -109,6 +111,7 @@ edge clj:.//mm.use/unknown-area -dispatches(possible multimethod-dispatch)-> clj
 edge clj:.//mm.use/unknown-area -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:triangle @ src/mm/use.clj:7:24
 edge clj:.//mm.use/unmatched-area -calls(certain direct)-> clj:.//mm.shapes/area @ src/mm/use.clj:9:25
 edge clj:.//mm.use/unmatched-area -dispatches(likely multimethod-dispatch)-> clj:.//mm.shapes/area@:default @ src/mm/use.clj:9:25
+edge lib:maven:org.clojure/clojure -provides(certain direct)-> ext:clj//clojure.core
 edge unit:. -contains-> clj:.//mm.more
 edge unit:. -contains-> clj:.//mm.shapes
 edge unit:. -contains-> clj:.//mm.use

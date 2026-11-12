@@ -9,6 +9,7 @@ pub mod edn;
 pub mod key;
 pub mod local_git;
 pub mod manifest;
+pub mod maven;
 pub mod process;
 pub mod remote;
 pub mod target;

@@ -78,7 +78,12 @@ pub fn discover(root: &Path, git: bool, walk: Walk) -> Discovery {
     let mut units = Vec::new();
     let mut analyzed = Vec::new();
     for (dir, draft) in &drafts {
-        let (roots, service, entry_points) = unit_roots(root, dir, draft, &mut diagnostics);
+        let ManifestFacts {
+            roots,
+            service,
+            entry_points,
+            deps,
+        } = unit_roots(root, dir, draft, &mut diagnostics);
         let mut langs = BTreeSet::new();
         let mut count = 0;
         for file in sources
@@ -117,6 +122,7 @@ pub fn discover(root: &Path, git: bool, walk: Walk) -> Discovery {
             roots,
             service: service || draft.dockerfile,
             entry_points,
+            deps,
             files: count,
         });
     }
@@ -179,22 +185,31 @@ fn owner<'a>(drafts: &'a BTreeMap<RepoPath, Draft>, file: &RepoPath) -> Option<&
         .max_by_key(|unit| unit.components().count())
 }
 
-/// Reads a unit's manifests and returns its sorted roots, service flag and
-/// entry points.
+/// What a unit's manifests say together.
+struct ManifestFacts {
+    roots: Vec<SourceRoot>,
+    service: bool,
+    entry_points: Vec<String>,
+    deps: Vec<aldente_model::DeclaredDep>,
+}
+
+/// Reads a unit's manifests and returns its sorted roots, service flag,
+/// entry points and declared dependencies.
 /// Falls back to `src`/`test`, or the unit directory, when no manifest
 /// declares roots (including when every manifest failed to parse).
 ///
-/// Example: a `deps.edn` of `{}` in `svc` gives `([svc/src], false, [])`.
+/// Example: a `deps.edn` of `{}` in `svc` gives roots `[svc/src]` and nothing else.
 fn unit_roots(
     root: &Path,
     dir: &RepoPath,
     draft: &Draft,
     diagnostics: &mut Vec<Diagnostic>,
-) -> (Vec<SourceRoot>, bool, Vec<String>) {
+) -> ManifestFacts {
     let mut roots = Vec::new();
     let mut declared = false;
     let mut service = false;
     let mut entry_points = Vec::new();
+    let mut deps = Vec::new();
     for (kind, path) in &draft.manifests {
         let Some(info) = read_manifest(root, *kind, path, diagnostics) else {
             continue;
@@ -202,6 +217,7 @@ fn unit_roots(
         declared |= info.declares_roots;
         service |= info.service;
         entry_points.extend(info.entry_points);
+        deps.extend(info.deps);
         for r in info.roots {
             match dir.join_relative(&r.rel) {
                 Ok(p) if r.default && !is_dir(root, &p) => {}
@@ -238,7 +254,14 @@ fn unit_roots(
     roots.dedup();
     entry_points.sort();
     entry_points.dedup();
-    (roots, service, entry_points)
+    deps.sort();
+    deps.dedup();
+    ManifestFacts {
+        roots,
+        service,
+        entry_points,
+        deps,
+    }
 }
 
 /// Reads and parses one manifest, recording a diagnostic on failure.

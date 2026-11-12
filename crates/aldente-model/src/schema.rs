@@ -188,6 +188,7 @@ mod tests {
                 }],
                 service: false,
                 entry_points: Vec::new(),
+                deps: Vec::new(),
                 files: 1,
             }],
             diagnostics: vec![Diagnostic::new(None, DiagnosticCode::LimitReached, "cap")],

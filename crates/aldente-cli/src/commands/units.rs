@@ -109,6 +109,7 @@ mod tests {
                 roots: vec![],
                 service: false,
                 entry_points: Vec::new(),
+                deps: Vec::new(),
                 files: 0,
             }],
             diagnostics: vec![],
@@ -141,6 +142,7 @@ mod tests {
                 ],
                 service: true,
                 entry_points: Vec::new(),
+                deps: Vec::new(),
                 files: 13,
             }],
             diagnostics: vec![Diagnostic::new(
