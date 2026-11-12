@@ -1233,3 +1233,37 @@ fn holes_are_visible_at_namespace_level() {
         );
     }
 }
+
+/// The GUI's global namespace map: `repo_only` keeps repository namespaces
+/// (from every unit) and holes, and drops externals, platforms and libraries
+/// and the edges into them, so the map fits the payload cap.
+#[test]
+fn global_namespace_map_keeps_only_repository_code() {
+    use aldente_graph::query::{Filter, fit};
+    use aldente_model::NodeKind;
+    let g = analyze_fixture(&fixture_dir("mono-mini")).graph;
+    let filter = Filter {
+        repo_only: true,
+        ..Filter::default()
+    };
+    let (p, coarser) = fit(&g, AggregationLevel::Namespace, &filter);
+    assert!(!coarser);
+    assert!(
+        p.nodes
+            .iter()
+            .all(|n| matches!(n.kind, NodeKind::Namespace | NodeKind::Hole))
+    );
+    let units: BTreeSet<String> = p
+        .nodes
+        .iter()
+        .filter_map(|n| n.unit.as_ref().map(|u| u.to_string()))
+        .collect();
+    assert!(units.len() > 1, "namespaces from several units: {units:?}");
+    let ids: BTreeSet<&NodeId> = p.nodes.iter().map(|n| &n.id).collect();
+    assert!(
+        p.edges
+            .iter()
+            .all(|e| ids.contains(&e.from) && ids.contains(&e.to))
+    );
+    assert!(!p.edges.is_empty());
+}

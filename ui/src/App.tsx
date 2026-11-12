@@ -37,6 +37,7 @@ export function App() {
   const [panels, setPanels] = usePanels();
   const [spots, setSpots] = useState<BlindSpot[]>([]);
   const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
+  const [view, setView] = useState<'units' | 'namespaces'>('units');
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   // A ref, so callbacks that read the levels keep their identity and do not
@@ -51,6 +52,20 @@ export function App() {
   );
   const relayout = useCallback(() => layout(graph, redraw, edgeVisible), [graph, redraw, edgeVisible]);
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
+
+  /** The two root views: units (the default) and every namespace at once. */
+  const roots = useMemo(() => {
+    const fitted = ({ data, warnings }: { data: Payload; warnings: { code: string }[] }) => {
+      if (data.truncated) setNotice('The graph was too large and has been truncated.');
+      else if (warnings.some((w) => w.code === 'coarser') && data.aggregated)
+        setNotice(`Showing the ${data.aggregated.level} level to stay within the size limit.`);
+      return data;
+    };
+    return {
+      units: { label: 'Repository', load: () => api.graph().then(fitted) } as Crumb,
+      namespaces: { label: 'All namespaces', load: () => api.allNamespaces().then(fitted) } as Crumb,
+    };
+  }, [api]);
 
   /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
   const show = useCallback(
@@ -79,18 +94,18 @@ export function App() {
       .blindspots()
       .then((r) => setSpots(r.blindspots))
       .catch(fail);
-    const repo: Crumb = {
-      label: 'Repository',
-      load: () =>
-        api.graph().then(({ data, warnings }) => {
-          if (data.truncated) setNotice('The graph was too large and has been truncated.');
-          else if (warnings.some((w) => w.code === 'coarser') && data.aggregated)
-            setNotice(`Showing the ${data.aggregated.level} level to stay within the size limit.`);
-          return data;
-        }),
-    };
-    show(repo, []);
-  }, [api, show, fail]);
+    show(roots.units, []);
+  }, [api, show, fail, roots]);
+
+  /** Switches the canvas to the unit overview or the global namespace map. */
+  const switchView = useCallback(
+    (next: 'units' | 'namespaces') => {
+      setView(next);
+      setNotice(null);
+      show(roots[next], []);
+    },
+    [roots, show],
+  );
 
   const select = useCallback(
     (id: string) => {
@@ -355,6 +370,20 @@ export function App() {
               )}
             </span>
           ))}
+          <span className="view-switch" role="group" aria-label="Overview">
+            <button type="button" data-testid="view-units" aria-pressed={view === 'units'} onClick={() => switchView('units')} title="Units and how they depend on each other">
+              Units
+            </button>
+            <button
+              type="button"
+              data-testid="view-namespaces"
+              aria-pressed={view === 'namespaces'}
+              onClick={() => switchView('namespaces')}
+              title="Every namespace in the repository on one map (no externals)"
+            >
+              All namespaces
+            </button>
+          </span>
           <span className="panel-toggles">
             <button
               type="button"

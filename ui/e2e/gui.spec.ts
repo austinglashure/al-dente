@@ -243,3 +243,29 @@ test.describe('interop', () => {
     }
   });
 });
+
+test.describe('global namespace map', () => {
+  test('one click switches from units to every namespace and back', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await expect(listed(page, 'unit:services/orders')).toBeVisible();
+      await expect(page.getByTestId('view-units')).toHaveAttribute('aria-pressed', 'true');
+
+      await page.getByTestId('view-namespaces').click();
+      await expect(page.getByTestId('view-namespaces')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('breadcrumb')).toContainText('All namespaces');
+      await expect(listed(page, 'clj:services/orders//orders.core')).toBeVisible();
+      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await expect(listed(page, 'unit:services/orders')).toHaveCount(0);
+      // Repository code only: no externals on the global map.
+      await expect(page.locator('[data-testid="node-list"] [data-node-id^="ext:"]')).toHaveCount(0);
+
+      await page.getByTestId('view-units').click();
+      await expect(listed(page, 'unit:services/orders')).toBeVisible();
+    } finally {
+      server.close();
+    }
+  });
+});

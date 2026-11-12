@@ -110,7 +110,8 @@ fn resolve_id(state: &AppState, tag: &str, id: Option<&str>) -> Result<NodeId, B
     }
 }
 
-/// The filter from `min_certainty`, `kinds` (comma-separated) and `unit`.
+/// The filter from `min_certainty`, `kinds` (comma-separated), `unit` and
+/// `scope=repo` (repository code and holes only).
 ///
 /// Example: `?min_certainty=likely&kinds=calls,references`.
 fn filter_from(p: &Params) -> Filter {
@@ -121,6 +122,7 @@ fn filter_from(p: &Params) -> Filter {
             .map(|k| k.split(',').filter_map(token::<EdgeKind>).collect())
             .unwrap_or_default(),
         unit: p.get("unit").and_then(|u| u.parse().ok()),
+        repo_only: p.get("scope") == Some("repo"),
     }
 }
 

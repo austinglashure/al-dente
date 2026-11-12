@@ -317,6 +317,9 @@ pub struct Filter {
     pub kinds: Vec<EdgeKind>,
     /// Keep only nodes of this unit, plus the targets of their edges.
     pub unit: Option<NodeId>,
+    /// Keep only repository code and holes: drop externals, platforms and
+    /// libraries and the edges that touch them (the GUI's global map).
+    pub repo_only: bool,
 }
 
 /// Applies `filter` to a payload.
@@ -336,6 +339,17 @@ pub fn filter(graph: &Graph, payload: GraphPayload, filter: &Filter) -> GraphPay
         edges.retain(|e| in_unit(&e.from));
         let targets: BTreeSet<NodeId> = edges.iter().map(|e| e.to.clone()).collect();
         nodes.retain(|n| in_unit(&n.id) || targets.contains(&n.id));
+    }
+    if filter.repo_only {
+        let outside = |k: NodeKind| {
+            matches!(
+                k,
+                NodeKind::External | NodeKind::Platform | NodeKind::Library
+            )
+        };
+        nodes.retain(|n| !outside(n.kind));
+        let kept: BTreeSet<&NodeId> = nodes.iter().map(|n| &n.id).collect();
+        edges.retain(|e| kept.contains(&e.from) && kept.contains(&e.to));
     }
     GraphPayload {
         nodes,
