@@ -80,3 +80,14 @@ jobs:
       # WP0.4: doctor must find the real git and clj-kondo (clj-kondo.exe on Windows).
       - name: doctor
         run: cargo run -q -p aldente-cli -- doctor
+
+      # WP1.7: the DOT output must be valid Graphviz input.
+      - name: graph --format dot renders with Graphviz (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get install -y graphviz
+          cp -r fixtures/clj-mini "$RUNNER_TEMP/clj-mini"
+          set -o pipefail
+          cargo run -q -p aldente-cli -- graph --level namespace --format dot "$RUNNER_TEMP/clj-mini" | dot -Tsvg > "$RUNNER_TEMP/clj-mini.svg"
+

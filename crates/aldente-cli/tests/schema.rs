@@ -55,7 +55,7 @@ fn schema_without_name_lists_names() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "analyze\ncache\ncache-removal\ndoctor\nenvelope\nunits\n"
+        "analyze\nblindspots\ncache\ncache-removal\ndoctor\nenvelope\nfind\ngraph\nshow\nunits\n"
     );
 
     let output = run(&["schema", "--json"]);
@@ -63,10 +63,14 @@ fn schema_without_name_lists_names() {
         stdout_json(&output)["data"],
         serde_json::json!([
             "analyze",
+            "blindspots",
             "cache",
             "cache-removal",
             "doctor",
             "envelope",
+            "find",
+            "graph",
+            "show",
             "units"
         ])
     );

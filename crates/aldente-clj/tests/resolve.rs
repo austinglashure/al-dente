@@ -270,6 +270,16 @@ fn r4_calls_references_and_macro_bodies() {
         generated[0].node.as_ref().unwrap().to_string(),
         "clj:.//shop.util/with-timing"
     );
+    // Gensyms (`start#`) and special forms (`do`) in the template are not
+    // vars and not blind spots.
+    assert!(
+        !r.batch
+            .blindspots
+            .iter()
+            .any(|b| b.category == BlindSpotCategory::UnresolvedSymbol),
+        "{:?}",
+        r.batch.blindspots
+    );
     // Macro expansion is invisible: no edge from checkout into the macro body.
     assert!(
         !targets(r, "clj:.//shop.core/checkout", EdgeKind::Calls)

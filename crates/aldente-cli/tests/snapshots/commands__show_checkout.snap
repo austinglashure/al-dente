@@ -1,0 +1,19 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 111
+expression: "env.text(&[\"show\", \"checkout\"])"
+---
+clj:.//shop.core/checkout  symbol/fn
+  langs clj
+  at src/shop/core.clj:12:1
+  signature [order]
+  doc Prices, reserves and charges one order. Returns a summary string.
+callers (1)
+  certain  calls direct  clj:.//shop.core/-main  src/shop/core.clj:25:12
+callees (6)
+  certain  calls direct  clj:.//shop.inventory/reserve!  src/shop/core.clj:17:7
+  certain  calls direct  clj:.//shop.model/order-summary  src/shop/core.clj:19:7
+  certain  calls direct  clj:.//shop.payment/charge  src/shop/core.clj:18:7
+  certain  calls direct  clj:.//shop.pricing/price  src/shop/core.clj:16:17
+  certain  calls direct  clj:.//shop.util/with-timing  src/shop/core.clj:15:3
+  certain  calls direct  ext:clj//clojure.core/let  src/shop/core.clj:16:5

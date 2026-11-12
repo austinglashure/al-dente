@@ -21,6 +21,11 @@ use aldente_model::{
 
 use crate::build::Graph;
 
+/// The most nodes one payload may carry (`02-architecture.md`, "Performance targets").
+pub const MAX_NODES: usize = 2000;
+/// The most edges one payload may carry.
+pub const MAX_EDGES: usize = 10_000;
+
 /// Edge kinds that are invocation (rolled up between groups).
 const INVOCATION: &[EdgeKind] = &[EdgeKind::Calls, EdgeKind::References, EdgeKind::Dispatches];
 

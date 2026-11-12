@@ -13,6 +13,7 @@ pub mod graph;
 pub mod id;
 pub mod kinds;
 pub mod path;
+pub mod query;
 pub mod schema;
 pub mod units;
 

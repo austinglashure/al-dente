@@ -4,3 +4,6 @@
 
 (defn -main [& _args]
   (println "billing on" config/port))
+
+(defn charge! [amount]
+  (println "charging" amount))

@@ -9,7 +9,7 @@ use crate::resolve::resolve;
 
 /// The adapter's version, part of the snapshot key. Bump it whenever the
 /// resolver's output for the same input changes.
-pub const VERSION: &str = "3";
+pub const VERSION: &str = "4";
 
 /// The `clj` adapter for Clojure, ClojureScript and `.cljc`.
 #[derive(Debug, Clone)]

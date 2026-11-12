@@ -1,0 +1,32 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 139
+expression: "env.text(&[\"graph\", \"--level\", \"namespace\", \"--format\", \"dot\"])"
+---
+digraph aldente {
+  rankdir=LR;
+  node [shape=box];
+  "clj:libs/common//common.util" [label="common.util", tooltip="namespace"];
+  "clj:services/billing//billing.core" [label="billing.core", tooltip="namespace"];
+  "clj:services/billing//config" [label="config", tooltip="namespace"];
+  "clj:services/orders//config" [label="config", tooltip="namespace"];
+  "clj:services/orders//orders.core" [label="orders.core", tooltip="namespace"];
+  "clj:services/orders//orders.core-test" [label="orders.core-test", tooltip="namespace"];
+  "ext:clj//clojure.core" [label="clojure.core", tooltip="external"];
+  "ext:clj//clojure.test" [label="clojure.test", tooltip="external"];
+  "clj:libs/common//common.util" -> "ext:clj//clojure.core" [label="calls certain direct x1", style=solid];
+  "clj:libs/common//common.util" -> "ext:clj//clojure.core" [label="references likely value-ref x1", style=dashed];
+  "clj:services/billing//billing.core" -> "clj:services/billing//config" [label="requires", style=solid];
+  "clj:services/billing//billing.core" -> "clj:services/billing//config" [label="references likely value-ref x1", style=dashed];
+  "clj:services/billing//billing.core" -> "ext:clj//clojure.core" [label="calls certain direct x2", style=solid];
+  "clj:services/orders//orders.core" -> "clj:libs/common//common.util" [label="requires", style=solid];
+  "clj:services/orders//orders.core" -> "clj:libs/common//common.util" [label="calls certain direct x2", style=solid];
+  "clj:services/orders//orders.core" -> "clj:services/orders//config" [label="requires", style=solid];
+  "clj:services/orders//orders.core" -> "clj:services/orders//config" [label="references likely value-ref x1", style=dashed];
+  "clj:services/orders//orders.core" -> "ext:clj//clojure.core" [label="calls certain direct x1", style=solid];
+  "clj:services/orders//orders.core-test" -> "clj:services/orders//orders.core" [label="requires", style=solid];
+  "clj:services/orders//orders.core-test" -> "clj:services/orders//orders.core" [label="calls certain direct x1", style=solid];
+  "clj:services/orders//orders.core-test" -> "ext:clj//clojure.core" [label="calls certain direct x1", style=solid];
+  "clj:services/orders//orders.core-test" -> "ext:clj//clojure.test" [label="requires", style=solid];
+  "clj:services/orders//orders.core-test" -> "ext:clj//clojure.test" [label="calls certain direct x1", style=solid];
+}

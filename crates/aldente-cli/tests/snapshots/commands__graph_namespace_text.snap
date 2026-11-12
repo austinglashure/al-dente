@@ -1,0 +1,30 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 138
+expression: "env.text(&[\"graph\", \"--level\", \"namespace\"])"
+---
+nodes (8):
+  clj:libs/common//common.util  namespace
+  clj:services/billing//billing.core  namespace
+  clj:services/billing//config  namespace
+  clj:services/orders//config  namespace
+  clj:services/orders//orders.core  namespace
+  clj:services/orders//orders.core-test  namespace
+  ext:clj//clojure.core  external
+  ext:clj//clojure.test  external
+edges (15):
+  clj:libs/common//common.util -> ext:clj//clojure.core  calls certain direct x1
+  clj:libs/common//common.util -> ext:clj//clojure.core  references likely value-ref x1
+  clj:services/billing//billing.core -> clj:services/billing//config  requires
+  clj:services/billing//billing.core -> clj:services/billing//config  references likely value-ref x1
+  clj:services/billing//billing.core -> ext:clj//clojure.core  calls certain direct x2
+  clj:services/orders//orders.core -> clj:libs/common//common.util  requires
+  clj:services/orders//orders.core -> clj:libs/common//common.util  calls certain direct x2
+  clj:services/orders//orders.core -> clj:services/orders//config  requires
+  clj:services/orders//orders.core -> clj:services/orders//config  references likely value-ref x1
+  clj:services/orders//orders.core -> ext:clj//clojure.core  calls certain direct x1
+  clj:services/orders//orders.core-test -> clj:services/orders//orders.core  requires
+  clj:services/orders//orders.core-test -> clj:services/orders//orders.core  calls certain direct x1
+  clj:services/orders//orders.core-test -> ext:clj//clojure.core  calls certain direct x1
+  clj:services/orders//orders.core-test -> ext:clj//clojure.test  requires
+  clj:services/orders//orders.core-test -> ext:clj//clojure.test  calls certain direct x1

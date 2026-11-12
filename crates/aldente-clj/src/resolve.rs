@@ -61,6 +61,9 @@ enum Suppression {
     ProtocolSignature,
     /// A name in an `ns` form's `:refer`; the `requires` edge covers it.
     NsRefer,
+    /// An unresolvable symbol inside a macro's syntax-quoted template: a
+    /// gensym (`start#`) or special form (`do`), not a var.
+    MacroTemplate,
 }
 
 impl Suppression {
@@ -74,6 +77,7 @@ impl Suppression {
             Suppression::ProtocolInImplForm => "protocol-in-impl-form",
             Suppression::ProtocolSignature => "protocol-signature",
             Suppression::NsRefer => "ns-refer",
+            Suppression::MacroTemplate => "macro-template",
         }
     }
 }
@@ -469,8 +473,14 @@ impl<'a> Resolver<'a> {
             };
             let scope = self.scope(u);
             let target = self.target(u);
-            let (Some(scope), Some((to, interop))) = (scope, target) else {
-                self.unresolved(u);
+            let (Some(scope), Some((to, interop))) = (scope.clone(), target) else {
+                let in_template = scope.is_some_and(|s| self.in_macro_quote(&s, &u.filename, pos));
+                if in_template {
+                    let name = Suppression::MacroTemplate.name();
+                    *self.stats.suppressed.entry(name).or_default() += 1;
+                } else {
+                    self.unresolved(u);
+                }
                 continue;
             };
             let is_call = self.is_call(u);

@@ -1,0 +1,29 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 140
+expression: "env.text(&[\"graph\", \"--level\", \"namespace\", \"--format\", \"mermaid\"])"
+---
+graph LR
+  n0["common.util"]
+  n1["billing.core"]
+  n2["config"]
+  n3["config"]
+  n4["orders.core"]
+  n5["orders.core-test"]
+  n6["clojure.core"]
+  n7["clojure.test"]
+  n0 -->|"calls certain direct x1"| n6
+  n0 -.->|"references likely value-ref x1"| n6
+  n1 -->|"requires"| n2
+  n1 -.->|"references likely value-ref x1"| n2
+  n1 -->|"calls certain direct x2"| n6
+  n4 -->|"requires"| n0
+  n4 -->|"calls certain direct x2"| n0
+  n4 -->|"requires"| n3
+  n4 -.->|"references likely value-ref x1"| n3
+  n4 -->|"calls certain direct x1"| n6
+  n5 -->|"requires"| n4
+  n5 -->|"calls certain direct x1"| n4
+  n5 -->|"calls certain direct x1"| n6
+  n5 -->|"requires"| n7
+  n5 -->|"calls certain direct x1"| n7

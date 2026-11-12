@@ -18,6 +18,7 @@ Hand-written. Golden snapshots are reviewed against this file, never the other w
    - `protocol-in-impl-form`: a protocol symbol in the header of `extend-type`, `extend-protocol`, `defrecord`, `deftype` or `reify` (Phase 2 adds `implements`);
    - `protocol-signature`: parameter names in a `defprotocol` signature, which clj-kondo reports as unresolved;
    - `ns-refer`: names in an `ns` form's `:refer` (the `requires` edge covers them).
+   - `macro-template`: symbols clj-kondo cannot resolve inside a macro's syntax-quoted template, i.e. gensyms (`start#`) and special forms (`do`); they are not vars.
    Every other usage becomes an edge site or an `unresolved-symbol` blind spot.
 2. **`let` and `fn`** (confirmed with clj-kondo 2026.10.26 in WP1.3). Every usage of `clojure.core/let` and `clojure.core/fn` (`cljs.core/…` in `.cljs`) is a certain `calls` edge from the enclosing scope (clj-kondo reports 5 `let` and 4 `fn` usages). They are not listed row by row. The scopes that use them: `shop.core/checkout`, `shop.core/-main`, `shop.plugins/load-plugin`, `shop.ui.views/cart-view` (`let`); the four re-frame registrations (`fn`).
 3. **`@x`** (confirmed in WP1.3). The reader expands `@x` to `(deref x)` and clj-kondo reports it as a `clojure.core/deref` usage (2 in this fixture), so each is a certain `calls` edge to `ext:clojure.core/deref`, not listed row by row; `x` itself is a `references` edge.

@@ -47,13 +47,16 @@ pub fn fail(
     json: bool,
 ) -> anyhow::Result<aldente_model::ExitCode> {
     if json {
-        print_json(&aldente_model::Envelope::<()>::failure(
-            tag,
-            failure.code,
-            &failure.message,
-        ))?;
+        let mut env = aldente_model::Envelope::<()>::failure(tag, failure.code, &failure.message);
+        if let Some(body) = env.error.as_mut() {
+            body.candidates = failure.candidates.clone();
+        }
+        print_json(&env)?;
     } else {
         eprintln!("aldente: {}", printable(&failure.message));
+        for c in failure.candidates.iter().flatten() {
+            eprintln!("  {}", printable(c));
+        }
     }
     Ok(failure.code.exit_code())
 }

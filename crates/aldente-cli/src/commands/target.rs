@@ -39,6 +39,8 @@ pub struct Opened {
 pub struct Failure {
     pub code: ErrorCode,
     pub message: String,
+    /// For ambiguous symbols: the full IDs that matched.
+    pub candidates: Option<Vec<String>>,
 }
 
 impl Failure {
@@ -49,6 +51,7 @@ impl Failure {
         Failure {
             code,
             message: message.into(),
+            candidates: None,
         }
     }
 }

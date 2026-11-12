@@ -6,3 +6,6 @@
   (util/sum (map :price items)))
 
 (defn port [] config/port)
+
+(defn charge! [amount]
+  (util/sum [amount]))

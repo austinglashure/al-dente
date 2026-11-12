@@ -1,12 +1,12 @@
 ---
 source: crates/aldente-testkit/src/golden.rs
-assertion_line: 63
+assertion_line: 65
 ---
 # nodes 3
 node unit:libs/common unit langs:clj
 node unit:services/billing unit [service] langs:clj
 node unit:services/orders unit langs:clj
 # edges 1
-edge unit:services/orders -calls(certain direct)-> unit:libs/common x1 [certain:1]
+edge unit:services/orders -calls(certain direct)-> unit:libs/common x2 [certain:2]
 # truncated false
 # aggregated unit

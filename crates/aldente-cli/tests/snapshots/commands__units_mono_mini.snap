@@ -1,0 +1,12 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 172
+expression: "env.text(&[\"units\"])"
+---
+unit:libs/common  clj  1 files  deps.edn
+  source  libs/common/src  deps.edn
+unit:services/billing  clj  2 files  project.clj  service
+  source  services/billing/src  project.clj
+unit:services/orders  clj  3 files  deps.edn
+  source  services/orders/src  deps.edn
+  test    services/orders/test  deps.edn :test

@@ -1,0 +1,8 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 163
+expression: "env.text(&[\"blindspots\"])"
+---
+blind spots (1):
+  macro-generated  src/shop/util.clj:16:1  calls made by expansions of shop.util/with-timing are not visible
+diagnostics (0):

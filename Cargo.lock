@@ -65,6 +65,7 @@ dependencies = [
  "aldente-model",
  "anyhow",
  "clap",
+ "insta",
  "jsonschema",
  "serde",
  "serde_json",

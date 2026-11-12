@@ -1,0 +1,11 @@
+---
+source: crates/aldente-cli/tests/commands.rs
+assertion_line: 99
+expression: "env.text(&[\"find\", \"charge\"])"
+---
+clj:.//shop.payment/Chargeable  symbol/protocol  src/shop/payment.clj:4:1
+clj:.//shop.payment/charge  symbol/protocol-method  src/shop/payment.clj:5:3
+clj:.//shop.payment/charge@Card  impl  src/shop/payment.clj:9:3
+clj:.//shop.payment/charge@String  impl  src/shop/payment.clj:19:3
+clj:.//shop.payment/charge@Voucher  impl  src/shop/payment.clj:14:3
+clj:.//shop.payment/free-charger  symbol/fn  src/shop/payment.clj:22:1

@@ -8,15 +8,21 @@ use crate::analyze::AnalyzeSummary;
 use crate::cache::{CacheRemoval, CacheReport};
 use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
+use crate::graph::GraphPayload;
+use crate::query::{BlindspotReport, FindResult, ShowResult};
 use crate::units::UnitsReport;
 
 /// Names `schema_by_name` understands, sorted.
 pub const SCHEMA_NAMES: &[&str] = &[
     "analyze",
+    "blindspots",
     "cache",
     "cache-removal",
     "doctor",
     "envelope",
+    "find",
+    "graph",
+    "show",
     "units",
 ];
 
@@ -49,6 +55,10 @@ pub(crate) fn all_keys_required(schema: &mut Schema) {
 pub fn schema_by_name(name: &str) -> Option<Value> {
     match name {
         "analyze" => Some(schemars::schema_for!(AnalyzeSummary).to_value()),
+        "blindspots" => Some(schemars::schema_for!(BlindspotReport).to_value()),
+        "find" => Some(schemars::schema_for!(FindResult).to_value()),
+        "graph" => Some(schemars::schema_for!(GraphPayload).to_value()),
+        "show" => Some(schemars::schema_for!(ShowResult).to_value()),
         "cache" => Some(schemars::schema_for!(CacheReport).to_value()),
         "cache-removal" => Some(schemars::schema_for!(CacheRemoval).to_value()),
         "doctor" => Some(schemars::schema_for!(DoctorReport).to_value()),
@@ -63,7 +73,6 @@ mod tests {
     use super::*;
     use crate::doctor::{CacheCheck, DoctorReport, Platform, ToolCheck, ToolStatus};
     use crate::envelope::{ErrorCode, SnapshotInfo, Warning, WarningCode};
-    use crate::graph::GraphPayload;
     use crate::strategies::arb_payload;
     use proptest::prelude::*;
 
