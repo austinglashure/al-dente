@@ -44,9 +44,19 @@ pub fn run_captured(
     args: &[&str],
     timeout: Duration,
 ) -> Result<Captured, RunError> {
-    let mut child = Command::new(program)
-        .args(args)
-        .current_dir(std::env::temp_dir())
+    let mut command = Command::new(program);
+    command.args(args).current_dir(std::env::temp_dir());
+    run_command(command, timeout)
+}
+
+/// Runs a prepared command (its program, arguments, environment and working
+/// directory already set) with stdin closed, capturing output, killing it
+/// after `timeout`.
+///
+/// Example: `run_command(git_command, Duration::from_secs(600))` gives the
+/// captured output of a `git fetch`.
+pub fn run_command(mut command: Command, timeout: Duration) -> Result<Captured, RunError> {
+    let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

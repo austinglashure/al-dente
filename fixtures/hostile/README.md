@@ -9,7 +9,7 @@ Each case is a small repository that tries to make Al Dente execute code, escape
 | 3 | file name with shell metacharacters, newlines and terminal escapes | WP1.1 | done: built at test time in `tests/walk.rs` (Windows gets the subset of names it allows) |
 | 4 | docstring containing `<script>` and an `onerror` attribute (browser test) | WP1.9 | todo |
 | 5 | `project.clj` with `#=(...)` read-eval and unquote forms | WP1.1 | done: `read-eval/`, tested in `crates/aldente-acquire/tests/units.rs` |
-| 6 | `.gitattributes` declaring a filter, and `.gitmodules` with a `file://` URL (clone against a local bare repository) | WP1.2 | todo |
+| 6 | `.gitattributes` declaring a filter, and `.gitmodules` with a `file://` URL (clone against a local bare repository) | WP1.2 | done: built at test time in `crates/aldente-acquire/src/remote.rs` (`hostile_6_…`), with a control clone proving the setup is live |
 | 6a | local repository whose `.git/config` sets `diff.external`, a textconv driver and `core.pager` | the first WP that runs git on a local repository (WP1.1 did not need git) | todo |
 | 7 | symbol name crafted as a SQL fragment and as a regex | WP1.6 | todo |
 | 8 | 50 MB single-line file and a deeply nested form | WP1.1 / WP1.4 | file part done (generated at test time, `tests/walk.rs`); the build-file reader caps nesting; the form-index part is WP1.4 |

@@ -1,45 +1,41 @@
 //! `aldente units [TARGET]`: lists build units, their source roots and what
 //! the file walk skipped.
 
-use std::path::PathBuf;
-
-use aldente_acquire::target::resolve;
 use aldente_acquire::units::discover;
 use aldente_acquire::walk::{Limits, walk};
-use aldente_model::{Envelope, ErrorCode, ExitCode, RootKind, UnitsReport};
+use aldente_model::{Envelope, ExitCode, RootKind, UnitsReport};
 use clap::Args;
 
-use crate::output::{print_json, print_lines, printable};
+use crate::commands::target::{TargetArgs, open};
+use crate::output::{fail, print_json, print_lines, printable};
 
 /// Arguments for `aldente units`.
 #[derive(Debug, Args)]
 pub struct UnitsArgs {
-    /// Directory to analyze; its git repository root is used when there is one.
-    #[arg(default_value = ".")]
-    target: PathBuf,
+    #[command(flatten)]
+    target: TargetArgs,
 }
 
 /// The envelope `schema` tag for this command's output.
 const TAG: &str = "units";
 
-/// Resolves the target, walks it and prints its units.
+/// Opens the target (cloning a URL first), walks it and prints its units.
 ///
 /// Example: `aldente units fixtures-copy/clj-mini` prints `unit:.` with roots
 /// `src` and `test` and returns `ExitCode::Success`; a missing path returns
 /// `ExitCode::Usage`.
 pub fn run(args: &UnitsArgs, json: bool) -> anyhow::Result<ExitCode> {
-    let target = match resolve(&args.target) {
+    let target = match open(&args.target) {
         Ok(target) => target,
-        Err(err) => return usage_error(&err.to_string(), json),
+        Err(failure) => return fail(TAG, &failure, json),
     };
-    if !target.git {
-        eprintln!("aldente: no git repository found; using the target directory as the root");
-    }
-    let found = discover(
+    let mut found = discover(
         &target.root,
         target.git,
         walk(&target.root, &Limits::default()),
     );
+    found.report.diagnostics.extend(target.diagnostics);
+    found.report.diagnostics.sort();
     if json {
         print_json(&Envelope::success(TAG, None, &found.report))?;
     } else {
@@ -47,19 +43,6 @@ pub fn run(args: &UnitsArgs, json: bool) -> anyhow::Result<ExitCode> {
         print_lines(lines.iter().map(String::as_str))?;
     }
     Ok(ExitCode::Success)
-}
-
-/// Reports a bad target as a usage error.
-///
-/// Example: `usage_error("/x: No such file", false)` prints
-/// `aldente: /x: No such file` on stderr and returns `ExitCode::Usage`.
-fn usage_error(message: &str, json: bool) -> anyhow::Result<ExitCode> {
-    if json {
-        print_json(&Envelope::<()>::failure(TAG, ErrorCode::Usage, message))?;
-    } else {
-        eprintln!("aldente: {message}");
-    }
-    Ok(ErrorCode::Usage.exit_code())
 }
 
 /// The text form: a line per unit, an indented line per root, then the

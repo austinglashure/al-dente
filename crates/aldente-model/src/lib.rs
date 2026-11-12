@@ -2,6 +2,7 @@
 //! The Rust types here are the source of truth for every JSON shape; see
 //! `docs/plan/03-graph-model.md` and `docs/plan/05-cli.md`.
 
+pub mod cache;
 pub mod certainty;
 pub mod diagnostic;
 pub mod doctor;

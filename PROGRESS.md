@@ -2,7 +2,7 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 1, WP1.2 (not started). Phase 0 and WP1.1 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 1, WP1.3 (not started). Phase 0, WP1.1 and WP1.2 are done locally; "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
@@ -12,7 +12,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 ## Phase 1. First proof
 - [x] WP1.1 Local target, walk, units
-- [ ] WP1.2 Safe remote acquisition
+- [x] WP1.2 Safe remote acquisition
 - [ ] WP1.3 clj-kondo runner
 - [ ] WP1.4 Form index
 - [ ] WP1.5 Graph build v1
@@ -120,6 +120,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 
 (Newest first. `YYYY-MM-DD WPx.y: note`.)
 
+- 2026-11-11 WP1.2: `acquire::remote` (URL validation, `Git` hardened command builder, `acquire`), `acquire::cache::Layout` (`ls`/`gc`/`clear`), `aldente cache`, URL targets and `--ref` via shared `commands/target.rs`. Choices: (a) one code path for first clone, re-use and `--ref`: `init --template=<empty>` once, then `fetch --depth 1 --no-tags -- <url> <ref|HEAD>` and `checkout --detach --force FETCH_HEAD`; a commit id works as a ref. (b) Every inherited `GIT_*` variable is removed before the hardening env is set. (c) `$ALDENTE_CACHE_DIR` overrides the cache location (tests use it; plan's config file comes later). (d) Snapshot files will be `snapshots/<hex>.db`: Windows forbids `:` in names, so the `b3:` prefix is not in the file name. (e) URLs with any userinfo on https (tokens too) are refused; ssh users are allowed. A host with a port becomes `<host>_<port>` in the cache path. (f) `gc` only empties `tmp/` until snapshots exist (WP1.6 adds pruning). (g) Fetch and clone failures exit 1 with git's stderr; no exit code fits network errors. Hostile case 6 lives in `remote.rs` unit tests because the `file` transport relaxation is a private, test-only field. The clone tests were written right after the clone code, not before; the URL and CLI tests were red first. Tried: `aldente units https://github.com/metosin/reitit` (31 s, mostly network) and `--ref 0.7.0`; the clone has no `.git/hooks`. Debt: Windows reserved names (`con`, `nul`) as repo names would break the cache path.
 - 2026-11-11 WP1.1 follow-up: tried on metosin/reitit (37 units, 0.06 s; all 170 Clojure files accounted for: 131 analyzed, 37 `project.clj`, 2 `scripts/` outside roots). Fixed, test first: lein-cljsbuild `:cljsbuild :builds … :source-paths` are now roots (alias `cljsbuild`); shadow-cljs test targets (`:node-test`, `:browser-test`, `:karma`) no longer mark a service; a root is `test` when any path component is `test`/`tests`. Leiningen `checkouts/` symlinks are reported and skipped, as intended. Not handled yet: figwheel-main `*.cljs.edn` build files.
 - 2026-11-11 WP1.1: `aldente units [TARGET]`. In `aldente-acquire`: `target` (nearest `.git`, else the directory, `git: false`), `walk` (ignore crate), `edn` (in-crate reader; `#=` kept as `ReadEval`, metadata dropped, nesting capped at 256), `manifest`, `units`, `key`. Model: `Diagnostic`/`DiagnosticCode`, `UnitsReport` (schema `units`), `RepoPath::{join_relative, starts_with, parent, components}`. New deps `ignore` 0.4 and `blake3` 1, both in `02-architecture.md`. New fixtures `mono-mini/` and `hostile/read-eval/`. Choices where the plan was silent:
   - Only the four Clojure manifests make units; `package.json`/`pyproject.toml` wait for Phase 10.

@@ -55,13 +55,13 @@ fn schema_without_name_lists_names() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "doctor\nenvelope\nunits\n"
+        "cache\ncache-removal\ndoctor\nenvelope\nunits\n"
     );
 
     let output = run(&["schema", "--json"]);
     assert_eq!(
         stdout_json(&output)["data"],
-        serde_json::json!(["doctor", "envelope", "units"])
+        serde_json::json!(["cache", "cache-removal", "doctor", "envelope", "units"])
     );
 }
 

@@ -9,6 +9,7 @@ pub mod edn;
 pub mod key;
 pub mod manifest;
 pub mod process;
+pub mod remote;
 pub mod target;
 pub mod tools;
 pub mod units;

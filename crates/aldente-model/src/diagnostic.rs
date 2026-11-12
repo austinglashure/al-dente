@@ -46,6 +46,8 @@ pub enum DiagnosticCode {
     MissingRoot,
     /// A source file inside a unit but under none of its source roots.
     OutsideRoots,
+    /// A git submodule; never fetched, so its contents are not analyzed.
+    Submodule,
 }
 
 impl Diagnostic {

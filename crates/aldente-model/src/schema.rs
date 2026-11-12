@@ -4,12 +4,13 @@
 use schemars::Schema;
 use serde_json::Value;
 
+use crate::cache::{CacheRemoval, CacheReport};
 use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
 use crate::units::UnitsReport;
 
 /// Names `schema_by_name` understands, sorted.
-pub const SCHEMA_NAMES: &[&str] = &["doctor", "envelope", "units"];
+pub const SCHEMA_NAMES: &[&str] = &["cache", "cache-removal", "doctor", "envelope", "units"];
 
 /// The JSON Schema (draft 2020-12) for the envelope with `data` of any shape.
 ///
@@ -39,6 +40,8 @@ pub(crate) fn all_keys_required(schema: &mut Schema) {
 /// Example: `schema_by_name("envelope")` is `Some(..)`; `schema_by_name("x")` is `None`.
 pub fn schema_by_name(name: &str) -> Option<Value> {
     match name {
+        "cache" => Some(schemars::schema_for!(CacheReport).to_value()),
+        "cache-removal" => Some(schemars::schema_for!(CacheRemoval).to_value()),
         "doctor" => Some(schemars::schema_for!(DoctorReport).to_value()),
         "envelope" => Some(envelope_schema()),
         "units" => Some(schemars::schema_for!(UnitsReport).to_value()),

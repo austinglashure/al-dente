@@ -36,6 +36,28 @@ pub fn printable(s: &str) -> String {
         .collect()
 }
 
+/// Reports a failure: a failure envelope on stdout with `--json`, otherwise
+/// `aldente: <message>` on stderr. Returns the matching exit code.
+///
+/// Example: `fail("units", &Failure::new(Usage, "bad target"), false)` prints
+/// `aldente: bad target` and returns `ExitCode::Usage`.
+pub fn fail(
+    tag: &str,
+    failure: &crate::commands::target::Failure,
+    json: bool,
+) -> anyhow::Result<aldente_model::ExitCode> {
+    if json {
+        print_json(&aldente_model::Envelope::<()>::failure(
+            tag,
+            failure.code,
+            &failure.message,
+        ))?;
+    } else {
+        eprintln!("aldente: {}", printable(&failure.message));
+    }
+    Ok(failure.code.exit_code())
+}
+
 /// Whether `err` means the reader of stdout went away (e.g. `aldente … | head`).
 /// That is not a failure of the command, so `main` exits quietly.
 ///
