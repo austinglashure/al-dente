@@ -1,0 +1,31 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 63
+---
+# nodes 8
+node clj:libs/common//common.util namespace langs:clj
+node clj:services/billing//billing.core namespace langs:clj
+node clj:services/billing//config namespace langs:clj
+node clj:services/orders//config namespace langs:clj
+node clj:services/orders//orders.core namespace langs:clj
+node clj:services/orders//orders.core-test namespace langs:clj
+node ext:clj//clojure.core external
+node ext:clj//clojure.test external
+# edges 15
+edge clj:libs/common//common.util -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
+edge clj:libs/common//common.util -references(likely value-ref)-> ext:clj//clojure.core x1 [likely:1]
+edge clj:services/billing//billing.core -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
+edge clj:services/billing//billing.core -references(likely value-ref)-> clj:services/billing//config x1 [likely:1]
+edge clj:services/billing//billing.core -requires-> clj:services/billing//config @ services/billing/src/billing/core.clj:2:14
+edge clj:services/orders//orders.core -calls(certain direct)-> clj:libs/common//common.util x1 [certain:1]
+edge clj:services/orders//orders.core -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
+edge clj:services/orders//orders.core -references(likely value-ref)-> clj:services/orders//config x1 [likely:1]
+edge clj:services/orders//orders.core -requires-> clj:libs/common//common.util @ services/orders/src/orders/core.clj:2:14
+edge clj:services/orders//orders.core -requires-> clj:services/orders//config @ services/orders/src/orders/core.clj:3:14
+edge clj:services/orders//orders.core-test -calls(certain direct)-> clj:services/orders//orders.core x1 [certain:1]
+edge clj:services/orders//orders.core-test -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
+edge clj:services/orders//orders.core-test -calls(certain direct)-> ext:clj//clojure.test x1 [certain:1]
+edge clj:services/orders//orders.core-test -requires-> clj:services/orders//orders.core @ services/orders/test/orders/core_test.clj:3:14
+edge clj:services/orders//orders.core-test -requires-> ext:clj//clojure.test @ services/orders/test/orders/core_test.clj:2:14
+# truncated false
+# aggregated namespace

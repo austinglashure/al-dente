@@ -1,7 +1,7 @@
 //! Nodes, edges and graph payloads as they appear in JSON.
 //! See "JSON shapes" in `docs/plan/03-graph-model.md`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,9 @@ use crate::kinds::{EdgeKind, Lang, NodeKind, SymbolFlag, SymbolSubkind};
 use crate::path::RepoPath;
 
 /// A source range. Lines and columns are 1-based.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Location {
     pub file: RepoPath,
     pub line: u32,
@@ -23,7 +25,9 @@ pub struct Location {
 }
 
 /// One place in the source where an edge occurs, e.g. a call site.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Site {
     pub file: RepoPath,
     pub line: u32,
@@ -71,6 +75,13 @@ pub struct Edge {
     pub lang: Option<Lang>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sites: Vec<Site>,
+    /// Rolled-up edges only: how many stored edges this one stands for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<u64>,
+    /// Rolled-up edges only: member edges per certainty. `certainty` is the
+    /// strongest present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by_certainty: Option<BTreeMap<Certainty, u64>>,
 }
 
 /// Why an edge breaks a model invariant.
@@ -142,6 +153,8 @@ mod tests {
             reason,
             lang: None,
             sites: vec![],
+            count: None,
+            by_certainty: None,
         }
     }
 

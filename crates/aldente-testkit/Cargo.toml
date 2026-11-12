@@ -8,6 +8,9 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+aldente-acquire.workspace = true
+aldente-clj.workspace = true
+aldente-graph.workspace = true
 aldente-model.workspace = true
 insta.workspace = true
 serde.workspace = true

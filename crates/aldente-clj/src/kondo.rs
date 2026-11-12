@@ -101,6 +101,8 @@ pub struct VarUsage {
     pub alias: Option<String>,
     pub defmethod: Option<bool>,
     pub dispatch_val_str: Option<String>,
+    /// Set for a name in an `ns` form's `:refer`.
+    pub refer: Option<bool>,
     pub lang: Option<String>,
 }
 

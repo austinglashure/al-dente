@@ -152,6 +152,8 @@ pub enum SymbolFlag {
     Deprecated,
     Stateful,
     Dynamic,
+    /// On units: has an entry point (`02-architecture.md`, "Units").
+    Service,
 }
 
 impl SymbolFlag {
@@ -163,6 +165,7 @@ impl SymbolFlag {
         SymbolFlag::Deprecated,
         SymbolFlag::Stateful,
         SymbolFlag::Dynamic,
+        SymbolFlag::Service,
     ];
 }
 

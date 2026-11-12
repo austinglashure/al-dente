@@ -1,6 +1,81 @@
 ---
 source: crates/aldente-testkit/src/golden.rs
+assertion_line: 63
 ---
-# nodes 0
-# edges 0
+# nodes 20
+node clj:.//shop.audit namespace langs:clj
+node clj:.//shop.core namespace langs:clj
+node clj:.//shop.interop namespace langs:clj
+node clj:.//shop.inventory namespace langs:clj
+node clj:.//shop.model namespace langs:clj,cljs
+node clj:.//shop.payment namespace langs:clj
+node clj:.//shop.plugins namespace langs:clj
+node clj:.//shop.pricing namespace langs:clj
+node clj:.//shop.pricing-test namespace langs:clj
+node clj:.//shop.ui.events namespace langs:cljs
+node clj:.//shop.ui.subs namespace langs:cljs
+node clj:.//shop.ui.views namespace langs:cljs
+node clj:.//shop.util namespace langs:clj
+node ext:clj//cljs.core external
+node ext:clj//clojure.core external
+node ext:clj//clojure.string external
+node ext:clj//clojure.test external
+node ext:clj//re-frame.core external
+node ext:clj//react external
+node js:console.log platform
+# edges 53
+edge clj:.//shop.audit -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
+edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.inventory x1 [certain:1]
+edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.model x1 [certain:1]
+edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.payment x3 [certain:3]
+edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.plugins x1 [certain:1]
+edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.pricing x1 [certain:1]
+edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.util x1 [certain:1]
+edge clj:.//shop.core -calls(certain direct)-> ext:clj//clojure.core x4 [certain:4]
+edge clj:.//shop.core -requires-> clj:.//shop.inventory @ src/shop/core.clj:3:14
+edge clj:.//shop.core -requires-> clj:.//shop.model @ src/shop/core.clj:4:14
+edge clj:.//shop.core -requires-> clj:.//shop.payment @ src/shop/core.clj:5:14
+edge clj:.//shop.core -requires-> clj:.//shop.plugins @ src/shop/core.clj:6:14
+edge clj:.//shop.core -requires-> clj:.//shop.pricing @ src/shop/core.clj:7:14
+edge clj:.//shop.core -requires-> clj:.//shop.util @ src/shop/core.clj:8:14
+edge clj:.//shop.interop -calls(certain direct)-> ext:clj//clojure.core x2 [certain:2]
+edge clj:.//shop.inventory -calls(certain direct)-> ext:clj//clojure.core x6 [certain:6]
+edge clj:.//shop.inventory -references(likely value-ref)-> ext:clj//clojure.core x4 [likely:4]
+edge clj:.//shop.model -calls(certain direct)-> ext:clj//cljs.core x1 [certain:1]
+edge clj:.//shop.model -calls(certain direct)-> ext:clj//clojure.core x2 [certain:2]
+edge clj:.//shop.model -calls(certain direct)-> ext:clj//clojure.string x2 [certain:2]
+edge clj:.//shop.model -requires(clj)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
+edge clj:.//shop.model -requires(cljs)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
+edge clj:.//shop.payment -calls(certain direct)-> ext:clj//clojure.core x3 [certain:3]
+edge clj:.//shop.plugins -calls(certain direct)-> ext:clj//clojure.core x6 [certain:6]
+edge clj:.//shop.pricing -calls(certain direct)-> clj:.//shop.util x1 [certain:1]
+edge clj:.//shop.pricing -calls(certain direct)-> ext:clj//clojure.core x2 [certain:2]
+edge clj:.//shop.pricing -requires-> clj:.//shop.util @ src/shop/pricing.clj:3:14
+edge clj:.//shop.pricing-test -calls(certain direct)-> clj:.//shop.pricing x2 [certain:2]
+edge clj:.//shop.pricing-test -calls(certain direct)-> ext:clj//clojure.core x2 [certain:2]
+edge clj:.//shop.pricing-test -calls(certain direct)-> ext:clj//clojure.test x2 [certain:2]
+edge clj:.//shop.pricing-test -requires-> clj:.//shop.pricing @ test/shop/pricing_test.clj:3:14
+edge clj:.//shop.pricing-test -requires-> ext:clj//clojure.test @ test/shop/pricing_test.clj:2:14
+edge clj:.//shop.ui.events -calls(certain direct)-> ext:clj//cljs.core x7 [certain:7]
+edge clj:.//shop.ui.events -calls(certain direct)-> ext:clj//re-frame.core x3 [certain:3]
+edge clj:.//shop.ui.events -references(likely value-ref)-> ext:clj//cljs.core x1 [likely:1]
+edge clj:.//shop.ui.events -requires-> ext:clj//re-frame.core @ src/shop/ui/events.cljs:3:14
+edge clj:.//shop.ui.subs -calls(certain direct)-> ext:clj//cljs.core x1 [certain:1]
+edge clj:.//shop.ui.subs -calls(certain direct)-> ext:clj//re-frame.core x1 [certain:1]
+edge clj:.//shop.ui.subs -requires-> ext:clj//re-frame.core @ src/shop/ui/subs.cljs:3:14
+edge clj:.//shop.ui.views -calls(certain direct)-> clj:.//shop.model x1 [certain:1]
+edge clj:.//shop.ui.views -calls(certain direct)-> ext:clj//cljs.core x4 [certain:4]
+edge clj:.//shop.ui.views -calls(certain direct)-> ext:clj//re-frame.core x3 [certain:3]
+edge clj:.//shop.ui.views -calls(certain direct)-> ext:clj//react x2 [certain:2]
+edge clj:.//shop.ui.views -calls(certain interop)-> js:console.log x1 [certain:1]
+edge clj:.//shop.ui.views -requires-> clj:.//shop.model @ src/shop/ui/views.cljs:5:14
+edge clj:.//shop.ui.views -requires-> clj:.//shop.ui.events @ src/shop/ui/views.cljs:6:14
+edge clj:.//shop.ui.views -requires-> clj:.//shop.ui.subs @ src/shop/ui/views.cljs:7:14
+edge clj:.//shop.ui.views -requires-> ext:clj//re-frame.core @ src/shop/ui/views.cljs:4:14
+edge clj:.//shop.ui.views -requires-> ext:clj//react @ src/shop/ui/views.cljs:3:14
+edge clj:.//shop.util -calls(certain direct)-> ext:clj//clojure.core x3 [certain:3]
+edge clj:.//shop.util -references(possible macro-body)-> clj:.//shop.interop x1 [possible:1]
+edge clj:.//shop.util -references(possible macro-body)-> ext:clj//clojure.core x2 [possible:2]
+edge clj:.//shop.util -requires-> clj:.//shop.interop @ src/shop/util.clj:3:14
 # truncated false
+# aggregated namespace

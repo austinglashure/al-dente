@@ -2,6 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
+use aldente_acquire::tools::locate;
+use aldente_clj::adapter::CljAdapter;
+use aldente_clj::kondo::Kondo;
+use aldente_graph::pipeline::{Analyzed, analyze};
 use aldente_model::{AggregationLevel, GraphPayload};
 
 use crate::render::render_graph;
@@ -18,16 +22,30 @@ pub fn fixture_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// Runs the analysis pipeline on a fixture and returns the graph at `level`.
-///
-/// Placeholder until WP1.5: there is no pipeline yet, so this returns an empty
-/// graph. WP1.5 replaces the body; callers do not change.
+/// Runs the analysis pipeline on a fixture (as a repository without git)
+/// and returns the graph at `level`. Needs clj-kondo on `PATH`.
 ///
 /// Example: `run_pipeline(&fixture_dir("clj-mini"), AggregationLevel::Symbol)`
-/// returns `GraphPayload::default()` for now.
+/// contains `clj:.//shop.core/checkout`.
 pub fn run_pipeline(fixture: &Path, level: AggregationLevel) -> GraphPayload {
-    let _ = (fixture, level);
-    GraphPayload::default()
+    analyze_fixture(fixture).graph.payload(level)
+}
+
+/// Runs the full pipeline on a fixture directory.
+///
+/// Example: `analyze_fixture(&fixture_dir("mono-mini")).discovery.report.units.len()` is 3.
+pub fn analyze_fixture(fixture: &Path) -> Analyzed {
+    let root = fixture
+        .canonicalize()
+        .unwrap_or_else(|_| fixture.to_path_buf());
+    let kondo = locate("clj-kondo", std::env::var_os("PATH").as_deref())
+        .unwrap_or_else(|| PathBuf::from("clj-kondo"));
+    let empty = std::env::temp_dir().join(format!("aldente-testkit-kondo-{}", std::process::id()));
+    let adapter = CljAdapter::new(Kondo::new(kondo, empty));
+    match analyze(&root, false, &[&adapter]) {
+        Ok(analyzed) => analyzed,
+        Err(e) => panic!("pipeline failed on {}: {e}", fixture.display()),
+    }
 }
 
 /// Runs the pipeline on `fixtures/<fixture>` and compares the rendered graph

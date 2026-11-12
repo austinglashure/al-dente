@@ -1,5 +1,5 @@
-//! Exercises the golden harness end to end with the placeholder (empty)
-//! pipeline. WP1.5 turns these into real golden graphs.
+//! Golden graphs of the fixtures, reviewed against
+//! `fixtures/clj-mini/EXPECTED.md` (rows marked Phase 1).
 
 use aldente_model::AggregationLevel;
 use aldente_testkit::{assert_graph_snapshot, fixture_dir};
@@ -12,6 +12,16 @@ fn clj_mini_symbol_level() {
 #[test]
 fn clj_mini_namespace_level() {
     assert_graph_snapshot("clj-mini", AggregationLevel::Namespace);
+}
+
+#[test]
+fn mono_mini_namespace_level() {
+    assert_graph_snapshot("mono-mini", AggregationLevel::Namespace);
+}
+
+#[test]
+fn mono_mini_unit_level() {
+    assert_graph_snapshot("mono-mini", AggregationLevel::Unit);
 }
 
 #[test]

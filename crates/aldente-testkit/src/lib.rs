@@ -4,5 +4,5 @@
 pub mod golden;
 pub mod render;
 
-pub use golden::{assert_graph_snapshot, fixture_dir, run_pipeline};
+pub use golden::{analyze_fixture, assert_graph_snapshot, fixture_dir, run_pipeline};
 pub use render::render_graph;

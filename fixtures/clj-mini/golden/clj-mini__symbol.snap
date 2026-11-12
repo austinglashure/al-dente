@@ -1,6 +1,282 @@
 ---
 source: crates/aldente-testkit/src/golden.rs
+assertion_line: 63
 ---
-# nodes 0
-# edges 0
+# nodes 109
+node clj:.//shop.audit namespace langs:clj
+node clj:.//shop.audit/record! symbol/fn langs:clj
+node clj:.//shop.core namespace langs:clj
+node clj:.//shop.core/-main symbol/fn langs:clj
+node clj:.//shop.core/<top>@L10 impl langs:clj
+node clj:.//shop.core/checkout symbol/fn langs:clj
+node clj:.//shop.interop namespace langs:clj
+node clj:.//shop.interop/new-id symbol/fn langs:clj
+node clj:.//shop.interop/now-ms symbol/fn langs:clj
+node clj:.//shop.interop/shout symbol/fn langs:clj
+node clj:.//shop.inventory namespace langs:clj
+node clj:.//shop.inventory/available symbol/fn langs:clj
+node clj:.//shop.inventory/reserve! symbol/fn langs:clj
+node clj:.//shop.inventory/restock! symbol/fn langs:clj
+node clj:.//shop.inventory/stock symbol/var [stateful] langs:clj
+node clj:.//shop.model namespace langs:clj,cljs
+node clj:.//shop.model/format-money symbol/fn langs:clj,cljs
+node clj:.//shop.model/order-summary symbol/fn langs:clj,cljs
+node clj:.//shop.payment namespace langs:clj
+node clj:.//shop.payment/->Card symbol/fn langs:clj
+node clj:.//shop.payment/->Voucher symbol/fn langs:clj
+node clj:.//shop.payment/Card symbol/record langs:clj
+node clj:.//shop.payment/Chargeable symbol/protocol langs:clj
+node clj:.//shop.payment/Voucher symbol/record langs:clj
+node clj:.//shop.payment/charge symbol/protocol-method langs:clj
+node clj:.//shop.payment/charge@Card impl langs:clj
+node clj:.//shop.payment/charge@String impl langs:clj
+node clj:.//shop.payment/charge@Voucher impl langs:clj
+node clj:.//shop.payment/free-charger symbol/fn langs:clj
+node clj:.//shop.payment/map->Card symbol/fn langs:clj
+node clj:.//shop.payment/map->Voucher symbol/fn langs:clj
+node clj:.//shop.plugins namespace langs:clj
+node clj:.//shop.plugins/audit-hook symbol/fn langs:clj
+node clj:.//shop.plugins/load-plugin symbol/fn langs:clj
+node clj:.//shop.plugins/run-script symbol/fn langs:clj
+node clj:.//shop.pricing namespace langs:clj
+node clj:.//shop.pricing-test namespace langs:clj
+node clj:.//shop.pricing-test/book-is-half-off symbol/test langs:clj
+node clj:.//shop.pricing-test/food-is-taxed symbol/test langs:clj
+node clj:.//shop.pricing/half-off symbol/fn langs:clj
+node clj:.//shop.pricing/price symbol/multimethod langs:clj
+node clj:.//shop.pricing/price@:book impl langs:clj
+node clj:.//shop.pricing/price@:default impl langs:clj
+node clj:.//shop.pricing/price@:food impl langs:clj
+node clj:.//shop.pricing/price@:gift impl langs:clj
+node clj:.//shop.ui.events namespace langs:cljs
+node clj:.//shop.ui.events/<top>@L14 impl langs:cljs
+node clj:.//shop.ui.events/<top>@L5 impl langs:cljs
+node clj:.//shop.ui.events/<top>@L9 impl langs:cljs
+node clj:.//shop.ui.subs namespace langs:cljs
+node clj:.//shop.ui.subs/<top>@L5 impl langs:cljs
+node clj:.//shop.ui.views namespace langs:cljs
+node clj:.//shop.ui.views/cart-view symbol/fn langs:cljs
+node clj:.//shop.ui.views/init symbol/fn langs:cljs
+node clj:.//shop.ui.views/submit-button symbol/fn langs:cljs
+node clj:.//shop.util namespace langs:clj
+node clj:.//shop.util/apply-discount symbol/fn langs:clj
+node clj:.//shop.util/clamp symbol/fn [private] langs:clj
+node clj:.//shop.util/log-timing symbol/fn langs:clj
+node clj:.//shop.util/with-timing symbol/macro langs:clj
+node ext:clj//cljs.core/assoc external
+node ext:clj//cljs.core/count external
+node ext:clj//cljs.core/deref external
+node ext:clj//cljs.core/fn external
+node ext:clj//cljs.core/fn* external
+node ext:clj//cljs.core/fnil external
+node ext:clj//cljs.core/inc external
+node ext:clj//cljs.core/let external
+node ext:clj//cljs.core/str external
+node ext:clj//cljs.core/update-in external
+node ext:clj//clojure.core/* external
+node ext:clj//clojure.core/+ external
+node ext:clj//clojure.core/- external
+node ext:clj//clojure.core/. external
+node ext:clj//clojure.core// external
+node ext:clj//clojure.core/< external
+node ext:clj//clojure.core/= external
+node ext:clj//clojure.core/atom external
+node ext:clj//clojure.core/deref external
+node ext:clj//clojure.core/double external
+node ext:clj//clojure.core/eval external
+node ext:clj//clojure.core/fnil external
+node ext:clj//clojure.core/format external
+node ext:clj//clojure.core/get external
+node ext:clj//clojure.core/let external
+node ext:clj//clojure.core/max external
+node ext:clj//clojure.core/min external
+node ext:clj//clojure.core/println external
+node ext:clj//clojure.core/read-string external
+node ext:clj//clojure.core/reify external
+node ext:clj//clojure.core/requiring-resolve external
+node ext:clj//clojure.core/str external
+node ext:clj//clojure.core/swap! external
+node ext:clj//clojure.core/symbol external
+node ext:clj//clojure.core/update external
+node ext:clj//clojure.string external
+node ext:clj//clojure.string/join external
+node ext:clj//clojure.test external
+node ext:clj//clojure.test/is external
+node ext:clj//re-frame.core external
+node ext:clj//re-frame.core/dispatch external
+node ext:clj//re-frame.core/reg-event-db external
+node ext:clj//re-frame.core/reg-event-fx external
+node ext:clj//re-frame.core/reg-sub external
+node ext:clj//re-frame.core/subscribe external
+node ext:clj//react external
+node ext:clj//react/createElement external
+node js:console.log platform
+node unit:. unit langs:clj,cljs
+# edges 166
+edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
+edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
+edge clj:.//shop.core -contains-> clj:.//shop.core/-main
+edge clj:.//shop.core -contains-> clj:.//shop.core/<top>@L10
+edge clj:.//shop.core -contains-> clj:.//shop.core/checkout
+edge clj:.//shop.core -requires-> clj:.//shop.inventory @ src/shop/core.clj:3:14
+edge clj:.//shop.core -requires-> clj:.//shop.model @ src/shop/core.clj:4:14
+edge clj:.//shop.core -requires-> clj:.//shop.payment @ src/shop/core.clj:5:14
+edge clj:.//shop.core -requires-> clj:.//shop.plugins @ src/shop/core.clj:6:14
+edge clj:.//shop.core -requires-> clj:.//shop.pricing @ src/shop/core.clj:7:14
+edge clj:.//shop.core -requires-> clj:.//shop.util @ src/shop/core.clj:8:14
+edge clj:.//shop.core/-main -calls(certain direct)-> clj:.//shop.core/checkout @ src/shop/core.clj:25:12
+edge clj:.//shop.core/-main -calls(certain direct)-> clj:.//shop.payment/->Card @ src/shop/core.clj:23:14
+edge clj:.//shop.core/-main -calls(certain direct)-> clj:.//shop.payment/charge @ src/shop/core.clj:24:5
+edge clj:.//shop.core/-main -calls(certain direct)-> clj:.//shop.plugins/audit-hook @ src/shop/core.clj:22:3
+edge clj:.//shop.core/-main -calls(certain direct)-> ext:clj//clojure.core/let @ src/shop/core.clj:23:3
+edge clj:.//shop.core/-main -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/core.clj:25:3
+edge clj:.//shop.core/<top>@L10 -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/core.clj:10:1
+edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.inventory/reserve! @ src/shop/core.clj:17:7
+edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.model/order-summary @ src/shop/core.clj:19:7
+edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.payment/charge @ src/shop/core.clj:18:7
+edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.pricing/price @ src/shop/core.clj:16:17
+edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.util/with-timing @ src/shop/core.clj:15:3
+edge clj:.//shop.core/checkout -calls(certain direct)-> ext:clj//clojure.core/let @ src/shop/core.clj:16:5
+edge clj:.//shop.interop -contains-> clj:.//shop.interop/new-id
+edge clj:.//shop.interop -contains-> clj:.//shop.interop/now-ms
+edge clj:.//shop.interop -contains-> clj:.//shop.interop/shout
+edge clj:.//shop.interop/new-id -calls(certain direct)-> ext:clj//clojure.core/str @ src/shop/interop.clj:9:3
+edge clj:.//shop.interop/shout -calls(certain direct)-> ext:clj//clojure.core/. @ src/shop/interop.clj:12:3
+edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/available
+edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/reserve!
+edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/restock!
+edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/stock
+edge clj:.//shop.inventory/available -calls(certain direct)-> ext:clj//clojure.core/deref @ src/shop/inventory.clj:13:8
+edge clj:.//shop.inventory/available -calls(certain direct)-> ext:clj//clojure.core/get @ src/shop/inventory.clj:13:3
+edge clj:.//shop.inventory/available -references(likely value-ref)-> clj:.//shop.inventory/stock @ src/shop/inventory.clj:13:9
+edge clj:.//shop.inventory/reserve! -calls(certain direct)-> ext:clj//clojure.core/swap! @ src/shop/inventory.clj:7:3
+edge clj:.//shop.inventory/reserve! -references(likely value-ref)-> clj:.//shop.inventory/stock @ src/shop/inventory.clj:7:10
+edge clj:.//shop.inventory/reserve! -references(likely value-ref)-> ext:clj//clojure.core/- @ src/shop/inventory.clj:7:27
+edge clj:.//shop.inventory/reserve! -references(likely value-ref)-> ext:clj//clojure.core/update @ src/shop/inventory.clj:7:16
+edge clj:.//shop.inventory/restock! -calls(certain direct)-> ext:clj//clojure.core/fnil @ src/shop/inventory.clj:10:27
+edge clj:.//shop.inventory/restock! -calls(certain direct)-> ext:clj//clojure.core/swap! @ src/shop/inventory.clj:10:3
+edge clj:.//shop.inventory/restock! -references(likely value-ref)-> clj:.//shop.inventory/stock @ src/shop/inventory.clj:10:10
+edge clj:.//shop.inventory/restock! -references(likely value-ref)-> ext:clj//clojure.core/+ @ src/shop/inventory.clj:10:33
+edge clj:.//shop.inventory/restock! -references(likely value-ref)-> ext:clj//clojure.core/update @ src/shop/inventory.clj:10:16
+edge clj:.//shop.inventory/stock -calls(certain direct)-> ext:clj//clojure.core/atom @ src/shop/inventory.clj:4:16
+edge clj:.//shop.model -contains-> clj:.//shop.model/format-money
+edge clj:.//shop.model -contains-> clj:.//shop.model/order-summary
+edge clj:.//shop.model -requires(clj)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
+edge clj:.//shop.model -requires(cljs)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
+edge clj:.//shop.model/format-money -calls(certain direct clj)-> ext:clj//clojure.core/double @ src/shop/model.cljc:6:26
+edge clj:.//shop.model/format-money -calls(certain direct clj)-> ext:clj//clojure.core/format @ src/shop/model.cljc:6:11
+edge clj:.//shop.model/format-money -calls(certain direct cljs)-> ext:clj//cljs.core/str @ src/shop/model.cljc:7:12
+edge clj:.//shop.model/order-summary -calls(certain direct clj)-> clj:.//shop.model/format-money @ src/shop/model.cljc:10:31
+edge clj:.//shop.model/order-summary -calls(certain direct clj)-> ext:clj//clojure.string/join @ src/shop/model.cljc:10:3
+edge clj:.//shop.model/order-summary -calls(certain direct cljs)-> clj:.//shop.model/format-money @ src/shop/model.cljc:10:31
+edge clj:.//shop.model/order-summary -calls(certain direct cljs)-> ext:clj//clojure.string/join @ src/shop/model.cljc:10:3
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/->Card
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/->Voucher
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/Card
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/Chargeable
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/Voucher
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/charge
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/free-charger
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/map->Card
+edge clj:.//shop.payment -contains-> clj:.//shop.payment/map->Voucher
+edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@Card
+edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@String
+edge clj:.//shop.payment/charge -contains-> clj:.//shop.payment/charge@Voucher
+edge clj:.//shop.payment/charge@Voucher -calls(certain direct)-> ext:clj//clojure.core/- @ src/shop/payment.clj:15:46
+edge clj:.//shop.payment/charge@Voucher -calls(certain direct)-> ext:clj//clojure.core/max @ src/shop/payment.clj:15:39
+edge clj:.//shop.payment/free-charger -calls(certain direct)-> ext:clj//clojure.core/reify @ src/shop/payment.clj:25:3
+edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/audit-hook
+edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/load-plugin
+edge clj:.//shop.plugins -contains-> clj:.//shop.plugins/run-script
+edge clj:.//shop.plugins/audit-hook -calls(certain direct)-> ext:clj//clojure.core/requiring-resolve @ src/shop/plugins.clj:5:4
+edge clj:.//shop.plugins/load-plugin -calls(certain direct)-> ext:clj//clojure.core/let @ src/shop/plugins.clj:8:3
+edge clj:.//shop.plugins/load-plugin -calls(certain direct)-> ext:clj//clojure.core/requiring-resolve @ src/shop/plugins.clj:8:11
+edge clj:.//shop.plugins/load-plugin -calls(certain direct)-> ext:clj//clojure.core/symbol @ src/shop/plugins.clj:8:30
+edge clj:.//shop.plugins/run-script -calls(certain direct)-> ext:clj//clojure.core/eval @ src/shop/plugins.clj:12:3
+edge clj:.//shop.plugins/run-script -calls(certain direct)-> ext:clj//clojure.core/read-string @ src/shop/plugins.clj:12:9
+edge clj:.//shop.pricing -contains-> clj:.//shop.pricing/half-off
+edge clj:.//shop.pricing -contains-> clj:.//shop.pricing/price
+edge clj:.//shop.pricing -requires-> clj:.//shop.util @ src/shop/pricing.clj:3:14
+edge clj:.//shop.pricing-test -contains-> clj:.//shop.pricing-test/book-is-half-off
+edge clj:.//shop.pricing-test -contains-> clj:.//shop.pricing-test/food-is-taxed
+edge clj:.//shop.pricing-test -requires-> clj:.//shop.pricing @ test/shop/pricing_test.clj:3:14
+edge clj:.//shop.pricing-test -requires-> ext:clj//clojure.test @ test/shop/pricing_test.clj:2:14
+edge clj:.//shop.pricing-test/book-is-half-off -calls(certain direct)-> clj:.//shop.pricing/price @ test/shop/pricing_test.clj:9:12
+edge clj:.//shop.pricing-test/book-is-half-off -calls(certain direct)-> ext:clj//clojure.core/= @ test/shop/pricing_test.clj:9:7
+edge clj:.//shop.pricing-test/book-is-half-off -calls(certain direct)-> ext:clj//clojure.test/is @ test/shop/pricing_test.clj:9:3
+edge clj:.//shop.pricing-test/food-is-taxed -calls(certain direct)-> clj:.//shop.pricing/price @ test/shop/pricing_test.clj:6:15
+edge clj:.//shop.pricing-test/food-is-taxed -calls(certain direct)-> ext:clj//clojure.core/< @ test/shop/pricing_test.clj:6:7
+edge clj:.//shop.pricing-test/food-is-taxed -calls(certain direct)-> ext:clj//clojure.test/is @ test/shop/pricing_test.clj:6:3
+edge clj:.//shop.pricing/half-off -calls(certain direct)-> ext:clj//clojure.core// @ src/shop/pricing.clj:10:3
+edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:book
+edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:default
+edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:food
+edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:gift
+edge clj:.//shop.pricing/price@:book -calls(certain direct)-> clj:.//shop.util/apply-discount @ src/shop/pricing.clj:13:3
+edge clj:.//shop.pricing/price@:book -references(likely value-ref)-> clj:.//shop.pricing/half-off @ src/shop/pricing.clj:13:24
+edge clj:.//shop.pricing/price@:food -calls(certain direct)-> ext:clj//clojure.core/* @ src/shop/pricing.clj:16:3
+edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L14
+edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L5
+edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L9
+edge clj:.//shop.ui.events -requires-> ext:clj//re-frame.core @ src/shop/ui/events.cljs:3:14
+edge clj:.//shop.ui.events/<top>@L14 -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/shop/ui/events.cljs:16:5
+edge clj:.//shop.ui.events/<top>@L14 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:15:3
+edge clj:.//shop.ui.events/<top>@L14 -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/shop/ui/events.cljs:14:1
+edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:6:3
+edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/fnil @ src/shop/ui/events.cljs:7:31
+edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/update-in @ src/shop/ui/events.cljs:7:5
+edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/shop/ui/events.cljs:5:1
+edge clj:.//shop.ui.events/<top>@L5 -references(likely value-ref)-> ext:clj//cljs.core/inc @ src/shop/ui/events.cljs:7:37
+edge clj:.//shop.ui.events/<top>@L9 -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/shop/ui/events.cljs:11:10
+edge clj:.//shop.ui.events/<top>@L9 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:10:3
+edge clj:.//shop.ui.events/<top>@L9 -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/shop/ui/events.cljs:9:1
+edge clj:.//shop.ui.subs -contains-> clj:.//shop.ui.subs/<top>@L5
+edge clj:.//shop.ui.subs -requires-> ext:clj//re-frame.core @ src/shop/ui/subs.cljs:3:14
+edge clj:.//shop.ui.subs/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/subs.cljs:6:3
+edge clj:.//shop.ui.subs/<top>@L5 -calls(certain direct)-> ext:clj//re-frame.core/reg-sub @ src/shop/ui/subs.cljs:5:1
+edge clj:.//shop.ui.views -contains-> clj:.//shop.ui.views/cart-view
+edge clj:.//shop.ui.views -contains-> clj:.//shop.ui.views/init
+edge clj:.//shop.ui.views -contains-> clj:.//shop.ui.views/submit-button
+edge clj:.//shop.ui.views -requires-> clj:.//shop.model @ src/shop/ui/views.cljs:5:14
+edge clj:.//shop.ui.views -requires-> clj:.//shop.ui.events @ src/shop/ui/views.cljs:6:14
+edge clj:.//shop.ui.views -requires-> clj:.//shop.ui.subs @ src/shop/ui/views.cljs:7:14
+edge clj:.//shop.ui.views -requires-> ext:clj//re-frame.core @ src/shop/ui/views.cljs:4:14
+edge clj:.//shop.ui.views -requires-> ext:clj//react @ src/shop/ui/views.cljs:3:14
+edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//cljs.core/count @ src/shop/ui/views.cljs:11:35
+edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//cljs.core/deref @ src/shop/ui/views.cljs:10:15
+edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//cljs.core/let @ src/shop/ui/views.cljs:10:3
+edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//re-frame.core/subscribe @ src/shop/ui/views.cljs:10:16
+edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//react/createElement @ src/shop/ui/views.cljs:11:5
+edge clj:.//shop.ui.views/init -calls(certain direct)-> clj:.//shop.model/format-money @ src/shop/ui/views.cljs:19:26
+edge clj:.//shop.ui.views/init -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/shop/ui/views.cljs:20:3
+edge clj:.//shop.ui.views/init -calls(certain interop)-> js:console.log @ src/shop/ui/views.cljs:19:3
+edge clj:.//shop.ui.views/submit-button -calls(certain direct)-> ext:clj//cljs.core/fn* @ src/shop/ui/views.cljs:15:38
+edge clj:.//shop.ui.views/submit-button -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/shop/ui/views.cljs:15:39
+edge clj:.//shop.ui.views/submit-button -calls(certain direct)-> ext:clj//react/createElement @ src/shop/ui/views.cljs:14:3
+edge clj:.//shop.util -contains-> clj:.//shop.util/apply-discount
+edge clj:.//shop.util -contains-> clj:.//shop.util/clamp
+edge clj:.//shop.util -contains-> clj:.//shop.util/log-timing
+edge clj:.//shop.util -contains-> clj:.//shop.util/with-timing
+edge clj:.//shop.util -requires-> clj:.//shop.interop @ src/shop/util.clj:3:14
+edge clj:.//shop.util/apply-discount -calls(certain direct)-> clj:.//shop.util/clamp @ src/shop/util.clj:11:3
+edge clj:.//shop.util/clamp -calls(certain direct)-> ext:clj//clojure.core/max @ src/shop/util.clj:6:3
+edge clj:.//shop.util/clamp -calls(certain direct)-> ext:clj//clojure.core/min @ src/shop/util.clj:6:11
+edge clj:.//shop.util/log-timing -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/util.clj:14:3
+edge clj:.//shop.util/with-timing -references(possible macro-body)-> clj:.//shop.interop/now-ms @ src/shop/util.clj:19:18 src/shop/util.clj:21:29
+edge clj:.//shop.util/with-timing -references(possible macro-body)-> clj:.//shop.util/log-timing @ src/shop/util.clj:21:7
+edge clj:.//shop.util/with-timing -references(possible macro-body)-> ext:clj//clojure.core/- @ src/shop/util.clj:21:26
+edge clj:.//shop.util/with-timing -references(possible macro-body)-> ext:clj//clojure.core/let @ src/shop/util.clj:19:5
+edge unit:. -contains-> clj:.//shop.audit
+edge unit:. -contains-> clj:.//shop.core
+edge unit:. -contains-> clj:.//shop.interop
+edge unit:. -contains-> clj:.//shop.inventory
+edge unit:. -contains-> clj:.//shop.model
+edge unit:. -contains-> clj:.//shop.payment
+edge unit:. -contains-> clj:.//shop.plugins
+edge unit:. -contains-> clj:.//shop.pricing
+edge unit:. -contains-> clj:.//shop.pricing-test
+edge unit:. -contains-> clj:.//shop.ui.events
+edge unit:. -contains-> clj:.//shop.ui.subs
+edge unit:. -contains-> clj:.//shop.ui.views
+edge unit:. -contains-> clj:.//shop.util
 # truncated false

@@ -456,6 +456,22 @@ impl fmt::Display for SymbolId {
     }
 }
 
+impl PartialOrd for NodeId {
+    /// See [`Ord`].
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for NodeId {
+    /// IDs sort by their string form, so sorted output reads alphabetically.
+    ///
+    /// Example: `clj:.//a/x` sorts before `ext:clj//clojure.core/map`.
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
 impl fmt::Display for NodeId {
     /// Writes the canonical string form described in the module docs.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -766,6 +782,17 @@ mod tests {
                 "state::order/paid",
             ),
         ]
+    }
+
+    #[test]
+    fn ids_sort_by_their_string_form() {
+        let mut ids: Vec<NodeId> = ["ext:clj//a/b", "clj:.//z/y", "unit:."]
+            .iter()
+            .map(|s| s.parse().unwrap())
+            .collect();
+        ids.sort();
+        let strings: Vec<String> = ids.iter().map(ToString::to_string).collect();
+        assert_eq!(strings, ["clj:.//z/y", "ext:clj//a/b", "unit:."]);
     }
 
     #[test]

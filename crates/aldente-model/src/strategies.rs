@@ -112,6 +112,8 @@ pub(crate) fn arb_edge() -> impl Strategy<Value = Edge> {
                 .into_iter()
                 .map(|(file, line, col)| Site { file, line, col })
                 .collect(),
+            count: None,
+            by_certainty: None,
         })
 }
 

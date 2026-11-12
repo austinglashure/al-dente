@@ -77,6 +77,9 @@ fn render(ix: &FileIndex) -> String {
     for b in &ix.branches {
         let _ = writeln!(out, "branch {} {}", span(&b.span), b.feature);
     }
+    for q in &ix.quoted {
+        let _ = writeln!(out, "quoted {}", span(q));
+    }
     for d in &ix.diagnostics {
         let _ = writeln!(out, "diagnostic {:?} {}", d.code, d.message);
     }
@@ -144,6 +147,25 @@ fn hostile_8_deep_nesting_does_not_overflow() {
     let (forms, calls) = handle.join().expect("indexing deep input must not crash");
     assert_eq!(forms, 2);
     assert!(calls >= 100_000, "{calls}");
+}
+
+#[test]
+fn anonymous_fn_bodies_are_call_sites_at_their_paren() {
+    let ix = index_source(RepoPath::parse("a.clj").unwrap(), "(f #(g %))");
+    let g = ix.calls.iter().find(|c| c.head == "g").expect("call to g");
+    assert_eq!(
+        (g.span.start.line, g.span.start.col),
+        (1, 5),
+        "the `(` after `#`"
+    );
+}
+
+#[test]
+fn syntax_quotes_are_recorded() {
+    let src = "(defmacro m [x] `(let [t# 1] (f ~x)))";
+    let ix = index_source(RepoPath::parse("m.clj").unwrap(), src);
+    assert_eq!(ix.quoted.len(), 1);
+    assert_eq!((ix.quoted[0].start.col, ix.quoted[0].end.col), (17, 37));
 }
 
 #[test]

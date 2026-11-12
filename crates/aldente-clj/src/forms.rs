@@ -102,6 +102,8 @@ pub struct FileIndex {
     pub calls: Vec<CallSite>,
     pub literals: Vec<Literal>,
     pub branches: Vec<CondBranch>,
+    /// Syntax-quoted forms (`` `(…) ``), outermost and nested.
+    pub quoted: Vec<Span>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -185,6 +187,7 @@ fn empty(path: RepoPath, diagnostics: Vec<Diagnostic>) -> FileIndex {
         calls: Vec::new(),
         literals: Vec::new(),
         branches: Vec::new(),
+        quoted: Vec::new(),
         diagnostics,
     }
 }
@@ -225,6 +228,7 @@ fn index_with(parser: &mut Parser, path: RepoPath, src: &str) -> FileIndex {
     ix.calls.sort_by_key(|c| c.span);
     ix.literals.sort_by_key(|l| l.span);
     ix.branches.sort_by_key(|b| b.span);
+    ix.quoted.sort();
     ix
 }
 
@@ -362,11 +366,14 @@ impl Ctx<'_> {
         while let Some(node) = stack.pop() {
             match node.kind() {
                 "dis_expr" | "comment" | "meta_lit" | "old_meta_lit" => continue,
-                "list_lit" => self.list(node, ix),
+                "list_lit" => self.list(node, ix, 0),
+                // `#(…)`: the call starts at the `(`, one byte after `#`.
+                "anon_fn_lit" => self.list(node, ix, 1),
                 "str_lit" => self.literal(node, LiteralKind::Str, ix),
                 "kwd_lit" => self.literal(node, LiteralKind::Keyword, ix),
                 "num_lit" => self.literal(node, LiteralKind::Number, ix),
                 "regex_lit" => self.literal(node, LiteralKind::Regex, ix),
+                "syn_quoting_lit" => ix.quoted.push(self.span(node)),
                 "read_cond_lit" | "splicing_read_cond_lit" => {
                     for pair in values(node).chunks_exact(2) {
                         ix.branches.push(CondBranch {
@@ -383,11 +390,12 @@ impl Ctx<'_> {
     }
 
     /// Records a list as a call site (symbol or keyword head) and, for
-    /// impl-holding heads, its method bodies.
+    /// impl-holding heads, its method bodies. `skip` bytes are dropped from
+    /// the start of the span (1 for `#(…)`, so the site is at the `(`).
     ///
     /// Example: `(extend-type Card Chargeable (charge [c a] …))` adds a call
     /// with head `extend-type` and an impl body for `charge`.
-    fn list(&self, node: Node<'_>, ix: &mut FileIndex) {
+    fn list(&self, node: Node<'_>, ix: &mut FileIndex, skip: usize) {
         let vals = values(node);
         let Some(first) = vals.first() else {
             return;
@@ -400,8 +408,11 @@ impl Ctx<'_> {
         let Some(head) = head else {
             return;
         };
+        let mut span = self.span(node);
+        span.start_byte += skip;
+        span.start = self.pos(span.start_byte);
         ix.calls.push(CallSite {
-            span: self.span(node),
+            span,
             head: head.clone(),
             args: vals[1..].iter().map(|n| self.span(*n)).collect(),
         });

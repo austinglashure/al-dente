@@ -26,6 +26,8 @@ rayon = "1"
 tree-sitter = "0.26"
 tree-sitter-clojure-orchard = "0.2"
 aldente-acquire = { path = "crates/aldente-acquire" }
+aldente-adapter = { path = "crates/aldente-adapter" }
+aldente-graph = { path = "crates/aldente-graph" }
 aldente-clj = { path = "crates/aldente-clj" }
 aldente-testkit = { path = "crates/aldente-testkit" }
 # dev-only

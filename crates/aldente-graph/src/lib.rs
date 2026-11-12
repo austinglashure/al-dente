@@ -1,3 +1,8 @@
-//! Graph build, the SQLite snapshot store, the in-memory graph and traversals.
-//!
-//! Empty until a later work package fills it; see `docs/plan/02-architecture.md`.
+//! The graph build: merges adapter facts across units, links across units,
+//! rolls edges up to namespace and unit level, and runs the whole pipeline.
+
+pub mod build;
+pub mod pipeline;
+pub mod rollup;
+
+pub use build::{Graph, build};

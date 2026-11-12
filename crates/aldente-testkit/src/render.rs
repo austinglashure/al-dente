@@ -49,7 +49,8 @@ fn node_line(node: &Node) -> String {
     line
 }
 
-/// One edge: `edge <from> -<kind>(<certainty> <reason> <lang>)-> <to> @ <sites>`.
+/// One edge: `edge <from> -<kind>(<certainty> <reason> <lang>)-> <to> [x<count>
+/// [<by certainty>]] @ <sites>`; the count part only on rolled-up edges.
 ///
 /// Example: `edge clj:.//a/f -calls(certain direct)-> ext:clj//clojure.core/map @ src/a.clj:3:2`.
 fn edge_line(edge: &Edge) -> String {
@@ -72,6 +73,16 @@ fn edge_line(edge: &Edge) -> String {
         label,
         clean(&edge.to.to_string())
     );
+    if let Some(count) = edge.count {
+        let _ = write!(line, " x{count}");
+        if let Some(by) = &edge.by_certainty {
+            let parts: Vec<String> = by
+                .iter()
+                .map(|(c, n)| format!("{}:{n}", token(c)))
+                .collect();
+            let _ = write!(line, " [{}]", parts.join(" "));
+        }
+    }
     let mut sites: Vec<_> = edge.sites.iter().collect();
     sites.sort_by(|a, b| (&a.file, a.line, a.col).cmp(&(&b.file, b.line, b.col)));
     if !sites.is_empty() {
@@ -169,6 +180,8 @@ mod tests {
                     reason: Some(Reason::ValueRef),
                     lang: None,
                     sites: vec![],
+                    count: None,
+                    by_certainty: None,
                 },
                 Edge {
                     from: "clj:.//app.core/f".parse().unwrap(),
@@ -178,6 +191,8 @@ mod tests {
                     reason: Some(Reason::Direct),
                     lang: Some(aldente_model::Lang::Cljs),
                     sites: vec![site("src/b.clj", 9, 1), site("src/a.clj", 3, 2)],
+                    count: None,
+                    by_certainty: None,
                 },
                 Edge {
                     from: "unit:.".parse().unwrap(),
@@ -187,6 +202,8 @@ mod tests {
                     reason: None,
                     lang: None,
                     sites: vec![],
+                    count: None,
+                    by_certainty: None,
                 },
             ],
             truncated: false,

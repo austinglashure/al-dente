@@ -6,5 +6,9 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+aldente-model.workspace = true
+thiserror.workspace = true
+
 [lints]
 workspace = true
