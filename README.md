@@ -35,6 +35,17 @@ cargo test --workspace
 cargo deny check        # needs cargo-deny; CI runs it on Linux, macOS and Windows
 ```
 
+UI (in `ui/`, needs Node 24+; only for changing the UI, since the built UI in `ui/dist` is committed and embedded in the binary):
+
+```sh
+cd ui
+npm ci                              # once
+npm run check && npm test           # type-check, lint, unit tests
+npm run build                       # rebuild ui/dist (commit it with the change)
+npx playwright install chromium     # once
+npm run e2e                         # builds the binary, then browser tests
+```
+
 Golden files live under `fixtures/<name>/golden/`. After an intended change, review and accept them with `cargo insta review` (needs `cargo-insta`) or `INSTA_UPDATE=always cargo test`, then read the diff before committing.
 
 ## Structure
@@ -50,6 +61,7 @@ Golden files live under `fixtures/<name>/golden/`. After an intended change, rev
 | `crates/aldente-analysis` | crater, measures, coverage, vetting and more |
 | `crates/aldente-rules` | loader for detection catalogs in `rules/` |
 | `crates/aldente-server` | local HTTP API and embedded UI |
+| `ui/` | the GUI (React, Sigma.js); `ui/dist` is the committed build |
 | `crates/aldente-testkit` | test support: fixture paths, golden graph harness |
 | `crates/acceptance` | runner for real-repository acceptance checks (needs network) |
 | `fixtures/` | crafted repositories and golden graphs (`clj-mini/EXPECTED.md` is the ground truth, `mono-mini` is a three-unit monorepo); `hostile/` safety cases |

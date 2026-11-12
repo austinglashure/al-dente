@@ -7,7 +7,7 @@ Each case is a small repository that tries to make Al Dente execute code, escape
 | 1 | `.clj-kondo` directory with a hook that would create a marker file or rewrite a call | WP1.3 | done: `kondo-hook/` (lint-as plus a call-rewriting hook), tested in `crates/aldente-clj/tests/kondo.rs` with a control run |
 | 2 | symlink to a file outside the repository | WP1.1 | done: built at test time in `crates/aldente-acquire/tests/walk.rs` (Unix only; symlinks need privileges on Windows) |
 | 3 | file name with shell metacharacters, newlines and terminal escapes | WP1.1 | done: built at test time in `tests/walk.rs` (Windows gets the subset of names it allows) |
-| 4 | docstring containing `<script>` and an `onerror` attribute (browser test) | WP1.9 | todo |
+| 4 | docstring containing `<script>` and an `onerror` attribute (browser test) | WP1.9 | done: `xss/`, tested in `ui/e2e/gui.spec.ts` (renders as text, no script ran, no `/x` request) |
 | 5 | `project.clj` with `#=(...)` read-eval and unquote forms | WP1.1 | done: `read-eval/`, tested in `crates/aldente-acquire/tests/units.rs` |
 | 6 | `.gitattributes` declaring a filter, and `.gitmodules` with a `file://` URL (clone against a local bare repository) | WP1.2 | done: built at test time in `crates/aldente-acquire/src/remote.rs` (`hostile_6_…`), with a control clone proving the setup is live |
 | 6a | local repository whose `.git/config` sets `diff.external`, a textconv driver and `core.pager` | WP1.6 (rev-parse) / later (diff, log) | partial: `rev-parse HEAD` with a hostile repo config runs nothing (`crates/aldente-acquire/src/local_git.rs`); `diff` and `log` get their test when a feature first runs them |

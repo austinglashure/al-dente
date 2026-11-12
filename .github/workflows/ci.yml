@@ -77,6 +77,32 @@ jobs:
       - name: deny
         run: cargo deny check
 
+      # WP1.9: the UI. ui/dist is committed so `cargo build` works without
+      # Node; CI rebuilds it and fails if the committed copy is stale.
+      - uses: actions/setup-node@v4
+        if: runner.os == 'Linux'
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: UI check, unit tests, build, dist up to date (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ui
+        run: |
+          npm ci
+          npm run check
+          npm test
+          npm run build
+          git diff --exit-code -- dist
+
+      - name: UI end-to-end tests (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ui
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+
       # WP0.4: doctor must find the real git and clj-kondo (clj-kondo.exe on Windows).
       - name: doctor
         run: cargo run -q -p aldente-cli -- doctor
