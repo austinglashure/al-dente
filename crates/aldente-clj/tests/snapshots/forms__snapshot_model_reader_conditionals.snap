@@ -1,0 +1,29 @@
+---
+source: crates/aldente-clj/tests/forms.rs
+assertion_line: 84
+expression: "render(&index_one(\"src/shop/model.cljc\"))"
+---
+form 1:1-3:39 ns name=shop.model
+form 5:1-7:30 defn name=format-money
+form 9:1-10:54 defn name=order-summary
+call 1:1-3:39 ns args=[1:5-1:15 2:3-2:41 3:3-3:38]
+call 3:3-3:38 :require args=[3:13-3:37]
+call 5:1-7:30 defn args=[5:7-5:19 5:20-5:28 6:3-7:29]
+call 6:11-6:42 format args=[6:19-6:25 6:26-6:41]
+call 6:26-6:41 double args=[6:34-6:40]
+call 7:12-7:28 str args=[7:17-7:20 7:21-7:27]
+call 9:1-10:54 defn args=[9:7-9:20 9:21-9:34 10:3-10:53]
+call 10:3-10:53 str/join args=[10:13-10:16 10:17-10:52]
+call 10:18-10:30 :sku args=[10:24-10:29]
+call 10:31-10:51 format-money args=[10:45-10:50]
+literal 2:3-2:41 Str \"Shared by Clojure and ClojureScript.\"
+literal 3:4-3:12 Keyword :require
+literal 3:29-3:32 Keyword :as
+literal 6:6-6:10 Keyword :clj
+literal 6:19-6:25 Str \"%.2f\"
+literal 7:6-7:11 Keyword :cljs
+literal 7:17-7:20 Str \"$\"
+literal 10:13-10:16 Str \" \"
+literal 10:19-10:23 Keyword :sku
+branch 6:11-6:42 :clj
+branch 7:12-7:28 :cljs

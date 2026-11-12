@@ -1,0 +1,41 @@
+---
+source: crates/aldente-clj/tests/forms.rs
+assertion_line: 74
+expression: "render(&index_one(\"src/shop/pricing.clj\"))"
+---
+form 1:1-3:35 ns name=shop.pricing
+form 5:1-7:9 defmulti name=price
+form 9:1-10:11 defn name=half-off
+form 12:1-13:49 defmethod name=price dispatch=:book
+form 15:1-16:26 defmethod name=price dispatch=:food
+form 18:1-19:5 defmethod name=price dispatch=:gift
+form 21:1-22:18 defmethod name=price dispatch=:default
+call 1:1-3:35 ns args=[1:5-1:17 2:3-2:52 3:3-3:34]
+call 3:3-3:34 :require args=[3:13-3:33]
+call 5:1-7:9 defmulti args=[5:11-5:16 6:3-6:37 7:3-7:8]
+call 9:1-10:11 defn args=[9:7-9:15 9:16-9:19 10:3-10:10]
+call 10:3-10:10 / args=[10:6-10:7 10:8-10:9]
+call 12:1-13:49 defmethod args=[12:12-12:17 12:18-12:23 12:24-12:31 13:3-13:48]
+call 13:3-13:48 util/apply-discount args=[13:24-13:32 13:33-13:47]
+call 13:33-13:47 :price args=[13:41-13:46]
+call 15:1-16:26 defmethod args=[15:12-15:17 15:18-15:23 15:24-15:31 16:3-16:25]
+call 16:3-16:25 * args=[16:6-16:9 16:10-16:24]
+call 16:10-16:24 :price args=[16:18-16:23]
+call 18:1-19:5 defmethod args=[18:12-18:17 18:18-18:23 18:24-18:32 19:3-19:4]
+call 21:1-22:18 defmethod args=[21:12-21:17 21:18-21:26 21:27-21:34 22:3-22:17]
+call 22:3-22:17 :price args=[22:11-22:16]
+literal 2:3-2:52 Str \"A multimethod with three methods and a default.\"
+literal 3:4-3:12 Keyword :require
+literal 3:24-3:27 Keyword :as
+literal 6:3-6:37 Str \"Price of an order, by its :kind.\"
+literal 7:3-7:8 Keyword :kind
+literal 10:8-10:9 Number 2
+literal 12:18-12:23 Keyword :book
+literal 13:34-13:40 Keyword :price
+literal 15:18-15:23 Keyword :food
+literal 16:6-16:9 Number 1.1
+literal 16:11-16:17 Keyword :price
+literal 18:18-18:23 Keyword :gift
+literal 19:3-19:4 Number 0
+literal 21:18-21:26 Keyword :default
+literal 22:4-22:10 Keyword :price

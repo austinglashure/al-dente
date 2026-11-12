@@ -12,7 +12,7 @@ Each case is a small repository that tries to make Al Dente execute code, escape
 | 6 | `.gitattributes` declaring a filter, and `.gitmodules` with a `file://` URL (clone against a local bare repository) | WP1.2 | done: built at test time in `crates/aldente-acquire/src/remote.rs` (`hostile_6_…`), with a control clone proving the setup is live |
 | 6a | local repository whose `.git/config` sets `diff.external`, a textconv driver and `core.pager` | the first WP that runs git on a local repository (WP1.1 did not need git) | todo |
 | 7 | symbol name crafted as a SQL fragment and as a regex | WP1.6 | todo |
-| 8 | 50 MB single-line file and a deeply nested form | WP1.1 / WP1.4 | file part done (generated at test time, `tests/walk.rs`); the build-file reader caps nesting; the form-index part is WP1.4 |
+| 8 | 50 MB single-line file and a deeply nested form | WP1.1 / WP1.4 | done: file part generated in `crates/aldente-acquire/tests/walk.rs`; nesting in `crates/aldente-clj/tests/forms.rs` (100,000 levels on a 256 KB stack) |
 | 9 | server requests with a wrong `Host`, a missing token and a foreign `Origin` | WP1.8 | todo |
 
 "Added by" is a best guess from the phase files; move a case if another work package needs it first.

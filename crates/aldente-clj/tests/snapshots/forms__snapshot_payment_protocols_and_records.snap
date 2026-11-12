@@ -1,0 +1,51 @@
+---
+source: crates/aldente-clj/tests/forms.rs
+assertion_line: 79
+expression: "render(&index_one(\"src/shop/payment.clj\"))"
+---
+form 1:1-2:62 ns name=shop.payment
+form 4:1-5:67 defprotocol name=Chargeable
+form 7:1-10:49 defrecord name=Card
+form 12:1-15:62 defrecord name=Voucher
+form 17:1-20:48 extend-type name=String
+form 22:1-27:47 defn name=free-charger
+impl 9:3-10:48 defrecord type=Card protocol=Chargeable method=charge
+impl 14:3-15:61 defrecord type=Voucher protocol=Chargeable method=charge
+impl 19:3-20:47 extend-type type=String protocol=Chargeable method=charge
+impl 26:5-27:45 reify type=- protocol=Chargeable method=charge
+call 1:1-2:62 ns args=[1:5-1:17 2:3-2:61]
+call 4:1-5:67 defprotocol args=[4:14-4:24 5:3-5:66]
+call 5:3-5:66 charge args=[5:11-5:24 5:25-5:65]
+call 7:1-10:49 defrecord args=[7:12-7:16 7:17-7:25 8:3-8:13 9:3-10:48]
+call 9:3-10:48 charge args=[9:11-9:21 10:5-10:47]
+call 12:1-15:62 defrecord args=[12:12-12:19 12:20-12:26 13:3-13:13 14:3-15:61]
+call 14:3-15:61 charge args=[14:11-14:21 15:5-15:60]
+call 15:39-15:59 max args=[15:44-15:45 15:46-15:58]
+call 15:46-15:58 - args=[15:49-15:55 15:56-15:57]
+call 17:1-20:48 extend-type args=[17:14-17:20 18:3-18:13 19:3-20:47]
+call 19:3-20:47 charge args=[19:11-19:21 20:5-20:46]
+call 22:1-27:47 defn args=[22:7-22:19 23:3-23:30 24:3-24:5 25:3-27:46]
+call 25:3-27:46 reify args=[25:10-25:20 26:5-27:45]
+call 26:5-27:45 charge args=[26:13-26:23 27:7-27:44]
+literal 2:3-2:61 Str \"A protocol with two records, an extend-type and a reify.\"
+literal 5:25-5:65 Str \"Charges amount. Returns a receipt map.\"
+literal 10:6-10:10 Keyword :via
+literal 10:11-10:16 Keyword :card
+literal 10:17-10:24 Keyword :number
+literal 10:32-10:39 Keyword :amount
+literal 15:6-15:10 Keyword :via
+literal 15:11-15:19 Keyword :voucher
+literal 15:20-15:25 Keyword :code
+literal 15:31-15:38 Keyword :amount
+literal 15:44-15:45 Number 0
+literal 15:56-15:57 Number 5
+literal 20:6-20:10 Keyword :via
+literal 20:11-20:19 Keyword :account
+literal 20:20-20:28 Keyword :account
+literal 20:31-20:38 Keyword :amount
+literal 23:3-23:30 Str \"A one-off implementation.\"
+literal 27:8-27:12 Keyword :via
+literal 27:13-27:18 Keyword :free
+literal 27:19-27:26 Keyword :amount
+literal 27:27-27:28 Number 0
+literal 27:29-27:36 Keyword :waived

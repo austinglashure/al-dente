@@ -9,9 +9,18 @@ publish.workspace = true
 [dependencies]
 aldente-acquire.workspace = true
 aldente-model.workspace = true
+# Parallel form indexing (02-architecture.md, "Key dependencies").
+rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+# The form index (02-architecture.md, "Key dependencies"). The grammar is
+# sogaiu's tree-sitter-clojure, published as tree-sitter-clojure-orchard.
+tree-sitter.workspace = true
+tree-sitter-clojure-orchard.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
 
 
 [lints]
