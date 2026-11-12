@@ -38,6 +38,8 @@ pub struct UnitInfo {
     pub roots: Vec<SourceRoot>,
     /// Has an entry point declared in a manifest or a `Dockerfile`.
     pub service: bool,
+    /// Entry-point symbols declared in manifests (`app.main/init`), sorted.
+    pub entry_points: Vec<String>,
     /// Number of source files the unit owns that lie under its roots.
     pub files: usize,
 }

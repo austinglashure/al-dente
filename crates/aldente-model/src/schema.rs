@@ -187,6 +187,7 @@ mod tests {
                     alias: Some("test".into()),
                 }],
                 service: false,
+                entry_points: Vec::new(),
                 files: 1,
             }],
             diagnostics: vec![Diagnostic::new(None, DiagnosticCode::LimitReached, "cap")],

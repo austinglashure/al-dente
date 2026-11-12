@@ -2,7 +2,7 @@
 source: crates/aldente-testkit/src/golden.rs
 assertion_line: 66
 ---
-# nodes 115
+# nodes 116
 node clj:.//shop.audit namespace langs:clj
 node clj:.//shop.audit/record! symbol/fn langs:clj
 node clj:.//shop.core namespace langs:clj
@@ -117,8 +117,9 @@ node java:java.lang.System#currentTimeMillis platform
 node java:java.util.UUID platform
 node java:java.util.UUID#randomUUID platform
 node js:console.log platform
+node lib:npm:react library
 node unit:. unit langs:clj,cljs
-# edges 195
+# edges 193
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -155,10 +156,10 @@ edge clj:.//shop.core/checkout -dispatches(possible protocol-dispatch)-> clj:.//
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/new-id
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/now-ms
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/shout
-edge clj:.//shop.interop -references(certain interop)-> java:java.util.UUID @ src/shop/interop.clj:3:23
+edge clj:.//shop.interop -references(certain interop clj)-> java:java.util.UUID @ src/shop/interop.clj:3:23
 edge clj:.//shop.interop/new-id -calls(certain direct)-> ext:clj//clojure.core/str @ src/shop/interop.clj:9:3
-edge clj:.//shop.interop/new-id -calls(certain interop)-> java:java.util.UUID#randomUUID @ src/shop/interop.clj:9:8
-edge clj:.//shop.interop/now-ms -calls(certain interop)-> java:java.lang.System#currentTimeMillis @ src/shop/interop.clj:6:3
+edge clj:.//shop.interop/new-id -calls(certain interop clj)-> java:java.util.UUID#randomUUID @ src/shop/interop.clj:9:8
+edge clj:.//shop.interop/now-ms -calls(certain interop clj)-> java:java.lang.System#currentTimeMillis @ src/shop/interop.clj:6:3
 edge clj:.//shop.interop/shout -calls(certain interop)-> java:java.lang.String#toUpperCase @ src/shop/interop.clj:12:3
 edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/available
 edge clj:.//shop.inventory -contains-> clj:.//shop.inventory/reserve!
@@ -179,15 +180,12 @@ edge clj:.//shop.inventory/restock! -references(likely value-ref)-> ext:clj//clo
 edge clj:.//shop.inventory/stock -calls(certain direct)-> ext:clj//clojure.core/atom @ src/shop/inventory.clj:4:16
 edge clj:.//shop.model -contains-> clj:.//shop.model/format-money
 edge clj:.//shop.model -contains-> clj:.//shop.model/order-summary
-edge clj:.//shop.model -requires(clj)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
-edge clj:.//shop.model -requires(cljs)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
+edge clj:.//shop.model -requires-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
 edge clj:.//shop.model/format-money -calls(certain direct clj)-> ext:clj//clojure.core/double @ src/shop/model.cljc:6:26
 edge clj:.//shop.model/format-money -calls(certain direct clj)-> ext:clj//clojure.core/format @ src/shop/model.cljc:6:11
 edge clj:.//shop.model/format-money -calls(certain direct cljs)-> ext:clj//cljs.core/str @ src/shop/model.cljc:7:12
-edge clj:.//shop.model/order-summary -calls(certain direct clj)-> clj:.//shop.model/format-money @ src/shop/model.cljc:10:31
-edge clj:.//shop.model/order-summary -calls(certain direct clj)-> ext:clj//clojure.string/join @ src/shop/model.cljc:10:3
-edge clj:.//shop.model/order-summary -calls(certain direct cljs)-> clj:.//shop.model/format-money @ src/shop/model.cljc:10:31
-edge clj:.//shop.model/order-summary -calls(certain direct cljs)-> ext:clj//clojure.string/join @ src/shop/model.cljc:10:3
+edge clj:.//shop.model/order-summary -calls(certain direct)-> clj:.//shop.model/format-money @ src/shop/model.cljc:10:31
+edge clj:.//shop.model/order-summary -calls(certain direct)-> ext:clj//clojure.string/join @ src/shop/model.cljc:10:3
 edge clj:.//shop.payment -contains-> clj:.//shop.payment/->Card
 edge clj:.//shop.payment -contains-> clj:.//shop.payment/->Voucher
 edge clj:.//shop.payment -contains-> clj:.//shop.payment/Card
@@ -301,6 +299,7 @@ edge clj:.//shop.util/with-timing -references(possible macro-body)-> clj:.//shop
 edge clj:.//shop.util/with-timing -references(possible macro-body)-> clj:.//shop.util/log-timing @ src/shop/util.clj:21:7
 edge clj:.//shop.util/with-timing -references(possible macro-body)-> ext:clj//clojure.core/- @ src/shop/util.clj:21:26
 edge clj:.//shop.util/with-timing -references(possible macro-body)-> ext:clj//clojure.core/let @ src/shop/util.clj:19:5
+edge lib:npm:react -provides(certain direct)-> ext:clj//react
 edge unit:. -contains-> clj:.//shop.audit
 edge unit:. -contains-> clj:.//shop.core
 edge unit:. -contains-> clj:.//shop.interop

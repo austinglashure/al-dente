@@ -265,6 +265,7 @@ mod tests {
             langs: [Lang::Clj].into(),
             roots: vec![],
             service: dir == "b",
+            entry_points: Vec::new(),
             files: 1,
         }
     }

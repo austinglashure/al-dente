@@ -1,0 +1,5 @@
+{:source-paths ["src"]
+ :builds {:app {:target :browser
+                :modules {:main {:init-fn app.main/init}}}
+          :lib {:target :npm-module
+                :exports {:render app.ui/render}}}}

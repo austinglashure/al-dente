@@ -24,7 +24,7 @@ Hand-written. Golden snapshots are reviewed against this file, never the other w
 3. **`@x`** (confirmed in WP1.3). The reader expands `@x` to `(deref x)` and clj-kondo reports it as a `clojure.core/deref` usage (2 in this fixture), so each is a certain `calls` edge to `ext:clojure.core/deref`, not listed row by row; `x` itself is a `references` edge.
 4. **Keywords in call position** (`(:sku order)`) are not vars and produce no edge.
 4a. **Reader macros are calls.** `@x`, `#(…)` and `#'x` expand to `deref`, `fn*` and `var`; clj-kondo reports those at the reader macro's position, and they are certain `calls` edges like `let` and `fn`. Usages inside `#(…)` are calls when in call position (`#(rf/dispatch …)` calls `dispatch`). From WP2.6 the interop forms `.` and `new` are suppressed (`interop-form`); R9 links `(.method x)` to its `java:` platform node instead.
-4b. **Phase 1 differences from the final rows.** `.cljc` `requires` edges are per language (two `shop.model -requires-> ext:clojure.string` edges, `lang` clj and cljs) until R12 merges them in Phase 2. `js/console.log` already gives the Phase 2 `js:console.log` platform edge (certain, `interop`), because JS usages have no other target.
+4b. **Phase 1 differences from the final rows.** `.cljc` edges were per language (two `shop.model -requires-> ext:clojure.string` edges, `lang` clj and cljs). Since WP2.7 (R12) an edge found by both reads with the same certainty is stored once without a `lang`; edges that differ keep theirs. `js/console.log` already gives the Phase 2 `js:console.log` platform edge (certain, `interop`), because JS usages have no other target.
 5. **Every other certain edge is listed.** Phase 2.10 requires "no extra `certain` edge".
 
 ## Nodes

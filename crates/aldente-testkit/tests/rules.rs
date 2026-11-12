@@ -354,3 +354,96 @@ fn r9_interop_exits_match_expected() {
 fn interop_golden() {
     assert_graph_snapshot("clj-rules/interop", AggregationLevel::Symbol);
 }
+
+#[test]
+fn cljs_golden() {
+    assert_graph_snapshot("clj-rules/cljs", AggregationLevel::Symbol);
+}
+
+#[test]
+fn r12_cljc_cljs_npm_and_shadow_entry_points() {
+    use aldente_model::{Lang, SymbolFlag};
+    let g = analyze_fixture(&fixture_dir("clj-rules/cljs")).graph;
+    let id = |s: &str| s.parse::<NodeId>().unwrap();
+    let edges = |from: &str, kind: EdgeKind, to: &str| -> Vec<Option<Lang>> {
+        g.edges
+            .iter()
+            .filter(|e| e.from == id(from) && e.kind == kind && e.to == id(to))
+            .map(|e| e.lang)
+            .collect()
+    };
+    let now = &g.nodes[&id("clj:.//app.shared/now")];
+    assert_eq!(now.langs, [Lang::Clj, Lang::Cljs].into());
+    assert_eq!(
+        edges(
+            "clj:.//app.shared/now",
+            EdgeKind::Calls,
+            "java:java.lang.System#currentTimeMillis"
+        ),
+        [Some(Lang::Clj)]
+    );
+    assert_eq!(
+        edges("clj:.//app.shared/now", EdgeKind::Calls, "js:Date.now"),
+        [Some(Lang::Cljs)]
+    );
+    assert_eq!(
+        edges(
+            "clj:.//app.shared/both",
+            EdgeKind::Calls,
+            "clj:.//app.shared/now"
+        ),
+        [None],
+        "stored once for both languages"
+    );
+    let provides: Vec<_> = g
+        .edges
+        .iter()
+        .filter(|e| {
+            e.kind == EdgeKind::Provides
+                && e.from == id("lib:npm:react")
+                && e.to == id("ext:clj//react")
+        })
+        .collect();
+    assert_eq!(provides.len(), 1);
+    assert_eq!(provides[0].certainty, Some(Certainty::Certain));
+    assert_eq!(
+        edges("clj:.//app.main", EdgeKind::Requires, "ext:clj//react").len(),
+        1
+    );
+    assert_eq!(
+        edges(
+            "clj:.//app.main",
+            EdgeKind::Requires,
+            "ext:clj//reagent.core"
+        )
+        .len(),
+        1
+    );
+    assert!(
+        !edges(
+            "clj:.//app.main/init",
+            EdgeKind::Calls,
+            "clj:.//app.macros/when-dev"
+        )
+        .is_empty()
+    );
+    assert!(
+        !edges(
+            "clj:.//app.ui/render",
+            EdgeKind::Calls,
+            "clj:.//app.ui/widget"
+        )
+        .is_empty()
+    );
+    for entry in ["clj:.//app.main/init", "clj:.//app.ui/render"] {
+        assert!(
+            g.nodes[&id(entry)].flags.contains(&SymbolFlag::EntryPoint),
+            "{entry}"
+        );
+    }
+    assert!(
+        !g.nodes[&id("clj:.//app.shared/both")]
+            .flags
+            .contains(&SymbolFlag::EntryPoint)
+    );
+}

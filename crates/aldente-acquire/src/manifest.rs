@@ -28,6 +28,8 @@ pub struct ManifestInfo {
     pub declares_roots: bool,
     /// Declares an entry point: Leiningen `:main`, or a shadow-cljs build.
     pub service: bool,
+    /// Entry-point symbols as written (`app.main/init`), sorted (R13).
+    pub entry_points: Vec<String>,
 }
 
 /// Parses `src` as the given manifest.
@@ -84,6 +86,7 @@ fn parse_deps(map: &Edn) -> ManifestInfo {
         roots,
         declares_roots: true,
         service: false,
+        entry_points: Vec::new(),
     }
 }
 
@@ -127,6 +130,7 @@ fn parse_project(forms: &[Edn]) -> Result<ManifestInfo, String> {
         roots,
         declares_roots: true,
         service: options.get_kw("main").is_some(),
+        entry_points: Vec::new(),
     })
 }
 
@@ -199,7 +203,39 @@ fn parse_shadow(map: &Edn) -> ManifestInfo {
             .unwrap_or_default(),
         declares_roots: paths.is_some(),
         service,
+        entry_points: shadow_entry_points(map),
     }
+}
+
+/// R13 entry points of shadow-cljs builds: each module's `:init-fn`, a
+/// build's `:main`, and the symbols in `:exports`.
+///
+/// Example: `{:builds {:app {:modules {:main {:init-fn app.main/init}}}}}`
+/// gives `["app.main/init"]`.
+fn shadow_entry_points(map: &Edn) -> Vec<String> {
+    let mut out = Vec::new();
+    let Some(Edn::Map(builds)) = map.get_kw("builds") else {
+        return out;
+    };
+    let sym = |e: Option<&Edn>| match e {
+        Some(Edn::Symbol(s)) => Some(s.clone()),
+        _ => None,
+    };
+    for (_, build) in builds {
+        out.extend(sym(build.get_kw("main")));
+        out.extend(sym(build.get_kw("init-fn")));
+        if let Some(Edn::Map(modules)) = build.get_kw("modules") {
+            for (_, module) in modules {
+                out.extend(sym(module.get_kw("init-fn")));
+            }
+        }
+        if let Some(Edn::Map(exports)) = build.get_kw("exports") {
+            out.extend(exports.iter().filter_map(|(_, v)| sym(Some(v))));
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
 }
 
 /// bb.edn: `:paths`.
@@ -213,6 +249,7 @@ fn parse_bb(map: &Edn) -> ManifestInfo {
             .unwrap_or_default(),
         declares_roots: paths.is_some(),
         service: false,
+        entry_points: Vec::new(),
     }
 }
 
@@ -412,6 +449,26 @@ mod tests {
         assert_eq!(
             map_form.roots,
             [root("src-cljs", Source, Some("cljsbuild"))]
+        );
+    }
+
+    #[test]
+    fn shadow_cljs_entry_points_from_init_fn_main_and_exports() {
+        let info = parse(
+            Manifest::ShadowCljs,
+            r#"{:builds {:app {:target :browser :modules {:main {:init-fn app.main/init}}}
+                         :lib {:target :npm-module :exports {:render app.ui/render :x app.ui/x}}
+                         :cli {:target :node-script :main app.cli/-main}}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            info.entry_points,
+            [
+                "app.cli/-main",
+                "app.main/init",
+                "app.ui/render",
+                "app.ui/x"
+            ]
         );
     }
 

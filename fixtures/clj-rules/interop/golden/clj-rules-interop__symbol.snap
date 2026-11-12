@@ -43,19 +43,19 @@ edge clj:.//io.jvm -contains-> clj:.//io.jvm/hinted-inline
 edge clj:.//io.jvm -contains-> clj:.//io.jvm/static-call
 edge clj:.//io.jvm -contains-> clj:.//io.jvm/unhinted
 edge clj:.//io.jvm -contains-> clj:.//io.jvm/uuid
-edge clj:.//io.jvm -references(certain interop)-> java:java.io.File @ src/io/jvm.clj:3:21
-edge clj:.//io.jvm -references(certain interop)-> java:java.util.ArrayList @ src/io/jvm.clj:2:23
-edge clj:.//io.jvm -references(certain interop)-> java:java.util.UUID @ src/io/jvm.clj:2:33
+edge clj:.//io.jvm -references(certain interop clj)-> java:java.io.File @ src/io/jvm.clj:3:21
+edge clj:.//io.jvm -references(certain interop clj)-> java:java.util.ArrayList @ src/io/jvm.clj:2:23
+edge clj:.//io.jvm -references(certain interop clj)-> java:java.util.UUID @ src/io/jvm.clj:2:33
 edge clj:.//io.jvm/cmp -calls(certain direct)-> ext:clj//clojure.core/compare @ src/io/jvm.clj:19:47
 edge clj:.//io.jvm/cmp -calls(certain direct)-> ext:clj//clojure.core/proxy @ src/io/jvm.clj:19:14
-edge clj:.//io.jvm/cmp -references(certain interop)-> java:java.util.Comparator @ src/io/jvm.clj:19:22
-edge clj:.//io.jvm/ctor -calls(certain interop)-> java:java.util.ArrayList @ src/io/jvm.clj:7:15
-edge clj:.//io.jvm/ctor-new -calls(certain interop)-> java:java.io.File @ src/io/jvm.clj:9:19
+edge clj:.//io.jvm/cmp -references(certain interop clj)-> java:java.util.Comparator @ src/io/jvm.clj:19:22
+edge clj:.//io.jvm/ctor -calls(certain interop clj)-> java:java.util.ArrayList @ src/io/jvm.clj:7:15
+edge clj:.//io.jvm/ctor-new -calls(certain interop clj)-> java:java.io.File @ src/io/jvm.clj:9:19
 edge clj:.//io.jvm/hinted -calls(certain interop)-> java:java.lang.String#trim @ src/io/jvm.clj:11:26
 edge clj:.//io.jvm/hinted-inline -calls(certain interop)-> java:java.lang.String#length @ src/io/jvm.clj:13:25
-edge clj:.//io.jvm/static-call -calls(certain interop)-> java:java.lang.Math#abs @ src/io/jvm.clj:5:22
+edge clj:.//io.jvm/static-call -calls(certain interop clj)-> java:java.lang.Math#abs @ src/io/jvm.clj:5:22
 edge clj:.//io.jvm/unhinted -calls(certain interop)-> java:?#close @ src/io/jvm.clj:15:20
-edge clj:.//io.jvm/uuid -calls(certain interop)-> java:java.util.UUID#randomUUID @ src/io/jvm.clj:17:15
+edge clj:.//io.jvm/uuid -calls(certain interop clj)-> java:java.util.UUID#randomUUID @ src/io/jvm.clj:17:15
 edge clj:.//io.web -contains-> clj:.//io.web/fmt
 edge clj:.//io.web -contains-> clj:.//io.web/log
 edge clj:.//io.web -contains-> clj:.//io.web/method

@@ -27,7 +27,7 @@ node java:java.lang.System#currentTimeMillis platform
 node java:java.util.UUID platform
 node java:java.util.UUID#randomUUID platform
 node js:console.log platform
-# edges 62
+# edges 61
 edge clj:.//shop.audit -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.inventory x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.model x1 [certain:1]
@@ -53,9 +53,8 @@ edge clj:.//shop.inventory -calls(certain direct)-> ext:clj//clojure.core x6 [ce
 edge clj:.//shop.inventory -references(likely value-ref)-> ext:clj//clojure.core x4 [likely:4]
 edge clj:.//shop.model -calls(certain direct)-> ext:clj//cljs.core x1 [certain:1]
 edge clj:.//shop.model -calls(certain direct)-> ext:clj//clojure.core x2 [certain:2]
-edge clj:.//shop.model -calls(certain direct)-> ext:clj//clojure.string x2 [certain:2]
-edge clj:.//shop.model -requires(clj)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
-edge clj:.//shop.model -requires(cljs)-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
+edge clj:.//shop.model -calls(certain direct)-> ext:clj//clojure.string x1 [certain:1]
+edge clj:.//shop.model -requires-> ext:clj//clojure.string @ src/shop/model.cljc:3:14
 edge clj:.//shop.payment -calls(certain direct)-> ext:clj//clojure.core x3 [certain:3]
 edge clj:.//shop.plugins -calls(certain direct)-> ext:clj//clojure.core x6 [certain:6]
 edge clj:.//shop.plugins -calls(likely quoted-resolve)-> clj:.//shop.audit x1 [likely:1]

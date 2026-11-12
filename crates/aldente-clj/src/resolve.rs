@@ -295,6 +295,11 @@ impl<'a> Resolver<'a> {
         if self.is_stateful(def) {
             flags.insert(SymbolFlag::Stateful);
         }
+        // R13: a manifest names this var as an entry point (shadow-cljs).
+        let qualified = format!("{}/{}", def.ns, def.name);
+        if self.unit.entry_points.contains(&qualified) {
+            flags.insert(SymbolFlag::EntryPoint);
+        }
         flags
     }
 
@@ -513,8 +518,63 @@ impl<'a> Resolver<'a> {
             let Some(to) = to else { continue };
             let site = site(&u.filename, u.row, u.col);
             let lang = u.lang.as_deref().and_then(Lang::from_token);
+            if self.is_string_require(
+                &u.filename,
+                Pos {
+                    line: u.row,
+                    col: u.col,
+                },
+            ) {
+                self.npm_library(&u.to, &to);
+            }
             self.edge(from, to, EdgeKind::Requires, None, None, lang, site);
         }
+    }
+
+    /// Whether a namespace usage is a string libspec (`["react" :as r]`),
+    /// i.e. an npm package: the form index has a string literal there.
+    ///
+    /// Example: the `"react"` in `(:require ["react" :as react])` gives `true`.
+    fn is_string_require(&self, file: &str, pos: Pos) -> bool {
+        self.indexes.get(file).is_some_and(|ix| {
+            ix.literals
+                .iter()
+                .any(|l| l.kind == LiteralKind::Str && l.span.start == pos)
+        })
+    }
+
+    /// R10 rule 1: an npm package `lib:npm:<name>` that certainly provides
+    /// the namespace required by its string name.
+    ///
+    /// Example: `npm_library("react", ext:clj//react)` adds
+    /// `lib:npm:react -provides(certain)-> ext:clj//react`.
+    fn npm_library(&mut self, package: &str, provided: &NodeId) {
+        let Ok(lib) = aldente_model::LibraryId::new("npm", package) else {
+            return;
+        };
+        let id = NodeId::Library(lib);
+        self.nodes.entry(id.clone()).or_insert_with(|| Node {
+            id: id.clone(),
+            kind: NodeKind::Library,
+            subkind: None,
+            name: package.to_owned(),
+            namespace: None,
+            unit: None,
+            langs: BTreeSet::new(),
+            flags: BTreeSet::new(),
+            loc: None,
+            doc: None,
+            signature: None,
+        });
+        self.edge(
+            id,
+            provided.clone(),
+            EdgeKind::Provides,
+            Some(Certainty::Certain),
+            Some(Reason::Direct),
+            None,
+            None,
+        );
     }
 
     /// R3 and R4 for every var usage.
@@ -1370,7 +1430,8 @@ impl<'a> Resolver<'a> {
                 .and_then(|(r, c)| site(&cu.filename, r, c));
             if cu.import == Some(true) {
                 if let Some(from) = self.ns_id(&ns).map(NodeId::Namespace) {
-                    self.platform_edge(from, &cu.class, None, EdgeKind::References, site);
+                    let lang = cu.lang.as_deref().and_then(Lang::from_token);
+                    self.platform_edge(from, &cu.class, None, EdgeKind::References, lang, site);
                 }
                 continue;
             }
@@ -1400,7 +1461,8 @@ impl<'a> Resolver<'a> {
                 continue;
             };
             if let Some(scope) = self.scope_at(&cu.filename, pos, &ns) {
-                self.platform_edge(scope, &cu.class, member.as_deref(), kind, site);
+                let lang = cu.lang.as_deref().and_then(Lang::from_token);
+                self.platform_edge(scope, &cu.class, member.as_deref(), kind, lang, site);
             }
         }
         let invocations = self.run.analysis.instance_invocations.clone();
@@ -1453,7 +1515,15 @@ impl<'a> Resolver<'a> {
                 let class = self
                     .receiver_class(&inv.filename, &call)
                     .unwrap_or_else(|| "?".to_owned());
-                self.platform_edge(scope, &class, Some(&inv.method_name), EdgeKind::Calls, site);
+                let lang = inv.lang.as_deref().and_then(Lang::from_token);
+                self.platform_edge(
+                    scope,
+                    &class,
+                    Some(&inv.method_name),
+                    EdgeKind::Calls,
+                    lang,
+                    site,
+                );
             }
         }
         let platforms: Vec<NodeId> = self
@@ -1481,6 +1551,7 @@ impl<'a> Resolver<'a> {
         class: &str,
         member: Option<&str>,
         kind: EdgeKind,
+        lang: Option<Lang>,
         site: Option<Site>,
     ) {
         let Ok(p) = PlatformId::java(class, member) else {
@@ -1500,7 +1571,7 @@ impl<'a> Resolver<'a> {
             kind,
             Some(Certainty::Certain),
             Some(Reason::Interop),
-            None,
+            lang,
             site,
         );
     }
@@ -1754,8 +1825,9 @@ impl<'a> Resolver<'a> {
     /// diagnostics from clj-kondo and the form index (one per file).
     ///
     /// Example: clj-mini gives a batch whose first node is `clj:.//shop.audit`.
-    fn finish(self) -> Resolved {
-        let mut edges: Vec<Edge> = self.edges.into_values().collect();
+    fn finish(mut self) -> Resolved {
+        let (mut edges, dropped) = merge_languages(self.edges.into_values().collect());
+        self.stats.merged_duplicates += dropped;
         for e in &mut edges {
             e.sites.sort();
         }
@@ -1801,6 +1873,50 @@ impl<'a> Resolver<'a> {
             stats: self.stats,
         }
     }
+}
+
+/// R12: an edge that exists for both `clj` and `cljs` (from the two reads of
+/// a `.cljc` file) with the same certainty is stored once, without a
+/// language, its sites combined. Edges that differ between the languages
+/// keep theirs. Also returns how many call/reference sites were dropped as
+/// duplicates (the same position seen by both reads), for [`UsageStats`].
+///
+/// Example: `both -calls-> now` from clj and from cljs becomes one edge with
+/// `lang: None` and 1 dropped site; `now -calls-> java:…` (clj only) keeps
+/// `lang: Some(Clj)`.
+fn merge_languages(edges: Vec<Edge>) -> (Vec<Edge>, usize) {
+    type Key = (NodeId, NodeId, EdgeKind, Option<Reason>, Option<Certainty>);
+    let mut groups: BTreeMap<Key, Vec<Edge>> = BTreeMap::new();
+    for e in edges {
+        groups
+            .entry((e.from.clone(), e.to.clone(), e.kind, e.reason, e.certainty))
+            .or_default()
+            .push(e);
+    }
+    let mut out = Vec::new();
+    let mut dropped = 0;
+    for (_, group) in groups {
+        let langs: BTreeSet<Option<Lang>> = group.iter().map(|e| e.lang).collect();
+        let both = langs.contains(&Some(Lang::Clj)) && langs.contains(&Some(Lang::Cljs));
+        if !both {
+            out.extend(group);
+            continue;
+        }
+        let mut merged = group[0].clone();
+        merged.lang = None;
+        merged.sites = Vec::new();
+        for e in group {
+            for site in e.sites {
+                if !merged.sites.contains(&site) {
+                    merged.sites.push(site);
+                } else if matches!(merged.kind, EdgeKind::Calls | EdgeKind::References) {
+                    dropped += 1;
+                }
+            }
+        }
+        out.push(merged);
+    }
+    (out, dropped)
 }
 
 /// R1 subkind from `defined-by` (and the name for record constructors).

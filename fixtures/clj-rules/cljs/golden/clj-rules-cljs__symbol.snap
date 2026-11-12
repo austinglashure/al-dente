@@ -1,0 +1,51 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 19
+node clj:.//app.macros namespace langs:clj
+node clj:.//app.macros/when-dev symbol/macro langs:clj
+node clj:.//app.main namespace langs:cljs
+node clj:.//app.main/init symbol/fn [entry-point] langs:cljs
+node clj:.//app.shared namespace langs:clj,cljs
+node clj:.//app.shared/both symbol/fn langs:clj,cljs
+node clj:.//app.shared/now symbol/fn langs:clj,cljs
+node clj:.//app.ui namespace langs:clj,cljs
+node clj:.//app.ui/render symbol/fn [entry-point] langs:cljs
+node clj:.//app.ui/widget symbol/macro langs:clj
+node ext:clj//clojure.core/when external
+node ext:clj//react external
+node ext:clj//react/createElement external
+node ext:clj//reagent.core external
+node ext:clj//reagent.core/atom external
+node java:java.lang.System#currentTimeMillis platform
+node js:Date.now platform
+node lib:npm:react library
+node unit:. unit [service] langs:clj,cljs
+# edges 25
+edge clj:.//app.macros -contains-> clj:.//app.macros/when-dev
+edge clj:.//app.macros/when-dev -references(possible macro-body)-> ext:clj//clojure.core/when @ src/app/macros.clj:4:5
+edge clj:.//app.main -contains-> clj:.//app.main/init
+edge clj:.//app.main -requires-> clj:.//app.macros @ src/app/main.cljs:5:21
+edge clj:.//app.main -requires-> clj:.//app.ui @ src/app/main.cljs:4:14
+edge clj:.//app.main -requires-> ext:clj//react @ src/app/main.cljs:2:14
+edge clj:.//app.main -requires-> ext:clj//reagent.core @ src/app/main.cljs:3:14
+edge clj:.//app.main/init -calls(certain direct)-> clj:.//app.macros/when-dev @ src/app/main.cljs:8:3
+edge clj:.//app.main/init -calls(certain direct)-> clj:.//app.ui/render @ src/app/main.cljs:8:13
+edge clj:.//app.main/init -calls(certain direct)-> ext:clj//react/createElement @ src/app/main.cljs:9:3
+edge clj:.//app.main/init -calls(certain direct)-> ext:clj//reagent.core/atom @ src/app/main.cljs:10:3
+edge clj:.//app.shared -contains-> clj:.//app.shared/both
+edge clj:.//app.shared -contains-> clj:.//app.shared/now
+edge clj:.//app.shared/both -calls(certain direct)-> clj:.//app.shared/now @ src/app/shared.cljc:8:3
+edge clj:.//app.shared/now -calls(certain interop clj)-> java:java.lang.System#currentTimeMillis @ src/app/shared.cljc:4:11
+edge clj:.//app.shared/now -calls(certain interop cljs)-> js:Date.now @ src/app/shared.cljc:5:12
+edge clj:.//app.ui -contains-> clj:.//app.ui/render
+edge clj:.//app.ui -contains-> clj:.//app.ui/widget
+edge clj:.//app.ui -requires-> clj:.//app.ui @ src/app/ui.cljs:2:21
+edge clj:.//app.ui/render -calls(certain direct)-> clj:.//app.ui/widget @ src/app/ui.cljs:5:3
+edge lib:npm:react -provides(certain direct)-> ext:clj//react
+edge unit:. -contains-> clj:.//app.macros
+edge unit:. -contains-> clj:.//app.main
+edge unit:. -contains-> clj:.//app.shared
+edge unit:. -contains-> clj:.//app.ui
+# truncated false
