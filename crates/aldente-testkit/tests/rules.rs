@@ -152,3 +152,55 @@ fn multimethod_impls_implement_their_multimethod() {
 fn protocols_golden() {
     assert_graph_snapshot("clj-rules/protocols", AggregationLevel::Symbol);
 }
+
+#[test]
+fn r7_layer_1_values_handed_on_are_likely_references() {
+    let refs = edges_of("clj-rules/higher-order", EdgeKind::References);
+    for (from, to) in [
+        ("mapped", "inc2"),
+        ("composed", "inc2"),
+        ("composed", "dbl"),
+        ("partial-dbl", "dbl"),
+        ("table", "inc2"),
+        ("returns-fn", "dbl"),
+        ("use-apply", "inc2"),
+    ] {
+        let edge = (
+            format!("ho.core/{from}"),
+            format!("ho.core/{to}"),
+            Certainty::Likely,
+        );
+        assert!(refs.contains(&edge), "missing {edge:?}");
+    }
+}
+
+#[test]
+fn r7_layer_2_param_flow_matches_expected() {
+    let g = analyze_fixture(&fixture_dir("clj-rules/higher-order")).graph;
+    let flows: BTreeSet<(String, String, Option<Certainty>)> = g
+        .edges
+        .iter()
+        .filter(|e| e.reason == Some(aldente_model::Reason::ParamFlow))
+        .map(|e| {
+            assert_eq!(e.kind, EdgeKind::Calls);
+            let short = |id: &NodeId| {
+                id.to_string()
+                    .trim_start_matches("clj:.//ho.core/")
+                    .to_owned()
+            };
+            (short(&e.from), short(&e.to), e.certainty)
+        })
+        .collect();
+    let p = Some(Certainty::Possible);
+    let expected: BTreeSet<(String, String, Option<Certainty>)> =
+        [("apply-it", "inc2"), ("apply-it", "dbl"), ("twice", "dbl")]
+            .into_iter()
+            .map(|(a, b)| (a.to_owned(), b.to_owned(), p))
+            .collect();
+    assert_eq!(flows, expected);
+}
+
+#[test]
+fn higher_order_golden() {
+    assert_graph_snapshot("clj-rules/higher-order", AggregationLevel::Symbol);
+}

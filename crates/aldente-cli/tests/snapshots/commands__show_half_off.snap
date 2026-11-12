@@ -1,13 +1,14 @@
 ---
 source: crates/aldente-cli/tests/commands.rs
-assertion_line: 112
+assertion_line: 126
 expression: "env.text(&[\"show\", \"shop.pricing/half-off\"])"
 ---
 clj:.//shop.pricing/half-off  symbol/fn
   langs clj
   at src/shop/pricing.clj:9:1
   signature [p]
-callers (1)
+callers (2)
   likely  references value-ref  clj:.//shop.pricing/price@:book  src/shop/pricing.clj:13:24
+  possible  calls param-flow  clj:.//shop.util/apply-discount  src/shop/util.clj:11:18
 callees (1)
   certain  calls direct  ext:clj//clojure.core//  src/shop/pricing.clj:10:3

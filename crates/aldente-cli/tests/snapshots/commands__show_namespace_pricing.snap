@@ -7,11 +7,12 @@ clj:.//shop.pricing  namespace
   langs clj
   at src/shop/pricing.clj:1:1
   doc A multimethod with three methods and a default.
-callers (6)
+callers (7)
   certain  calls direct  clj:.//shop.core x1
   certain  calls direct  clj:.//shop.pricing-test x2
   likely  dispatches multimethod-dispatch  clj:.//shop.pricing-test x4
   possible  dispatches multimethod-dispatch  clj:.//shop.core x4
+  possible  calls param-flow  clj:.//shop.util x1
   -  requires -  clj:.//shop.core  src/shop/core.clj:7:14
   -  requires -  clj:.//shop.pricing-test  test/shop/pricing_test.clj:3:14
 callees (3)

@@ -1,0 +1,69 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 22
+node clj:.//ho.core namespace langs:clj
+node clj:.//ho.core/apply-it symbol/fn langs:clj
+node clj:.//ho.core/composed symbol/var langs:clj
+node clj:.//ho.core/dbl symbol/fn langs:clj
+node clj:.//ho.core/inc2 symbol/fn langs:clj
+node clj:.//ho.core/mapped symbol/fn langs:clj
+node clj:.//ho.core/partial-dbl symbol/var langs:clj
+node clj:.//ho.core/returns-fn symbol/fn langs:clj
+node clj:.//ho.core/table symbol/var langs:clj
+node clj:.//ho.core/twice symbol/fn langs:clj
+node clj:.//ho.core/use-anon symbol/fn langs:clj
+node clj:.//ho.core/use-apply symbol/fn langs:clj
+node clj:.//ho.core/use-apply-2 symbol/fn langs:clj
+node clj:.//ho.core/use-twice symbol/fn langs:clj
+node clj:.//ho.core/use-twice-1 symbol/fn langs:clj
+node ext:clj//clojure.core/* external
+node ext:clj//clojure.core/+ external
+node ext:clj//clojure.core/comp external
+node ext:clj//clojure.core/fn external
+node ext:clj//clojure.core/map external
+node ext:clj//clojure.core/partial external
+node unit:. unit langs:clj
+# edges 40
+edge clj:.//ho.core -contains-> clj:.//ho.core/apply-it
+edge clj:.//ho.core -contains-> clj:.//ho.core/composed
+edge clj:.//ho.core -contains-> clj:.//ho.core/dbl
+edge clj:.//ho.core -contains-> clj:.//ho.core/inc2
+edge clj:.//ho.core -contains-> clj:.//ho.core/mapped
+edge clj:.//ho.core -contains-> clj:.//ho.core/partial-dbl
+edge clj:.//ho.core -contains-> clj:.//ho.core/returns-fn
+edge clj:.//ho.core -contains-> clj:.//ho.core/table
+edge clj:.//ho.core -contains-> clj:.//ho.core/twice
+edge clj:.//ho.core -contains-> clj:.//ho.core/use-anon
+edge clj:.//ho.core -contains-> clj:.//ho.core/use-apply
+edge clj:.//ho.core -contains-> clj:.//ho.core/use-apply-2
+edge clj:.//ho.core -contains-> clj:.//ho.core/use-twice
+edge clj:.//ho.core -contains-> clj:.//ho.core/use-twice-1
+edge clj:.//ho.core/apply-it -calls(possible param-flow)-> clj:.//ho.core/dbl @ src/ho/core.clj:8:3
+edge clj:.//ho.core/apply-it -calls(possible param-flow)-> clj:.//ho.core/inc2 @ src/ho/core.clj:8:3
+edge clj:.//ho.core/composed -calls(certain direct)-> ext:clj//clojure.core/comp @ src/ho/core.clj:26:15
+edge clj:.//ho.core/composed -references(likely value-ref)-> clj:.//ho.core/dbl @ src/ho/core.clj:26:26
+edge clj:.//ho.core/composed -references(likely value-ref)-> clj:.//ho.core/inc2 @ src/ho/core.clj:26:21
+edge clj:.//ho.core/dbl -calls(certain direct)-> ext:clj//clojure.core/* @ src/ho/core.clj:5:15
+edge clj:.//ho.core/inc2 -calls(certain direct)-> ext:clj//clojure.core/+ @ src/ho/core.clj:3:16
+edge clj:.//ho.core/mapped -calls(certain direct)-> ext:clj//clojure.core/map @ src/ho/core.clj:24:19
+edge clj:.//ho.core/mapped -references(likely value-ref)-> clj:.//ho.core/inc2 @ src/ho/core.clj:24:24
+edge clj:.//ho.core/partial-dbl -calls(certain direct)-> ext:clj//clojure.core/partial @ src/ho/core.clj:28:18
+edge clj:.//ho.core/partial-dbl -references(likely value-ref)-> clj:.//ho.core/dbl @ src/ho/core.clj:28:27
+edge clj:.//ho.core/returns-fn -references(likely value-ref)-> clj:.//ho.core/dbl @ src/ho/core.clj:32:21
+edge clj:.//ho.core/table -references(likely value-ref)-> clj:.//ho.core/inc2 @ src/ho/core.clj:30:18
+edge clj:.//ho.core/twice -calls(certain direct)-> clj:.//ho.core/twice @ src/ho/core.clj:11:8
+edge clj:.//ho.core/twice -calls(possible param-flow)-> clj:.//ho.core/dbl @ src/ho/core.clj:12:10 src/ho/core.clj:12:13
+edge clj:.//ho.core/use-anon -calls(certain direct)-> clj:.//ho.core/apply-it @ src/ho/core.clj:18:19
+edge clj:.//ho.core/use-anon -calls(certain direct)-> ext:clj//clojure.core/fn @ src/ho/core.clj:18:29
+edge clj:.//ho.core/use-apply -calls(certain direct)-> clj:.//ho.core/apply-it @ src/ho/core.clj:14:20
+edge clj:.//ho.core/use-apply -references(likely value-ref)-> clj:.//ho.core/inc2 @ src/ho/core.clj:14:30
+edge clj:.//ho.core/use-apply-2 -calls(certain direct)-> clj:.//ho.core/apply-it @ src/ho/core.clj:16:22
+edge clj:.//ho.core/use-apply-2 -references(likely value-ref)-> clj:.//ho.core/dbl @ src/ho/core.clj:16:32
+edge clj:.//ho.core/use-twice -calls(certain direct)-> clj:.//ho.core/twice @ src/ho/core.clj:20:20
+edge clj:.//ho.core/use-twice -references(likely value-ref)-> clj:.//ho.core/dbl @ src/ho/core.clj:20:27
+edge clj:.//ho.core/use-twice-1 -calls(certain direct)-> clj:.//ho.core/twice @ src/ho/core.clj:22:22
+edge clj:.//ho.core/use-twice-1 -references(likely value-ref)-> clj:.//ho.core/inc2 @ src/ho/core.clj:22:29
+edge unit:. -contains-> clj:.//ho.core
+# truncated false

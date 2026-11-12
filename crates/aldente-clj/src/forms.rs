@@ -46,6 +46,17 @@ pub struct TopForm {
     pub name: Option<String>,
     /// For `defmethod`: the dispatch value as written.
     pub dispatch: Option<String>,
+    /// For `defn`, `defn-` and `defmacro`: each arity's parameters, in order.
+    pub arities: Vec<Arity>,
+}
+
+/// One arity's parameter list.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Arity {
+    /// Each fixed parameter's name and position; `None` for a destructured one.
+    pub params: Vec<Option<(String, Pos)>>,
+    /// Has a `& rest` parameter.
+    pub variadic: bool,
 }
 
 /// A method body inside `extend-type`, `extend-protocol`, `defrecord`,
@@ -358,6 +369,7 @@ impl Ctx<'_> {
             head: None,
             name: None,
             dispatch: None,
+            arities: Vec::new(),
         };
         if node.kind() != "list_lit" {
             return form;
@@ -373,7 +385,60 @@ impl Ctx<'_> {
         if local == "defmethod" {
             form.dispatch = vals.get(2).map(|n| self.text(*n).to_owned());
         }
+        if matches!(local, "defn" | "defn-" | "defmacro") {
+            form.arities = self.arities(&vals);
+        }
         form
+    }
+
+    /// The arities of a `defn`-like form: its single parameter vector, or the
+    /// vector at the head of each `([params] body)` list.
+    ///
+    /// Example: `(defn f ([a] …) ([a b & more] …))` gives two arities, the
+    /// second with params `a`, `b` and `variadic: true`.
+    fn arities(&self, vals: &[Node<'_>]) -> Vec<Arity> {
+        for (i, node) in vals.iter().enumerate().skip(2) {
+            match node.kind() {
+                "vec_lit" => return vec![self.arity(*node)],
+                "list_lit" if values(*node).first().is_some_and(|v| v.kind() == "vec_lit") => {
+                    return vals[i..]
+                        .iter()
+                        .filter_map(|n| {
+                            values(*n)
+                                .first()
+                                .copied()
+                                .filter(|v| v.kind() == "vec_lit")
+                        })
+                        .map(|v| self.arity(v))
+                        .collect();
+                }
+                _ => {}
+            }
+        }
+        Vec::new()
+    }
+
+    /// One parameter vector.
+    ///
+    /// Example: `[f {:keys [a]} & xs]` gives `[Some(f), None]`, variadic.
+    fn arity(&self, vec: Node<'_>) -> Arity {
+        let mut params = Vec::new();
+        for v in values(vec) {
+            match self.sym(v) {
+                Some(name) if name == "&" => {
+                    return Arity {
+                        params,
+                        variadic: true,
+                    };
+                }
+                Some(name) => params.push(Some((name, self.pos(v.start_byte())))),
+                None => params.push(None),
+            }
+        }
+        Arity {
+            params,
+            variadic: false,
+        }
     }
 
     /// Walks the whole tree iteratively, collecting calls, impl bodies,

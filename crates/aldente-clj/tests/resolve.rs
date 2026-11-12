@@ -321,6 +321,8 @@ fn no_usage_is_dropped() {
                 .edges
                 .iter()
                 .filter(|e| matches!(e.kind, EdgeKind::Calls | EdgeKind::References))
+                // Derived edges (R7 param-flow) are not var usages.
+                .filter(|e| e.reason != Some(Reason::ParamFlow))
                 .map(|e| e.sites.len())
                 .sum();
             assert_eq!(sites + s.merged_duplicates, s.sites, "{fixture}: {s:?}");

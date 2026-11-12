@@ -113,7 +113,7 @@ node ext:clj//react external
 node ext:clj//react/createElement external
 node js:console.log platform
 node unit:. unit langs:clj,cljs
-# edges 188
+# edges 189
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -282,6 +282,7 @@ edge clj:.//shop.util -contains-> clj:.//shop.util/log-timing
 edge clj:.//shop.util -contains-> clj:.//shop.util/with-timing
 edge clj:.//shop.util -requires-> clj:.//shop.interop @ src/shop/util.clj:3:14
 edge clj:.//shop.util/apply-discount -calls(certain direct)-> clj:.//shop.util/clamp @ src/shop/util.clj:11:3
+edge clj:.//shop.util/apply-discount -calls(possible param-flow)-> clj:.//shop.pricing/half-off @ src/shop/util.clj:11:18
 edge clj:.//shop.util/clamp -calls(certain direct)-> ext:clj//clojure.core/max @ src/shop/util.clj:6:3
 edge clj:.//shop.util/clamp -calls(certain direct)-> ext:clj//clojure.core/min @ src/shop/util.clj:6:11
 edge clj:.//shop.util/log-timing -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/util.clj:14:3
