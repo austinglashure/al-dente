@@ -47,7 +47,7 @@ npx playwright install chromium     # once
 npm run e2e                         # builds the binary, then browser tests
 ```
 
-Golden files live under `fixtures/<name>/golden/`. After an intended change, review and accept them with `cargo insta review` (needs `cargo-insta`) or `INSTA_UPDATE=always cargo test`, then read the diff before committing.
+Golden files live under `fixtures/<name>/golden/`. After an intended change, review and accept them with `cargo insta review` (needs `cargo-insta`) or `INSTA_UPDATE=always cargo test --workspace`, then read the diff before committing.
 
 ## Structure
 

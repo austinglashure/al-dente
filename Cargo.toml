@@ -1,6 +1,9 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
+# Plain `cargo run` / `cargo build` mean the `aldente` binary. Workspace-wide
+# commands (tests, clippy, the acceptance runner) name `--workspace` or `-p`.
+default-members = ["crates/aldente-cli"]
 
 [workspace.package]
 version = "0.1.0"
