@@ -10,6 +10,8 @@ publish.workspace = true
 aldente-acquire.workspace = true
 aldente-adapter.workspace = true
 aldente-model.workspace = true
+# R11 keyword-dispatch catalog.
+aldente-rules.workspace = true
 # Parallel form indexing (02-architecture.md, "Key dependencies").
 rayon.workspace = true
 serde.workspace = true

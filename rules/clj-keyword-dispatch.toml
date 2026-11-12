@@ -1,0 +1,149 @@
+# Keyword-keyed dispatch for Clojure and ClojureScript (R11 in
+# docs/plan/04-clojure-analysis.md). Add frameworks here as data.
+#
+# A family is a set of handlers keyed by keyword. Its handlers come from
+# `[[registration]]` calls (`(reg-event-fx :k handler)` becomes the impl
+# `<ns>/reg-event-fx@:k`) and/or from `defmethod`s of the listed
+# multimethods (dispatch value `:k`). Dispatches with a literal keyword get
+# an edge of the family's kind and certainty; a computed one gets a hole.
+
+[[family]]
+name = "re-frame/event"
+edge = "calls"
+certainty = "likely"
+
+[[family]]
+name = "re-frame/sub"
+edge = "calls"
+certainty = "likely"
+
+[[family]]
+name = "re-frame/fx"
+edge = "calls"
+certainty = "likely"
+
+[[family]]
+name = "re-frame/cofx"
+edge = "calls"
+certainty = "likely"
+
+[[family]]
+name = "integrant/key"
+edge = "references"
+certainty = "possible"
+multimethods = [
+  "integrant.core/init-key",
+  "integrant.core/halt-key!",
+  "integrant.core/resume-key",
+  "integrant.core/suspend-key!",
+]
+
+# Namespaces that re-export the same functions.
+[[alias]]
+ns = "re-frame.alpha"
+same_as = "re-frame.core"
+
+[[alias]]
+ns = "re-frame.core-instrumented"
+same_as = "re-frame.core"
+
+[[alias]]
+ns = "re-frame.alpha-instrumented"
+same_as = "re-frame.core"
+
+# `(fn :k handler)` registers handler under :k.
+[[registration]]
+fn = "re-frame.core/reg-event-db"
+family = "re-frame/event"
+
+[[registration]]
+fn = "re-frame.core/reg-event-fx"
+family = "re-frame/event"
+
+[[registration]]
+fn = "re-frame.core/reg-event-ctx"
+family = "re-frame/event"
+
+[[registration]]
+fn = "re-frame.core/reg-sub"
+family = "re-frame/sub"
+# `(reg-sub :k :<- [:a] f)`: the vector after `:<-` subscribes to :a.
+signal_marker = ":<-"
+
+[[registration]]
+fn = "re-frame.core/reg-fx"
+family = "re-frame/fx"
+
+[[registration]]
+fn = "re-frame.core/reg-cofx"
+family = "re-frame/cofx"
+
+# `arg = "vector"`: the first argument is `[:k …]`; `"keyword"`: it is `:k`.
+[[dispatch]]
+fn = "re-frame.core/dispatch"
+family = "re-frame/event"
+arg = "vector"
+
+[[dispatch]]
+fn = "re-frame.core/dispatch-sync"
+family = "re-frame/event"
+arg = "vector"
+
+[[dispatch]]
+fn = "re-frame.core/dispatch-with"
+family = "re-frame/event"
+arg = "vector"
+
+[[dispatch]]
+fn = "re-frame.core/dispatch-sync-with"
+family = "re-frame/event"
+arg = "vector"
+
+[[dispatch]]
+fn = "re-frame.core/dispatch-and-settle"
+family = "re-frame/event"
+arg = "vector"
+
+[[dispatch]]
+fn = "re-frame.core/subscribe"
+family = "re-frame/sub"
+arg = "vector"
+
+[[dispatch]]
+fn = "re-frame.core/inject-cofx"
+family = "re-frame/cofx"
+arg = "keyword"
+
+[[dispatch]]
+fn = "integrant.core/ref"
+family = "integrant/key"
+arg = "keyword"
+
+[[dispatch]]
+fn = "integrant.core/refset"
+family = "integrant/key"
+arg = "keyword"
+
+# Map entries in effect maps. `value = "event"`: `[:k …]`; `"events"`: a
+# vector of those; `"effects"`: a vector of `[effect-key value]` pairs, each
+# read as an entry of this table.
+[[effect]]
+key = ":dispatch"
+family = "re-frame/event"
+value = "event"
+
+[[effect]]
+key = ":dispatch-n"
+family = "re-frame/event"
+value = "events"
+
+[[effect]]
+key = ":fx"
+family = "re-frame/event"
+value = "effects"
+
+# Inside an event handler, an effect-map key (`{:http-xhrio …}`) or an `:fx`
+# pair (`[:http-xhrio …]`) runs the `reg-fx` registered under that key.
+[[effect_map]]
+inside = "re-frame/event"
+family = "re-frame/fx"

@@ -99,10 +99,10 @@ The discriminators for protocol impls and `reify` are not fixed by the plan. Thi
 | `shop.payment/charge@Voucher` | `src/shop/payment.clj:14:3` | in `defrecord` |
 | `shop.payment/charge@String` | `src/shop/payment.clj:19:3` | in `extend-type` |
 | `shop.payment/charge@reify:L25` | `src/shop/payment.clj:26:5` | Phase 2 (R6). In Phase 1 its body belongs to `free-charger`. |
-| `shop.ui.events/<top>@L5` | `src/shop/ui/events.cljs:5:1` | Phase 2 (R11) renames to `shop.ui.events/reg-event-db@:cart/add` |
-| `shop.ui.events/<top>@L9` | `src/shop/ui/events.cljs:9:1` | Phase 2 renames to `shop.ui.events/reg-event-fx@:order/submit` |
-| `shop.ui.events/<top>@L14` | `src/shop/ui/events.cljs:14:1` | Phase 2 renames to `shop.ui.events/reg-event-db@:order/submitted` |
-| `shop.ui.subs/<top>@L5` | `src/shop/ui/subs.cljs:5:1` | Phase 2 renames to `shop.ui.subs/reg-sub@:cart/items` |
+| `shop.ui.events/<top>@L5` | `src/shop/ui/events.cljs:5:1` | renamed in WP2.8 (R11) to `shop.ui.events/reg-event-db@:cart/add` |
+| `shop.ui.events/<top>@L9` | `src/shop/ui/events.cljs:9:1` | renamed in WP2.8 to `shop.ui.events/reg-event-fx@:order/submit` |
+| `shop.ui.events/<top>@L14` | `src/shop/ui/events.cljs:14:1` | renamed in WP2.8 to `shop.ui.events/reg-event-db@:order/submitted` |
+| `shop.ui.subs/<top>@L5` | `src/shop/ui/subs.cljs:5:1` | renamed in WP2.8 to `shop.ui.subs/reg-sub@:cart/items` |
 
 Below, `events@L5`, `events@L9`, `events@L14` and `subs@L5` stand for these impls under whichever name the phase uses.
 

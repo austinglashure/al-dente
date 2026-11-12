@@ -50,11 +50,11 @@ node clj:.//shop.pricing/price@:default impl langs:clj
 node clj:.//shop.pricing/price@:food impl langs:clj
 node clj:.//shop.pricing/price@:gift impl langs:clj
 node clj:.//shop.ui.events namespace langs:cljs
-node clj:.//shop.ui.events/<top>@L14 impl langs:cljs
-node clj:.//shop.ui.events/<top>@L5 impl langs:cljs
-node clj:.//shop.ui.events/<top>@L9 impl langs:cljs
+node clj:.//shop.ui.events/reg-event-db@:cart/add impl langs:cljs
+node clj:.//shop.ui.events/reg-event-db@:order/submitted impl langs:cljs
+node clj:.//shop.ui.events/reg-event-fx@:order/submit impl langs:cljs
 node clj:.//shop.ui.subs namespace langs:cljs
-node clj:.//shop.ui.subs/<top>@L5 impl langs:cljs
+node clj:.//shop.ui.subs/reg-sub@:cart/items impl langs:cljs
 node clj:.//shop.ui.views namespace langs:cljs
 node clj:.//shop.ui.views/cart-view symbol/fn langs:cljs
 node clj:.//shop.ui.views/init symbol/fn langs:cljs
@@ -119,7 +119,7 @@ node java:java.util.UUID#randomUUID platform
 node js:console.log platform
 node lib:npm:react library
 node unit:. unit langs:clj,cljs
-# edges 193
+# edges 197
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -247,25 +247,26 @@ edge clj:.//shop.pricing/price@:default -implements-> clj:.//shop.pricing/price
 edge clj:.//shop.pricing/price@:food -calls(certain direct)-> ext:clj//clojure.core/* @ src/shop/pricing.clj:16:3
 edge clj:.//shop.pricing/price@:food -implements-> clj:.//shop.pricing/price
 edge clj:.//shop.pricing/price@:gift -implements-> clj:.//shop.pricing/price
-edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L14
-edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L5
-edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/<top>@L9
+edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/reg-event-db@:cart/add
+edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/reg-event-db@:order/submitted
+edge clj:.//shop.ui.events -contains-> clj:.//shop.ui.events/reg-event-fx@:order/submit
 edge clj:.//shop.ui.events -requires-> ext:clj//re-frame.core @ src/shop/ui/events.cljs:3:14
-edge clj:.//shop.ui.events/<top>@L14 -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/shop/ui/events.cljs:16:5
-edge clj:.//shop.ui.events/<top>@L14 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:15:3
-edge clj:.//shop.ui.events/<top>@L14 -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/shop/ui/events.cljs:14:1
-edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:6:3
-edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/fnil @ src/shop/ui/events.cljs:7:31
-edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/update-in @ src/shop/ui/events.cljs:7:5
-edge clj:.//shop.ui.events/<top>@L5 -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/shop/ui/events.cljs:5:1
-edge clj:.//shop.ui.events/<top>@L5 -references(likely value-ref)-> ext:clj//cljs.core/inc @ src/shop/ui/events.cljs:7:37
-edge clj:.//shop.ui.events/<top>@L9 -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/shop/ui/events.cljs:11:10
-edge clj:.//shop.ui.events/<top>@L9 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:10:3
-edge clj:.//shop.ui.events/<top>@L9 -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/shop/ui/events.cljs:9:1
-edge clj:.//shop.ui.subs -contains-> clj:.//shop.ui.subs/<top>@L5
+edge clj:.//shop.ui.events/reg-event-db@:cart/add -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:6:3
+edge clj:.//shop.ui.events/reg-event-db@:cart/add -calls(certain direct)-> ext:clj//cljs.core/fnil @ src/shop/ui/events.cljs:7:31
+edge clj:.//shop.ui.events/reg-event-db@:cart/add -calls(certain direct)-> ext:clj//cljs.core/update-in @ src/shop/ui/events.cljs:7:5
+edge clj:.//shop.ui.events/reg-event-db@:cart/add -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/shop/ui/events.cljs:5:1
+edge clj:.//shop.ui.events/reg-event-db@:cart/add -references(likely value-ref)-> ext:clj//cljs.core/inc @ src/shop/ui/events.cljs:7:37
+edge clj:.//shop.ui.events/reg-event-db@:order/submitted -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/shop/ui/events.cljs:16:5
+edge clj:.//shop.ui.events/reg-event-db@:order/submitted -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:15:3
+edge clj:.//shop.ui.events/reg-event-db@:order/submitted -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/shop/ui/events.cljs:14:1
+edge clj:.//shop.ui.events/reg-event-fx@:order/submit -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/shop/ui/events.cljs:11:10
+edge clj:.//shop.ui.events/reg-event-fx@:order/submit -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/events.cljs:10:3
+edge clj:.//shop.ui.events/reg-event-fx@:order/submit -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/shop/ui/events.cljs:9:1
+edge clj:.//shop.ui.events/reg-event-fx@:order/submit -calls(likely keyword-dispatch)-> clj:.//shop.ui.events/reg-event-db@:order/submitted @ src/shop/ui/events.cljs:12:6
+edge clj:.//shop.ui.subs -contains-> clj:.//shop.ui.subs/reg-sub@:cart/items
 edge clj:.//shop.ui.subs -requires-> ext:clj//re-frame.core @ src/shop/ui/subs.cljs:3:14
-edge clj:.//shop.ui.subs/<top>@L5 -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/subs.cljs:6:3
-edge clj:.//shop.ui.subs/<top>@L5 -calls(certain direct)-> ext:clj//re-frame.core/reg-sub @ src/shop/ui/subs.cljs:5:1
+edge clj:.//shop.ui.subs/reg-sub@:cart/items -calls(certain direct)-> ext:clj//cljs.core/fn @ src/shop/ui/subs.cljs:6:3
+edge clj:.//shop.ui.subs/reg-sub@:cart/items -calls(certain direct)-> ext:clj//re-frame.core/reg-sub @ src/shop/ui/subs.cljs:5:1
 edge clj:.//shop.ui.views -contains-> clj:.//shop.ui.views/cart-view
 edge clj:.//shop.ui.views -contains-> clj:.//shop.ui.views/init
 edge clj:.//shop.ui.views -contains-> clj:.//shop.ui.views/submit-button
@@ -279,12 +280,15 @@ edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//cljs.core/
 edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//cljs.core/let @ src/shop/ui/views.cljs:10:3
 edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//re-frame.core/subscribe @ src/shop/ui/views.cljs:10:16
 edge clj:.//shop.ui.views/cart-view -calls(certain direct)-> ext:clj//react/createElement @ src/shop/ui/views.cljs:11:5
+edge clj:.//shop.ui.views/cart-view -calls(likely keyword-dispatch)-> clj:.//shop.ui.subs/reg-sub@:cart/items @ src/shop/ui/views.cljs:10:16
 edge clj:.//shop.ui.views/init -calls(certain direct)-> clj:.//shop.model/format-money @ src/shop/ui/views.cljs:19:26
 edge clj:.//shop.ui.views/init -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/shop/ui/views.cljs:20:3
 edge clj:.//shop.ui.views/init -calls(certain interop)-> js:console.log @ src/shop/ui/views.cljs:19:3
+edge clj:.//shop.ui.views/init -calls(likely keyword-dispatch)-> clj:.//shop.ui.events/reg-event-db@:cart/add @ src/shop/ui/views.cljs:20:3
 edge clj:.//shop.ui.views/submit-button -calls(certain direct)-> ext:clj//cljs.core/fn* @ src/shop/ui/views.cljs:15:38
 edge clj:.//shop.ui.views/submit-button -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/shop/ui/views.cljs:15:39
 edge clj:.//shop.ui.views/submit-button -calls(certain direct)-> ext:clj//react/createElement @ src/shop/ui/views.cljs:14:3
+edge clj:.//shop.ui.views/submit-button -calls(likely keyword-dispatch)-> clj:.//shop.ui.events/reg-event-fx@:order/submit @ src/shop/ui/views.cljs:15:39
 edge clj:.//shop.util -contains-> clj:.//shop.util/apply-discount
 edge clj:.//shop.util -contains-> clj:.//shop.util/clamp
 edge clj:.//shop.util -contains-> clj:.//shop.util/log-timing

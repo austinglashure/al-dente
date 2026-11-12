@@ -99,6 +99,49 @@ pub struct ArgInfo {
     pub entries: Vec<(String, String)>,
     /// A type hint on a symbol argument: `^String x` gives `String`.
     pub tag: Option<String>,
+    /// Keywords and nested vectors of a vector argument (R11).
+    pub shape: Shape,
+}
+
+/// The keyword/vector skeleton of a form: enough to read `[:event arg]`,
+/// `[[:a] [:b]]` and `[[:dispatch [:x]]]` without a full reader.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Shape {
+    /// A keyword as written, e.g. `:a/b` or `::local`.
+    Kw(String),
+    /// A vector, up to [`MAX_SHAPE_ITEMS`] items and [`MAX_SHAPE_DEPTH`] levels.
+    Vec(Vec<Shape>),
+    /// Anything else.
+    Other,
+}
+
+impl Shape {
+    /// The keyword a vector starts with.
+    ///
+    /// Example: the shape of `[:a/b x]` gives `Some(":a/b")`; of `[evt]`, `None`.
+    pub fn head_keyword(&self) -> Option<&str> {
+        match self {
+            Shape::Vec(items) => match items.first() {
+                Some(Shape::Kw(k)) => Some(k),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
+
+/// Vectors deeper than this become [`Shape::Other`].
+pub const MAX_SHAPE_DEPTH: usize = 4;
+/// Vector items past this many are dropped from a [`Shape`].
+pub const MAX_SHAPE_ITEMS: usize = 64;
+
+/// A map entry with a keyword key, e.g. `:dispatch [:next]` (R11 effects).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MapEntry {
+    /// Where the key is.
+    pub pos: Pos,
+    pub key: String,
+    pub value: Shape,
 }
 
 /// Argument text longer than this is cut.
@@ -139,6 +182,8 @@ pub struct FileIndex {
     pub branches: Vec<CondBranch>,
     /// Syntax-quoted forms (`` `(…) ``), outermost and nested.
     pub quoted: Vec<Span>,
+    /// Keyword-keyed map entries (R11 effects).
+    pub entries: Vec<MapEntry>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -223,6 +268,7 @@ fn empty(path: RepoPath, diagnostics: Vec<Diagnostic>) -> FileIndex {
         literals: Vec::new(),
         branches: Vec::new(),
         quoted: Vec::new(),
+        entries: Vec::new(),
         diagnostics,
     }
 }
@@ -487,6 +533,7 @@ impl Ctx<'_> {
                 "num_lit" => self.literal(node, LiteralKind::Number, ix),
                 "regex_lit" => self.literal(node, LiteralKind::Regex, ix),
                 "syn_quoting_lit" => ix.quoted.push(self.span(node)),
+                "map_lit" => self.map_entries(node, ix),
                 "read_cond_lit" | "splicing_read_cond_lit" => {
                     for pair in values(node).as_chunks::<2>().0 {
                         ix.branches.push(CondBranch {
@@ -601,6 +648,39 @@ impl Ctx<'_> {
             text,
             entries,
             tag: self.tag(node),
+            shape: self.shape(node, 0),
+        }
+    }
+
+    /// The keyword/vector skeleton of a node.
+    ///
+    /// Example: `[:a [:b] x]` gives `Vec[Kw(":a"), Vec[Kw(":b")], Other]`.
+    fn shape(&self, node: Node<'_>, depth: usize) -> Shape {
+        match node.kind() {
+            "kwd_lit" => Shape::Kw(self.text(node).to_owned()),
+            "vec_lit" if depth < MAX_SHAPE_DEPTH => Shape::Vec(
+                values(node)
+                    .into_iter()
+                    .take(MAX_SHAPE_ITEMS)
+                    .map(|n| self.shape(n, depth + 1))
+                    .collect(),
+            ),
+            _ => Shape::Other,
+        }
+    }
+
+    /// Records a map's keyword-keyed entries.
+    ///
+    /// Example: `{:db db "s" 1 :dispatch [:next]}` records `:db` and `:dispatch`.
+    fn map_entries(&self, node: Node<'_>, ix: &mut FileIndex) {
+        for kv in values(node).as_chunks::<2>().0 {
+            if kv[0].kind() == "kwd_lit" {
+                ix.entries.push(MapEntry {
+                    pos: self.span(kv[0]).start,
+                    key: self.text(kv[0]).to_owned(),
+                    value: self.shape(kv[1], 0),
+                });
+            }
         }
     }
 
@@ -648,5 +728,42 @@ mod tests {
     fn diag_is_a_parse_error() {
         let d = diag(&RepoPath::parse("a.clj").unwrap(), "x".into());
         assert_eq!(d.code, DiagnosticCode::ParseError);
+    }
+
+    fn index(src: &str) -> FileIndex {
+        index_source(RepoPath::parse("a.cljs").unwrap(), src)
+    }
+
+    #[test]
+    fn vector_arguments_record_their_shape() {
+        let ix = index("(rf/dispatch [:a/b x [:c]])\n(rf/dispatch [evt])\n(rf/dispatch e)");
+        let shapes: Vec<&Shape> = ix.calls.iter().map(|c| &c.arg_info[0].shape).collect();
+        assert_eq!(
+            shapes[0],
+            &Shape::Vec(vec![
+                Shape::Kw(":a/b".into()),
+                Shape::Other,
+                Shape::Vec(vec![Shape::Kw(":c".into())])
+            ])
+        );
+        assert_eq!(shapes[1], &Shape::Vec(vec![Shape::Other]));
+        assert_eq!(shapes[2], &Shape::Other);
+        assert_eq!(shapes[0].head_keyword(), Some(":a/b"));
+        assert_eq!(shapes[1].head_keyword(), None);
+    }
+
+    #[test]
+    fn keyword_keyed_map_entries_are_indexed() {
+        let ix = index(
+            "(defn h [_]\n  {:db 1\n   :dispatch [:next]\n   :fx [[:dispatch [:x]]]\n   \"s\" [:no]})",
+        );
+        let keys: Vec<(&str, u32, u32)> = ix
+            .entries
+            .iter()
+            .map(|e| (e.key.as_str(), e.pos.line, e.pos.col))
+            .collect();
+        assert_eq!(keys, [(":db", 2, 4), (":dispatch", 3, 4), (":fx", 4, 4)]);
+        assert_eq!(ix.entries[0].value, Shape::Other);
+        assert_eq!(ix.entries[1].value.head_keyword(), Some(":next"));
     }
 }

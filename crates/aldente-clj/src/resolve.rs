@@ -17,8 +17,9 @@ use aldente_model::{
     Location, NamespaceId, Node, NodeId, NodeKind, PlatformId, Reason, RepoPath, Site, SymbolFlag,
     SymbolId, SymbolSubkind, UnitInfo,
 };
+use aldente_rules::keyword_dispatch::{self as kd, Catalog};
 
-use crate::forms::{Arity, FileIndex, LiteralKind, Pos, Span, TopForm};
+use crate::forms::{Arity, FileIndex, LiteralKind, Pos, Shape, Span, TopForm};
 use crate::kondo::{KondoRun, VarDefinition, VarUsage};
 
 /// How many usages ended where.
@@ -114,13 +115,20 @@ const UNKNOWN_NS: &str = "clj-kondo/unknown-namespace";
 ///
 /// Example: on clj-mini gives `clj:.//shop.core/checkout` (fn) with a
 /// certain `calls` edge to `clj:.//shop.pricing/price` at `src/shop/core.clj:16:17`.
-pub fn resolve(unit: &UnitInfo, run: &KondoRun, indexes: &[FileIndex]) -> Resolved {
-    let mut r = Resolver::new(unit, run, indexes);
+pub fn resolve(
+    unit: &UnitInfo,
+    run: &KondoRun,
+    indexes: &[FileIndex],
+    catalog: &Catalog,
+) -> Resolved {
+    let mut r = Resolver::new(unit, run, indexes, catalog);
     r.namespaces();
     r.definitions();
     r.impls();
+    r.registrations();
     r.requires();
     r.usages();
+    r.keyword_dispatch();
     r.multimethod_dispatch();
     r.protocol_dispatch();
     r.param_flow();
@@ -155,6 +163,47 @@ struct Resolver<'a> {
     method_impls: BTreeMap<NodeId, Vec<(NodeId, String)>>,
     /// Usages of protocol methods, for R6 dispatch edges.
     method_uses: Vec<MultiUse>,
+    /// The R11 keyword-dispatch catalog.
+    catalog: &'a Catalog,
+    /// R11 registration calls `(file, call span, impl)`; code inside is
+    /// scoped to the impl.
+    reg_impls: Vec<(String, Span, NodeId)>,
+    /// R11 handlers by `(family, keyword)`.
+    handlers: BTreeMap<(String, String), BTreeSet<NodeId>>,
+    /// The family of each R11 registration impl.
+    reg_family: BTreeMap<NodeId, String>,
+    /// R11 dispatches waiting to be linked.
+    kw_uses: Vec<KwUse>,
+}
+
+/// One R11 dispatch: who names which key of which family, and where.
+#[derive(Debug, Clone)]
+struct KwUse {
+    scope: NodeId,
+    family: String,
+    /// The keyword, resolved (`::a` → `:ns/a`); `None` when computed.
+    key: Option<String>,
+    /// What does the dispatching, for messages: `dispatch`, `:dispatch`.
+    by: String,
+    ns: String,
+    file: String,
+    pos: Pos,
+    lang: Option<Lang>,
+    /// A key that names no handler is data, not a blind spot (effect maps).
+    quiet: bool,
+}
+
+/// A dispatch found in an effect: `(family, key, quiet)`.
+type FoundKey = (String, Option<String>, bool);
+
+/// Where a hole goes and what made it.
+struct HoleAt<'s> {
+    /// What could not be seen through: `eval`, `dispatch`, `:dispatch`.
+    name: &'s str,
+    ns: &'s str,
+    file: &'s str,
+    lang: Option<Lang>,
+    pos: Pos,
 }
 
 /// One usage of a multimethod: who uses it, where, and how.
@@ -173,7 +222,12 @@ impl<'a> Resolver<'a> {
     /// Indexes the inputs.
     ///
     /// Example: `Resolver::new(unit, run, &indexes)` with clj-mini.
-    fn new(unit: &'a UnitInfo, run: &'a KondoRun, indexes: &'a [FileIndex]) -> Resolver<'a> {
+    fn new(
+        unit: &'a UnitInfo,
+        run: &'a KondoRun,
+        indexes: &'a [FileIndex],
+        catalog: &'a Catalog,
+    ) -> Resolver<'a> {
         Resolver {
             unit,
             run,
@@ -194,6 +248,11 @@ impl<'a> Resolver<'a> {
             multi_uses: Vec::new(),
             method_impls: BTreeMap::new(),
             method_uses: Vec::new(),
+            catalog,
+            reg_impls: Vec::new(),
+            handlers: BTreeMap::new(),
+            reg_family: BTreeMap::new(),
+            kw_uses: Vec::new(),
         }
     }
 
@@ -406,11 +465,326 @@ impl<'a> Resolver<'a> {
                         .push((id.clone(), disc));
                 }
                 if let Some(p) = protocol {
+                    // As written: `java.lang.Runnable` is a class; Clojure
+                    // protocols are `P` or `ns/P`.
+                    let written = body.protocol.as_deref().unwrap_or_default();
+                    let dotted_class = written.contains('.') && !written.contains('/');
                     let p = local(Some(&p)).to_owned();
-                    self.implements(id, &protocol_ns, &p);
+                    let local_protocol = self
+                        .sym_id(&protocol_ns, &p)
+                        .is_some_and(|s| self.nodes.contains_key(&NodeId::Symbol(s)));
+                    if dotted_class || (entry.is_none() && !local_protocol) {
+                        // clj-kondo knows no protocol by this name and this
+                        // unit defines none: a Java interface or class.
+                        let class =
+                            self.qualify_class(file, if dotted_class { written } else { &p });
+                        self.implements_class(id, &class);
+                    } else {
+                        self.implements(id, &protocol_ns, &p);
+                    }
                 }
             }
         }
+    }
+
+    /// R11: each call to a catalog registration function with a literal
+    /// keyword becomes an impl `<ns>/<fn>@<key>`, a handler of its family;
+    /// so do the `defmethod`s of a family's multimethods. `:<-` signals of a
+    /// registration are queued as dispatches from it.
+    ///
+    /// Example: `(rf/reg-event-db :cart/add f)` in shop.ui.events gives
+    /// `clj:.//shop.ui.events/reg-event-db@:cart/add`.
+    fn registrations(&mut self) {
+        let usages: &'a [VarUsage] = &self.run.analysis.var_usages;
+        for u in usages {
+            let Some(reg) =
+                u.to.as_deref()
+                    .and_then(|to| self.catalog.registration(to, &u.name))
+            else {
+                continue;
+            };
+            let Some(call) = upos(u).and_then(|p| self.call_at(&u.filename, p)) else {
+                continue;
+            };
+            let Some(Shape::Kw(raw)) = call.arg_info.first().map(|a| &a.shape) else {
+                continue;
+            };
+            let key = self.resolve_keyword(&u.filename, &u.from, raw);
+            let Some(id) = self.impl_node(&u.from, &u.from, &u.name, &key, &u.filename, call.span)
+            else {
+                continue;
+            };
+            self.reg_impls
+                .push((u.filename.clone(), call.span, id.clone()));
+            self.reg_family.insert(id.clone(), reg.family.clone());
+            self.handlers
+                .entry((reg.family.clone(), key))
+                .or_default()
+                .insert(id.clone());
+            let Some(marker) = reg.signal_marker.as_deref() else {
+                continue;
+            };
+            let lang = u.lang.as_deref().and_then(Lang::from_token);
+            for (i, a) in call.arg_info.iter().enumerate() {
+                let (Some(next), Some(span)) = (call.arg_info.get(i + 1), call.args.get(i + 1))
+                else {
+                    continue;
+                };
+                if a.text != marker {
+                    continue;
+                }
+                let key = next
+                    .shape
+                    .head_keyword()
+                    .map(|k| self.resolve_keyword(&u.filename, &u.from, k));
+                self.kw_uses.push(KwUse {
+                    scope: id.clone(),
+                    family: reg.family.clone(),
+                    key,
+                    by: marker.to_owned(),
+                    ns: u.from.clone(),
+                    file: u.filename.clone(),
+                    pos: span.start,
+                    lang,
+                    quiet: false,
+                });
+            }
+        }
+        let catalog: &'a Catalog = self.catalog;
+        for family in &catalog.families {
+            for q in &family.multimethods {
+                let Some(sym) = q.split_once('/').and_then(|(ns, n)| self.sym_id(ns, n)) else {
+                    continue;
+                };
+                for (impl_id, dispatch) in self
+                    .multi_impls
+                    .get(&NodeId::Symbol(sym))
+                    .cloned()
+                    .unwrap_or_default()
+                {
+                    self.handlers
+                        .entry((family.name.clone(), dispatch))
+                        .or_default()
+                        .insert(impl_id);
+                }
+            }
+        }
+    }
+
+    /// R11: catalog dispatch calls and effect-map entries, plus the queued
+    /// signals, become edges to the handlers of the named key (the family's
+    /// edge kind and certainty, reason `keyword-dispatch`). A computed key
+    /// gives a hole; a literal key with no handler in this unit gives an
+    /// `unresolved-symbol` blind spot.
+    ///
+    /// Example: `(rf/dispatch [:order/submit])` in `submit-button` gives
+    /// `submit-button -calls(likely keyword-dispatch)-> reg-event-fx@:order/submit`.
+    fn keyword_dispatch(&mut self) {
+        let usages: &'a [VarUsage] = &self.run.analysis.var_usages;
+        for u in usages {
+            let Some(d) =
+                u.to.as_deref()
+                    .and_then(|to| self.catalog.dispatch(to, &u.name))
+            else {
+                continue;
+            };
+            let Some(pos) = upos(u) else { continue };
+            let Some(call) = self.call_at(&u.filename, pos) else {
+                continue;
+            };
+            let Some(scope) = self.scope(u) else { continue };
+            let shape = call.arg_info.first().map(|a| &a.shape);
+            let raw = match (d.arg, shape) {
+                (kd::Arg::Vector, Some(s)) => s.head_keyword(),
+                (kd::Arg::Keyword, Some(Shape::Kw(k))) => Some(k.as_str()),
+                _ => None,
+            };
+            self.kw_uses.push(KwUse {
+                scope,
+                family: d.family.clone(),
+                key: raw.map(|k| self.resolve_keyword(&u.filename, &u.from, k)),
+                by: u.name.clone(),
+                ns: u.from.clone(),
+                file: u.filename.clone(),
+                pos,
+                lang: u.lang.as_deref().and_then(Lang::from_token),
+                quiet: false,
+            });
+        }
+        let indexes: Vec<&FileIndex> = self.indexes.values().copied().collect();
+        for ix in indexes {
+            let file = ix.path.as_str();
+            let Some(ns) = self.file_ns(file) else {
+                continue;
+            };
+            for e in &ix.entries {
+                let effect = self.catalog.effect(&e.key);
+                let inside = self
+                    .impl_scope(file, e.pos)
+                    .and_then(|id| self.reg_family.get(&id).cloned());
+                let maps = inside
+                    .as_ref()
+                    .map_or(0, |f| self.catalog.effect_maps_inside(f).count());
+                if effect.is_none() && maps == 0 {
+                    continue;
+                }
+                let Some(scope) = self.scope_at(file, e.pos, &ns) else {
+                    continue;
+                };
+                let mut found = Vec::new();
+                match effect {
+                    Some(effect) => self.effect_keys(effect, &e.value, &mut found),
+                    None => self.effect_map_keys(inside.as_ref(), &e.key, &mut found),
+                }
+                for (family, raw, quiet) in found {
+                    self.kw_uses.push(KwUse {
+                        scope: scope.clone(),
+                        family,
+                        key: raw.map(|k| self.resolve_keyword(file, &ns, &k)),
+                        by: e.key.clone(),
+                        ns: ns.clone(),
+                        file: file.to_owned(),
+                        pos: e.pos,
+                        // Like a usage outside `.cljc` (clj-kondo tags only
+                        // those), and the index reads a `.cljc` file once.
+                        lang: None,
+                        quiet,
+                    });
+                }
+            }
+        }
+        for k in std::mem::take(&mut self.kw_uses) {
+            self.link_keyword(k);
+        }
+    }
+
+    /// The `(family, key, quiet)` dispatches an effect's value makes; key
+    /// `None` for a computed one.
+    ///
+    /// Example: `:dispatch-n [[:a] [e]]` gives `[(event, Some(":a"), false), (event, None, false)]`.
+    fn effect_keys(&self, effect: &kd::Effect, value: &Shape, out: &mut Vec<FoundKey>) {
+        let one = |s: &Shape| s.head_keyword().map(str::to_owned);
+        match (effect.value, value) {
+            (kd::EffectValue::Event, s) => out.push((effect.family.clone(), one(s), false)),
+            (kd::EffectValue::Events, Shape::Vec(items)) => {
+                out.extend(items.iter().map(|s| (effect.family.clone(), one(s), false)));
+            }
+            (kd::EffectValue::Effects, Shape::Vec(items)) => {
+                for item in items {
+                    let Shape::Vec(pair) = item else { continue };
+                    let [Shape::Kw(k), v, ..] = pair.as_slice() else {
+                        continue;
+                    };
+                    match self.catalog.effect(k) {
+                        Some(inner) => self.effect_keys(inner, v, out),
+                        None => self.effect_map_keys(Some(&effect.family), k, out),
+                    }
+                }
+            }
+            (_, _) => out.push((effect.family.clone(), None, false)),
+        }
+    }
+
+    /// The quiet dispatches a plain effect key makes inside a handler of
+    /// family `inside`, one per applicable effect map.
+    ///
+    /// Example: `:http-xhrio` inside an event handler gives
+    /// `[("re-frame/fx", Some(":http-xhrio"), true)]`.
+    fn effect_map_keys(&self, inside: Option<&String>, key: &str, out: &mut Vec<FoundKey>) {
+        let Some(inside) = inside else { return };
+        for m in self.catalog.effect_maps_inside(inside) {
+            out.push((m.family.clone(), Some(key.to_owned()), true));
+        }
+    }
+
+    /// Turns one R11 dispatch into edges, a hole, or a blind spot.
+    ///
+    /// Example: a `KwUse` for `:order/submit` with one registered handler
+    /// gives one `likely` `calls` edge.
+    fn link_keyword(&mut self, k: KwUse) {
+        let Some(key) = k.key.clone() else {
+            let at = HoleAt {
+                name: &k.by,
+                ns: &k.ns,
+                file: &k.file,
+                lang: k.lang,
+                pos: k.pos,
+            };
+            self.hole_at(&k.scope, &at, BlindSpotCategory::DynamicResolve);
+            return;
+        };
+        let Some(family) = self.catalog.family(&k.family) else {
+            return;
+        };
+        let kind = match family.edge {
+            kd::EdgeKind::Calls => EdgeKind::Calls,
+            kd::EdgeKind::References => EdgeKind::References,
+        };
+        let certainty = match family.certainty {
+            kd::Certainty::Likely => Certainty::Likely,
+            kd::Certainty::Possible => Certainty::Possible,
+        };
+        let targets = self
+            .handlers
+            .get(&(k.family.clone(), key.clone()))
+            .cloned()
+            .unwrap_or_default();
+        if targets.is_empty() && k.quiet {
+            return;
+        }
+        if targets.is_empty() {
+            self.blindspots.push(BlindSpot {
+                category: BlindSpotCategory::UnresolvedSymbol,
+                node: None,
+                site: site(&k.file, k.pos.line, k.pos.col),
+                message: format!(
+                    "{} names {key}, but nothing in this unit registers it ({})",
+                    k.by, k.family
+                ),
+            });
+            return;
+        }
+        for to in targets {
+            self.edge(
+                k.scope.clone(),
+                to,
+                kind,
+                Some(certainty),
+                Some(Reason::KeywordDispatch),
+                k.lang,
+                site(&k.file, k.pos.line, k.pos.col),
+            );
+        }
+    }
+
+    /// A keyword with auto-resolution applied: `::a` in ns `x` is `:x/a`;
+    /// `::al/a` uses the file's alias `al`. Others are returned as written.
+    ///
+    /// Example: `resolve_keyword("src/v.cljs", "app.views", "::ev/local")`
+    /// with `[app.events :as ev]` gives `":app.events/local"`.
+    fn resolve_keyword(&self, file: &str, ns: &str, kw: &str) -> String {
+        let Some(rest) = kw.strip_prefix("::") else {
+            return kw.to_owned();
+        };
+        match rest.split_once('/') {
+            None => format!(":{ns}/{rest}"),
+            Some((alias, name)) => self
+                .run
+                .analysis
+                .namespace_usages
+                .iter()
+                .find(|n| n.filename == file && n.alias.as_deref() == Some(alias))
+                .map(|n| format!(":{}/{name}", n.to))
+                .unwrap_or_else(|| kw.to_owned()),
+        }
+    }
+
+    /// The call site that starts at `pos` in `file`.
+    ///
+    /// Example: the position of `(rf/dispatch [:a])` gives that call.
+    fn call_at(&self, file: &str, pos: Pos) -> Option<&'a crate::forms::CallSite> {
+        let ix: &'a FileIndex = self.indexes.get(file)?;
+        ix.calls.iter().find(|c| c.span.start == pos)
     }
 
     /// The multimethod a `defmethod` form names, from clj-kondo's usage with
@@ -726,23 +1100,39 @@ impl<'a> Resolver<'a> {
     ///
     /// Example: `(eval x)` at 16:20 gives `hole:dynamic-eval@src/dyn/core.clj:16:20`.
     fn hole(&mut self, scope: &NodeId, u: &VarUsage, pos: Pos, category: BlindSpotCategory) {
-        let Ok(file) = RepoPath::parse(&u.filename) else {
+        let at = HoleAt {
+            name: &u.name,
+            ns: &u.from,
+            file: &u.filename,
+            lang: u.lang.as_deref().and_then(Lang::from_token),
+            pos,
+        };
+        self.hole_at(scope, &at, category);
+    }
+
+    /// [`Self::hole`] for a position that is not a clj-kondo usage (an R11
+    /// effect entry).
+    ///
+    /// Example: `{:dispatch [evt]}` at 5:4 gives `hole:dynamic-resolve@…:5:4`.
+    fn hole_at(&mut self, scope: &NodeId, at: &HoleAt<'_>, category: BlindSpotCategory) {
+        let (pos, name) = (at.pos, at.name);
+        let Ok(file) = RepoPath::parse(at.file) else {
             return;
         };
         let id = NodeId::Hole(aldente_model::HoleId::new(
             category, file, pos.line, pos.col,
         ));
-        let lang = lang_of(u.lang.as_deref(), &u.filename);
+        let lang = at.lang.unwrap_or_else(|| lang_of(None, at.file));
         let node = self.nodes.entry(id.clone()).or_insert_with(|| Node {
             id: id.clone(),
             kind: NodeKind::Hole,
             subkind: None,
-            name: format!("{} ({})", u.name, category.as_str()),
-            namespace: Some(u.from.clone()),
+            name: format!("{name} ({})", category.as_str()),
+            namespace: Some(at.ns.to_owned()),
             unit: Some(NodeId::Unit(self.unit.dir.clone())),
             langs: BTreeSet::new(),
             flags: BTreeSet::new(),
-            loc: location(&u.filename, pos.line, pos.col, None, None),
+            loc: location(at.file, pos.line, pos.col, None, None),
             doc: None,
             signature: None,
         });
@@ -750,21 +1140,19 @@ impl<'a> Resolver<'a> {
         self.blindspots.push(BlindSpot {
             category,
             node: Some(id.clone()),
-            site: site_of(u),
+            site: site(at.file, pos.line, pos.col),
             message: format!(
-                "{} with a computed argument: the target cannot be known statically",
-                u.name
+                "{name} with a computed argument: the target cannot be known statically"
             ),
         });
-        let edge_lang = u.lang.as_deref().and_then(Lang::from_token);
         self.edge(
             scope.clone(),
             id,
             EdgeKind::Calls,
             Some(Certainty::Certain),
             Some(Reason::Dynamic),
-            edge_lang,
-            site_of(u),
+            at.lang,
+            site(at.file, pos.line, pos.col),
         );
     }
 
@@ -881,7 +1269,8 @@ impl<'a> Resolver<'a> {
         self.scope_at(&u.filename, pos, &u.from)
     }
 
-    /// The defmethod or protocol impl whose body contains `pos`, if any.
+    /// The defmethod, protocol impl or R11 registration whose body contains
+    /// `pos`, if any (the innermost).
     ///
     /// Example: a position inside `(defmethod price :book …)` gives `price@:book`.
     fn impl_scope(&self, file: &str, pos: Pos) -> Option<NodeId> {
@@ -893,6 +1282,7 @@ impl<'a> Resolver<'a> {
         }
         self.protocol_impls
             .iter()
+            .chain(&self.reg_impls)
             .filter(|(f, span, _)| f == file && span.contains(pos))
             .min_by_key(|(_, span, _)| span.end_byte - span.start_byte)
             .map(|(_, _, id)| id.clone())
@@ -1613,15 +2003,24 @@ impl<'a> Resolver<'a> {
             }
             None => return None,
         };
+        Some(self.qualify_class(file, &short))
+    }
+
+    /// A class name as written, qualified through the file's imports, else
+    /// `java.lang`. Qualified names are returned unchanged.
+    ///
+    /// Example: `Runnable` gives `java.lang.Runnable`; with
+    /// `(:import [java.util Comparator])`, `Comparator` gives `java.util.Comparator`.
+    fn qualify_class(&self, file: &str, short: &str) -> String {
         if short.contains('.') {
-            return Some(short);
+            return short.to_owned();
         }
         let imported = self.run.analysis.java_class_usages.iter().find(|c| {
             c.filename == file
                 && c.import == Some(true)
-                && c.class.rsplit('.').next() == Some(short.as_str())
+                && c.class.rsplit('.').next() == Some(short)
         });
-        Some(imported.map_or_else(|| format!("java.lang.{short}"), |c| c.class.clone()))
+        imported.map_or_else(|| format!("java.lang.{short}"), |c| c.class.clone())
     }
 
     /// Adds `impl implements target`, where the target is this unit's symbol
@@ -1645,6 +2044,22 @@ impl<'a> Resolver<'a> {
                 None,
             );
         }
+    }
+
+    /// Adds `impl implements java:<class>` for a Java interface in `reify`,
+    /// `deftype`, `defrecord` or `proxy`.
+    ///
+    /// Example: `(reify clojure.lang.IDeref (deref [_] 1))` gives
+    /// `…/deref@reify:L1 -implements-> java:clojure.lang.IDeref`.
+    fn implements_class(&mut self, impl_id: NodeId, class: &str) {
+        let Ok(p) = PlatformId::java(class, None) else {
+            return;
+        };
+        let id = NodeId::Platform(p);
+        self.nodes
+            .entry(id.clone())
+            .or_insert_with(|| platform_node(&id, class));
+        self.edge(impl_id, id, EdgeKind::Implements, None, None, None, None);
     }
 
     /// Keywords that appear as the child in a `(derive child parent)` call

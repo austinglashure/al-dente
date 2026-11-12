@@ -39,6 +39,7 @@ aldente-graph = { path = "crates/aldente-graph" }
 aldente-server = { path = "crates/aldente-server" }
 aldente-clj = { path = "crates/aldente-clj" }
 aldente-testkit = { path = "crates/aldente-testkit" }
+aldente-rules = { path = "crates/aldente-rules" }
 # dev-only
 jsonschema = { version = "0.61", default-features = false }
 proptest = "1"

@@ -447,3 +447,138 @@ fn r12_cljc_cljs_npm_and_shadow_entry_points() {
             .contains(&SymbolFlag::EntryPoint)
     );
 }
+
+#[test]
+fn keyword_dispatch_golden() {
+    assert_graph_snapshot("clj-rules/keyword-dispatch", AggregationLevel::Symbol);
+}
+
+/// R11 (WP2.8): every row of `fixtures/clj-rules/keyword-dispatch/EXPECTED.md`.
+#[test]
+fn r11_keyword_dispatch_matches_expected() {
+    use Certainty::{Likely, Possible};
+    use aldente_model::{BlindSpotCategory, Reason};
+    let a = analyze_fixture(&fixture_dir("clj-rules/keyword-dispatch"));
+    let g = &a.graph;
+    let short = |id: &NodeId| id.to_string().trim_start_matches("clj:.//").to_owned();
+    let actual: BTreeSet<(String, EdgeKind, String, Certainty)> = g
+        .edges
+        .iter()
+        .filter(|e| e.reason == Some(Reason::KeywordDispatch))
+        .map(|e| (short(&e.from), e.kind, short(&e.to), e.certainty.unwrap()))
+        .collect();
+    let c = |from: &str, to: &str| (from.to_owned(), EdgeKind::Calls, to.to_owned(), Likely);
+    let mut expected: BTreeSet<_> = [
+        c("app.views/order-list", "app.subs/reg-sub@:orders/all"),
+        c(
+            "app.views/submit-button",
+            "app.events/reg-event-fx@:order/submit",
+        ),
+        c(
+            "app.views/local-by-alias",
+            "app.events/reg-event-db@:app.events/local",
+        ),
+        c(
+            "app.views/local-by-name",
+            "app.events/reg-event-db@:app.events/local",
+        ),
+        c(
+            "app.events/reg-event-fx@:order/submit",
+            "app.events/reg-cofx@:now",
+        ),
+        c(
+            "app.events/reg-event-fx@:order/submit",
+            "app.events/reg-event-db@:order/submitted",
+        ),
+        c(
+            "app.events/reg-event-fx@:order/submit",
+            "app.events/reg-event-db@:order/log",
+        ),
+        c(
+            "app.events/reg-event-fx@:order/batch",
+            "app.events/reg-event-db@:order/submitted",
+        ),
+        c(
+            "app.events/reg-event-fx@:order/batch",
+            "app.events/reg-event-db@:order/log",
+        ),
+        c(
+            "app.subs/reg-sub@:orders/count",
+            "app.subs/reg-sub@:orders/all",
+        ),
+        c("app.views/alpha-log", "app.events/reg-event-db@:order/log"),
+        c(
+            "app.events/reg-event-fx@:order/notify",
+            "app.events/reg-fx@:app/notify",
+        ),
+    ]
+    .into_iter()
+    .collect();
+    for m in ["init-key", "halt-key!"] {
+        expected.insert((
+            "app.system/config".to_owned(),
+            EdgeKind::References,
+            format!("integrant.core/{m}@:app/db"),
+            Possible,
+        ));
+    }
+    let missing: Vec<_> = expected.difference(&actual).collect();
+    let extra: Vec<_> = actual.difference(&expected).collect();
+    assert!(
+        missing.is_empty() && extra.is_empty(),
+        "missing {missing:#?}\nextra {extra:#?}"
+    );
+
+    let registered = |id: &str, loc: &str| {
+        let n = g
+            .nodes
+            .values()
+            .find(|n| short(&n.id) == id)
+            .unwrap_or_else(|| panic!("no node {id}"));
+        let l = n.loc.as_ref().unwrap();
+        assert_eq!(format!("{}:{}:{}", l.file, l.line, l.col), loc, "{id}");
+    };
+    registered("app.events/reg-cofx@:now", "src/app/events.cljs:4:1");
+    registered(
+        "app.events/reg-event-db@:app.events/local",
+        "src/app/events.cljs:23:1",
+    );
+    registered("app.subs/reg-sub@:orders/count", "src/app/subs.cljs:7:1");
+    assert!(
+        !g.nodes
+            .keys()
+            .any(|n| short(n).starts_with("app.events/<top>")),
+        "registrations replace <top> impls"
+    );
+
+    let notify = g
+        .edges
+        .iter()
+        .find(|e| {
+            short(&e.to) == "app.events/reg-fx@:app/notify"
+                && e.reason == Some(Reason::KeywordDispatch)
+        })
+        .unwrap();
+    let sites: Vec<(u32, u32)> = notify.sites.iter().map(|s| (s.line, s.col)).collect();
+    assert_eq!(sites, [(40, 6), (41, 6)]);
+    assert!(
+        !g.blindspots.iter().any(|b| b.message.contains(":db")),
+        "unregistered effect keys are data"
+    );
+
+    for (line, col) in [(27, 3), (30, 3), (45, 6)] {
+        let hole = format!("hole:dynamic-resolve@src/app/events.cljs:{line}:{col}");
+        assert!(
+            g.edges.iter().any(|e| e.to.to_string() == hole
+                && e.reason == Some(Reason::Dynamic)
+                && e.certainty == Some(Certainty::Certain)),
+            "{hole}"
+        );
+    }
+    assert!(
+        g.blindspots
+            .iter()
+            .any(|b| b.category == BlindSpotCategory::UnresolvedSymbol
+                && b.message.contains(":no/handler"))
+    );
+}

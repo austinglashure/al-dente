@@ -9,7 +9,7 @@ use crate::resolve::resolve;
 
 /// The adapter's version, part of the snapshot key. Bump it whenever the
 /// resolver's output for the same input changes.
-pub const VERSION: &str = "10";
+pub const VERSION: &str = "11";
 
 /// The `clj` adapter for Clojure, ClojureScript and `.cljc`.
 #[derive(Debug, Clone)]
@@ -60,6 +60,8 @@ impl Adapter for CljAdapter {
                 other => AdapterError::Failed(other.to_string()),
             })?;
         let indexes = index_files(ctx.root, ctx.files);
-        Ok(resolve(unit, &run, &indexes).batch)
+        let catalog = aldente_rules::keyword_dispatch::builtin()
+            .map_err(|e| AdapterError::Failed(e.to_string()))?;
+        Ok(resolve(unit, &run, &indexes, &catalog).batch)
     }
 }

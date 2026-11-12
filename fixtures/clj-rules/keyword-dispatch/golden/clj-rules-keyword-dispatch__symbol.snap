@@ -1,0 +1,150 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 52
+node clj:.//app.events namespace langs:cljs
+node clj:.//app.events/dispatch-computed symbol/fn langs:cljs
+node clj:.//app.events/dispatch-computed-key symbol/fn langs:cljs
+node clj:.//app.events/dispatch-unregistered symbol/fn langs:cljs
+node clj:.//app.events/reg-cofx@:now impl langs:cljs
+node clj:.//app.events/reg-event-db@:app.events/local impl langs:cljs
+node clj:.//app.events/reg-event-db@:order/log impl langs:cljs
+node clj:.//app.events/reg-event-db@:order/submitted impl langs:cljs
+node clj:.//app.events/reg-event-fx@:order/batch impl langs:cljs
+node clj:.//app.events/reg-event-fx@:order/forward impl langs:cljs
+node clj:.//app.events/reg-event-fx@:order/notify impl langs:cljs
+node clj:.//app.events/reg-event-fx@:order/submit impl langs:cljs
+node clj:.//app.events/reg-fx@:app/notify impl langs:cljs
+node clj:.//app.subs namespace langs:cljs
+node clj:.//app.subs/reg-sub@:orders/all impl langs:cljs
+node clj:.//app.subs/reg-sub@:orders/count impl langs:cljs
+node clj:.//app.system namespace langs:clj
+node clj:.//app.system/config symbol/var langs:clj
+node clj:.//app.views namespace langs:cljs
+node clj:.//app.views/alpha-log symbol/fn langs:cljs
+node clj:.//app.views/local-by-alias symbol/fn langs:cljs
+node clj:.//app.views/local-by-name symbol/fn langs:cljs
+node clj:.//app.views/order-list symbol/fn langs:cljs
+node clj:.//app.views/submit-button symbol/fn langs:cljs
+node clj:.//integrant.core/halt-key!@:app/db impl langs:clj
+node clj:.//integrant.core/init-key@:app/db impl langs:clj
+node clj:.//integrant.core/init-key@:app/handler impl langs:clj
+node ext:clj//cljs.core/assoc external
+node ext:clj//cljs.core/count external
+node ext:clj//cljs.core/deref external
+node ext:clj//cljs.core/fn external
+node ext:clj//clojure.core/fn external
+node ext:clj//integrant.core external
+node ext:clj//integrant.core/halt-key! external
+node ext:clj//integrant.core/init-key external
+node ext:clj//integrant.core/ref external
+node ext:clj//re-frame.alpha external
+node ext:clj//re-frame.alpha/dispatch external
+node ext:clj//re-frame.core external
+node ext:clj//re-frame.core/dispatch external
+node ext:clj//re-frame.core/dispatch-sync external
+node ext:clj//re-frame.core/inject-cofx external
+node ext:clj//re-frame.core/reg-cofx external
+node ext:clj//re-frame.core/reg-event-db external
+node ext:clj//re-frame.core/reg-event-fx external
+node ext:clj//re-frame.core/reg-fx external
+node ext:clj//re-frame.core/reg-sub external
+node ext:clj//re-frame.core/subscribe external
+node hole:dynamic-resolve@src/app/events.cljs:27:3 hole langs:cljs
+node hole:dynamic-resolve@src/app/events.cljs:30:3 hole langs:cljs
+node hole:dynamic-resolve@src/app/events.cljs:45:6 hole langs:cljs
+node unit:. unit langs:clj,cljs
+# edges 91
+edge clj:.//app.events -contains-> clj:.//app.events/dispatch-computed
+edge clj:.//app.events -contains-> clj:.//app.events/dispatch-computed-key
+edge clj:.//app.events -contains-> clj:.//app.events/dispatch-unregistered
+edge clj:.//app.events -contains-> clj:.//app.events/reg-cofx@:now
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-db@:app.events/local
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-db@:order/log
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-db@:order/submitted
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-fx@:order/batch
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-fx@:order/forward
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-fx@:order/notify
+edge clj:.//app.events -contains-> clj:.//app.events/reg-event-fx@:order/submit
+edge clj:.//app.events -contains-> clj:.//app.events/reg-fx@:app/notify
+edge clj:.//app.events -requires-> ext:clj//re-frame.core @ src/app/events.cljs:2:14
+edge clj:.//app.events/dispatch-computed -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/app/events.cljs:27:3
+edge clj:.//app.events/dispatch-computed -calls(certain dynamic)-> hole:dynamic-resolve@src/app/events.cljs:27:3 @ src/app/events.cljs:27:3
+edge clj:.//app.events/dispatch-computed-key -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/app/events.cljs:30:3
+edge clj:.//app.events/dispatch-computed-key -calls(certain dynamic)-> hole:dynamic-resolve@src/app/events.cljs:30:3 @ src/app/events.cljs:30:3
+edge clj:.//app.events/dispatch-unregistered -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/app/events.cljs:33:3
+edge clj:.//app.events/reg-cofx@:now -calls(certain direct)-> ext:clj//cljs.core/assoc @ src/app/events.cljs:5:16
+edge clj:.//app.events/reg-cofx@:now -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:5:3
+edge clj:.//app.events/reg-cofx@:now -calls(certain direct)-> ext:clj//re-frame.core/reg-cofx @ src/app/events.cljs:4:1
+edge clj:.//app.events/reg-event-db@:app.events/local -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:24:3
+edge clj:.//app.events/reg-event-db@:app.events/local -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/app/events.cljs:23:1
+edge clj:.//app.events/reg-event-db@:order/log -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:18:3
+edge clj:.//app.events/reg-event-db@:order/log -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/app/events.cljs:17:1
+edge clj:.//app.events/reg-event-db@:order/submitted -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:15:3
+edge clj:.//app.events/reg-event-db@:order/submitted -calls(certain direct)-> ext:clj//re-frame.core/reg-event-db @ src/app/events.cljs:14:1
+edge clj:.//app.events/reg-event-fx@:order/batch -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:21:3
+edge clj:.//app.events/reg-event-fx@:order/batch -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/app/events.cljs:20:1
+edge clj:.//app.events/reg-event-fx@:order/batch -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:order/log @ src/app/events.cljs:21:14
+edge clj:.//app.events/reg-event-fx@:order/batch -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:order/submitted @ src/app/events.cljs:21:14
+edge clj:.//app.events/reg-event-fx@:order/forward -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:44:3
+edge clj:.//app.events/reg-event-fx@:order/forward -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/app/events.cljs:43:1
+edge clj:.//app.events/reg-event-fx@:order/forward -calls(certain dynamic)-> hole:dynamic-resolve@src/app/events.cljs:45:6 @ src/app/events.cljs:45:6
+edge clj:.//app.events/reg-event-fx@:order/notify -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:39:3
+edge clj:.//app.events/reg-event-fx@:order/notify -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/app/events.cljs:38:1
+edge clj:.//app.events/reg-event-fx@:order/notify -calls(likely keyword-dispatch)-> clj:.//app.events/reg-fx@:app/notify @ src/app/events.cljs:40:6 src/app/events.cljs:41:6
+edge clj:.//app.events/reg-event-fx@:order/submit -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:9:3
+edge clj:.//app.events/reg-event-fx@:order/submit -calls(certain direct)-> ext:clj//re-frame.core/inject-cofx @ src/app/events.cljs:8:4
+edge clj:.//app.events/reg-event-fx@:order/submit -calls(certain direct)-> ext:clj//re-frame.core/reg-event-fx @ src/app/events.cljs:7:1
+edge clj:.//app.events/reg-event-fx@:order/submit -calls(likely keyword-dispatch)-> clj:.//app.events/reg-cofx@:now @ src/app/events.cljs:8:4
+edge clj:.//app.events/reg-event-fx@:order/submit -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:order/log @ src/app/events.cljs:12:6
+edge clj:.//app.events/reg-event-fx@:order/submit -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:order/submitted @ src/app/events.cljs:11:6
+edge clj:.//app.events/reg-fx@:app/notify -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/events.cljs:36:3
+edge clj:.//app.events/reg-fx@:app/notify -calls(certain direct)-> ext:clj//re-frame.core/reg-fx @ src/app/events.cljs:35:1
+edge clj:.//app.subs -contains-> clj:.//app.subs/reg-sub@:orders/all
+edge clj:.//app.subs -contains-> clj:.//app.subs/reg-sub@:orders/count
+edge clj:.//app.subs -requires-> ext:clj//re-frame.core @ src/app/subs.cljs:2:14
+edge clj:.//app.subs/reg-sub@:orders/all -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/subs.cljs:5:3
+edge clj:.//app.subs/reg-sub@:orders/all -calls(certain direct)-> ext:clj//re-frame.core/reg-sub @ src/app/subs.cljs:4:1
+edge clj:.//app.subs/reg-sub@:orders/count -calls(certain direct)-> ext:clj//cljs.core/count @ src/app/subs.cljs:9:18
+edge clj:.//app.subs/reg-sub@:orders/count -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/subs.cljs:9:3
+edge clj:.//app.subs/reg-sub@:orders/count -calls(certain direct)-> ext:clj//re-frame.core/reg-sub @ src/app/subs.cljs:7:1
+edge clj:.//app.subs/reg-sub@:orders/count -calls(likely keyword-dispatch)-> clj:.//app.subs/reg-sub@:orders/all @ src/app/subs.cljs:8:7
+edge clj:.//app.system -contains-> clj:.//app.system/config
+edge clj:.//app.system -contains-> clj:.//integrant.core/halt-key!@:app/db
+edge clj:.//app.system -contains-> clj:.//integrant.core/init-key@:app/db
+edge clj:.//app.system -contains-> clj:.//integrant.core/init-key@:app/handler
+edge clj:.//app.system -requires-> ext:clj//integrant.core @ src/app/system.clj:2:14
+edge clj:.//app.system/config -calls(certain direct)-> ext:clj//integrant.core/ref @ src/app/system.clj:6:22
+edge clj:.//app.system/config -references(possible keyword-dispatch)-> clj:.//integrant.core/halt-key!@:app/db @ src/app/system.clj:6:22
+edge clj:.//app.system/config -references(possible keyword-dispatch)-> clj:.//integrant.core/init-key@:app/db @ src/app/system.clj:6:22
+edge clj:.//app.views -contains-> clj:.//app.views/alpha-log
+edge clj:.//app.views -contains-> clj:.//app.views/local-by-alias
+edge clj:.//app.views -contains-> clj:.//app.views/local-by-name
+edge clj:.//app.views -contains-> clj:.//app.views/order-list
+edge clj:.//app.views -contains-> clj:.//app.views/submit-button
+edge clj:.//app.views -requires-> clj:.//app.events @ src/app/views.cljs:4:14
+edge clj:.//app.views -requires-> clj:.//app.subs @ src/app/views.cljs:5:14
+edge clj:.//app.views -requires-> ext:clj//re-frame.alpha @ src/app/views.cljs:3:14
+edge clj:.//app.views -requires-> ext:clj//re-frame.core @ src/app/views.cljs:2:14
+edge clj:.//app.views/alpha-log -calls(certain direct)-> ext:clj//re-frame.alpha/dispatch @ src/app/views.cljs:20:3
+edge clj:.//app.views/alpha-log -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:order/log @ src/app/views.cljs:20:3
+edge clj:.//app.views/local-by-alias -calls(certain direct)-> ext:clj//re-frame.core/dispatch-sync @ src/app/views.cljs:14:3
+edge clj:.//app.views/local-by-alias -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:app.events/local @ src/app/views.cljs:14:3
+edge clj:.//app.views/local-by-name -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/app/views.cljs:17:3
+edge clj:.//app.views/local-by-name -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-db@:app.events/local @ src/app/views.cljs:17:3
+edge clj:.//app.views/order-list -calls(certain direct)-> ext:clj//cljs.core/deref @ src/app/views.cljs:8:3
+edge clj:.//app.views/order-list -calls(certain direct)-> ext:clj//re-frame.core/subscribe @ src/app/views.cljs:8:4
+edge clj:.//app.views/order-list -calls(likely keyword-dispatch)-> clj:.//app.subs/reg-sub@:orders/all @ src/app/views.cljs:8:4
+edge clj:.//app.views/submit-button -calls(certain direct)-> ext:clj//cljs.core/fn @ src/app/views.cljs:11:3
+edge clj:.//app.views/submit-button -calls(certain direct)-> ext:clj//re-frame.core/dispatch @ src/app/views.cljs:11:10
+edge clj:.//app.views/submit-button -calls(likely keyword-dispatch)-> clj:.//app.events/reg-event-fx@:order/submit @ src/app/views.cljs:11:10
+edge clj:.//integrant.core/halt-key!@:app/db -implements-> ext:clj//integrant.core/halt-key!
+edge clj:.//integrant.core/init-key@:app/db -implements-> ext:clj//integrant.core/init-key
+edge clj:.//integrant.core/init-key@:app/handler -calls(certain direct)-> ext:clj//clojure.core/fn @ src/app/system.clj:10:54
+edge clj:.//integrant.core/init-key@:app/handler -implements-> ext:clj//integrant.core/init-key
+edge unit:. -contains-> clj:.//app.events
+edge unit:. -contains-> clj:.//app.subs
+edge unit:. -contains-> clj:.//app.system
+edge unit:. -contains-> clj:.//app.views
+# truncated false

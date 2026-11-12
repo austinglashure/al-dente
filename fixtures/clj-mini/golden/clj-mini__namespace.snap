@@ -27,7 +27,7 @@ node java:java.lang.System#currentTimeMillis platform
 node java:java.util.UUID platform
 node java:java.util.UUID#randomUUID platform
 node js:console.log platform
-# edges 61
+# edges 63
 edge clj:.//shop.audit -calls(certain direct)-> ext:clj//clojure.core x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.inventory x1 [certain:1]
 edge clj:.//shop.core -calls(certain direct)-> clj:.//shop.model x1 [certain:1]
@@ -79,6 +79,8 @@ edge clj:.//shop.ui.views -calls(certain direct)-> ext:clj//cljs.core x4 [certai
 edge clj:.//shop.ui.views -calls(certain direct)-> ext:clj//re-frame.core x3 [certain:3]
 edge clj:.//shop.ui.views -calls(certain direct)-> ext:clj//react x2 [certain:2]
 edge clj:.//shop.ui.views -calls(certain interop)-> js:console.log x1 [certain:1]
+edge clj:.//shop.ui.views -calls(likely keyword-dispatch)-> clj:.//shop.ui.events x2 [likely:2]
+edge clj:.//shop.ui.views -calls(likely keyword-dispatch)-> clj:.//shop.ui.subs x1 [likely:1]
 edge clj:.//shop.ui.views -requires-> clj:.//shop.model @ src/shop/ui/views.cljs:5:14
 edge clj:.//shop.ui.views -requires-> clj:.//shop.ui.events @ src/shop/ui/views.cljs:6:14
 edge clj:.//shop.ui.views -requires-> clj:.//shop.ui.subs @ src/shop/ui/views.cljs:7:14

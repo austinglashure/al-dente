@@ -15,6 +15,7 @@ use aldente_model::{
     BlindSpotCategory, Certainty, Edge, EdgeKind, Lang, Node, NodeKind, Reason, RepoPath,
     SymbolFlag, SymbolSubkind,
 };
+use aldente_rules::keyword_dispatch::builtin;
 
 fn fixture(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -45,7 +46,7 @@ fn run(name: &str) -> Vec<Resolved> {
                 .collect();
             let run = kondo.analyze(&root, &files).unwrap();
             let indexes = index_files(&root, &files);
-            resolve(unit, &run, &indexes)
+            resolve(unit, &run, &indexes, &builtin().unwrap())
         })
         .collect()
 }
@@ -74,7 +75,7 @@ fn run_files(name: &str, files: &[(&str, &str)]) -> Resolved {
     let unit = &d.report.units[0];
     let files: Vec<RepoPath> = d.analyzed.iter().map(|f| f.path.clone()).collect();
     let run = kondo.analyze(&root, &files).unwrap();
-    resolve(unit, &run, &index_files(&root, &files))
+    resolve(unit, &run, &index_files(&root, &files), &builtin().unwrap())
 }
 
 fn node<'a>(r: &'a Resolved, id: &str) -> &'a Node {
@@ -401,5 +402,46 @@ fn positionless_usages_become_edges_without_sites() {
         s.usages,
         s.sites + s.positionless + suppressed + s.unresolved,
         "{s:?}"
+    );
+}
+
+/// A Java interface in `reify`/`deftype` is not a protocol: the impl
+/// implements the platform class, and no edge points at a missing node.
+#[test]
+fn reify_of_a_java_interface_implements_the_platform_class() {
+    let r = run_files(
+        "reify-java",
+        &[
+            ("deps.edn", "{}"),
+            (
+                "src/a.clj",
+                "(ns a)\n(defn mk [f]\n  (reify clojure.lang.IDeref\n    (deref [_] (f))))\n(deftype T [] java.lang.Runnable\n  (run [_] nil))\n",
+            ),
+        ],
+    );
+    let ids: std::collections::BTreeSet<String> =
+        r.batch.nodes.iter().map(|n| n.id.to_string()).collect();
+    for e in &r.batch.edges {
+        assert!(
+            ids.contains(&e.to.to_string()) || e.to.to_string().starts_with("ext:"),
+            "edge to a missing node: {} -> {}",
+            e.from,
+            e.to
+        );
+    }
+    let implements: Vec<String> = r
+        .batch
+        .edges
+        .iter()
+        .filter(|e| e.kind == EdgeKind::Implements)
+        .map(|e| e.to.to_string())
+        .collect();
+    assert!(
+        implements.contains(&"java:clojure.lang.IDeref".to_owned()),
+        "{implements:?}"
+    );
+    assert!(
+        implements.contains(&"java:java.lang.Runnable".to_owned()),
+        "{implements:?}"
     );
 }

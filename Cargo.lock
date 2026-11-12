@@ -89,6 +89,7 @@ dependencies = [
  "aldente-acquire",
  "aldente-adapter",
  "aldente-model",
+ "aldente-rules",
  "insta",
  "rayon",
  "serde",
@@ -126,6 +127,11 @@ dependencies = [
 [[package]]
 name = "aldente-rules"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror",
+ "toml",
+]
 
 [[package]]
 name = "aldente-server"
