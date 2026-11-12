@@ -42,15 +42,24 @@ export function apiPath(endpoint: string, params: Record<string, string | number
 export class Api {
   constructor(private readonly token: string) {}
 
-  /** GETs a JSON envelope and returns its data, or throws its error message.
-   *  Example: `await api.json<Payload>('graph', { level: 'namespace' })`. */
-  async json<T>(endpoint: string, params?: Record<string, string | number | string[] | undefined>): Promise<T> {
+  /** GETs a JSON envelope and returns its data and warnings, or throws its error message.
+   *  Example: `const { data, warnings } = await api.envelope<Payload>('graph')`. */
+  async envelope<T>(
+    endpoint: string,
+    params?: Record<string, string | number | string[] | undefined>,
+  ): Promise<{ data: T; warnings: Envelope<T>['warnings'] }> {
     const res = await fetch(apiPath(endpoint, params), { headers: { 'x-aldente-token': this.token } });
     const env = (await res.json()) as Envelope<T>;
     if (!env.ok || env.data === null) {
       throw new Error(env.error?.message ?? `request failed (${res.status})`);
     }
-    return env.data;
+    return { data: env.data, warnings: env.warnings ?? [] };
+  }
+
+  /** GETs a JSON envelope and returns its data, or throws its error message.
+   *  Example: `await api.json<Payload>('graph', { level: 'namespace' })`. */
+  async json<T>(endpoint: string, params?: Record<string, string | number | string[] | undefined>): Promise<T> {
+    return (await this.envelope<T>(endpoint, params)).data;
   }
 
   /** GETs plain text (the `/source` endpoint).
@@ -65,7 +74,7 @@ export class Api {
   }
 
   snapshot = () => this.json<SnapshotOverview>('snapshot');
-  graph = () => this.json<Payload>('graph');
+  graph = () => this.envelope<Payload>('graph');
   neighborhood = (id: string) => this.json<Payload>('neighborhood', { id, depth: 1 });
   expand = (id: string, visible: string[]) => this.json<Payload>('expand', { id, visible });
   node = (id: string) => this.json<ShowResult>('node', { id });

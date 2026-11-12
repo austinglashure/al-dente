@@ -1,0 +1,106 @@
+# Acceptance repositories for milestone M1 (docs/plan/phases/phase-01.md,
+# WP1.10). Stand-ins from docs/plan/open-questions.md, pinned by commit.
+# Facts were read from each repository's source at the pinned commit, not
+# from Al Dente's output.
+#
+# Run: cargo run -p acceptance            (all)
+#      cargo run -p acceptance -- ring    (one)
+#
+# Fact kinds: `node` (id exists), `edge` (from -kind-> to exists),
+# `no-edge` (it must not exist).
+
+[[repo]]
+name = "ring"
+url = "https://github.com/ring-clojure/ring"
+rev = "5f745bbc7daefa097d7e9cf6394b44dce51cf597"
+lang = "clj"
+
+[[repo.fact]]
+kind = "node"
+id = "clj:ring-core//ring.middleware.params/wrap-params"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.params/wrap-params"
+edge = "calls"
+to = "clj:ring-core//ring.middleware.params/params-request"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.params/params-request"
+edge = "calls"
+to = "clj:ring-core//ring.util.request/character-encoding"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:ring-core//ring.middleware.params"
+edge = "requires"
+to = "ext:clj//ring.util.codec"
+
+[[repo.fact]]
+kind = "node"
+id = "clj:ring-core-protocols//ring.core.protocols/StreamableResponseBody"
+
+[[repo.fact]]
+kind = "node"
+id = "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream"
+
+[[repo.fact]]
+kind = "no-edge"
+from = "clj:ring-core//ring.middleware.params/params-request"
+edge = "calls"
+to = "clj:ring-core//ring.middleware.params/wrap-params"
+
+[[repo]]
+name = "reitit"
+url = "https://github.com/metosin/reitit"
+rev = "1d2fc6735f53e2026fed98e92322a29f7a35c371"
+lang = "clj"
+
+[[repo.fact]]
+kind = "node"
+id = "clj:modules/reitit-core//reitit.impl/resolve-routes"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:modules/reitit-core//reitit.impl/resolve-routes"
+edge = "calls"
+to = "ext:clj//clojure.core/cond->>"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:modules/reitit-core//reitit.impl/path-conflicting-routes"
+edge = "calls"
+to = "clj:modules/reitit-core//reitit.trie/split-path"
+
+[[repo]]
+name = "re-frame"
+url = "https://github.com/day8/re-frame"
+rev = "1a1bf1df6570b17a148ebce70d500ec2da393cdc"
+lang = "cljs"
+
+[[repo.fact]]
+kind = "node"
+id = "clj:.//re-frame.core/dispatch"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:.//re-frame.core/dispatch"
+edge = "calls"
+to = "clj:.//re-frame.router/dispatch"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:.//re-frame.core"
+edge = "requires"
+to = "clj:.//re-frame.router"
+
+[[repo.fact]]
+kind = "node"
+id = "clj:examples/todomvc//todomvc.views/todo-input"
+
+[[repo.fact]]
+kind = "edge"
+from = "clj:examples/todomvc//todomvc.views"
+edge = "requires"
+to = "clj:.//re-frame.alpha"

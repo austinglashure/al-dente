@@ -29,6 +29,7 @@ test.describe('clj-mini', () => {
     await page.goto(server.url);
     await expect(listed(page, 'clj:.//shop.core')).toBeVisible();
     await expect(page).not.toHaveURL(/token=/);
+    await expect(page.getByTestId('notice')).toHaveCount(0);
 
     await page.locator('[data-expand="clj:.//shop.core"]').click();
     await expect(listed(page, 'clj:.//shop.core/checkout')).toBeVisible();

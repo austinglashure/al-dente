@@ -1,0 +1,45 @@
+{
+  "analyze_seconds": 1.104502358,
+  "fetch_seconds": 0.629985907,
+  "parse_rate": 1.0,
+  "repo": "https://github.com/ring-clojure/ring",
+  "rev": "5f745bbc7daefa097d7e9cf6394b44dce51cf597",
+  "summary": {
+    "blindspots": {
+      "macro-generated": 10,
+      "unresolved-symbol": 67
+    },
+    "diagnostics": [
+      {
+        "code": "analyzer-failed",
+        "message": "2 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)",
+        "path": null
+      },
+      {
+        "code": "analyzer-failed",
+        "message": "20 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)",
+        "path": null
+      },
+      {
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed",
+        "path": "update_versions.bb"
+      }
+    ],
+    "edges": {
+      "calls": 3266,
+      "contains": 765,
+      "references": 421,
+      "requires": 179
+    },
+    "files": 72,
+    "nodes": {
+      "external": 391,
+      "impl": 58,
+      "namespace": 72,
+      "symbol": 635,
+      "unit": 9
+    },
+    "units": 9
+  }
+}

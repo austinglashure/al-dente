@@ -1,0 +1,52 @@
+{
+  "schema": "aldente/analyze/v1",
+  "ok": true,
+  "snapshot": {
+    "key": "b3:cb2e50847dc535adf216181c4ea45de47222dfeb0e96f37ec3a498e8ec295ca8",
+    "repo": "https://github.com/day8/re-frame",
+    "rev": "1a1bf1df6570b17a148ebce70d500ec2da393cdc",
+    "dirty": false,
+    "analyzer": "0.1.0"
+  },
+  "data": {
+    "units": 5,
+    "files": 70,
+    "nodes": {
+      "unit": 5,
+      "namespace": 62,
+      "symbol": 762,
+      "impl": 170,
+      "external": 445,
+      "platform": 17
+    },
+    "edges": {
+      "contains": 994,
+      "requires": 470,
+      "calls": 6535,
+      "references": 1507
+    },
+    "blindspots": {
+      "unresolved-symbol": 74,
+      "macro-generated": 4
+    },
+    "diagnostics": [
+      {
+        "path": null,
+        "code": "analyzer-failed",
+        "message": "2 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)"
+      },
+      {
+        "path": "examples/simple/target",
+        "code": "skipped-dir",
+        "message": "deny-listed directory, not entered"
+      },
+      {
+        "path": "examples/todomvc/target",
+        "code": "skipped-dir",
+        "message": "deny-listed directory, not entered"
+      }
+    ]
+  },
+  "warnings": [],
+  "error": null
+}

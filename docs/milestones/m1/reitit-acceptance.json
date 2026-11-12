@@ -1,0 +1,56 @@
+{
+  "analyze_seconds": 3.5796942,
+  "fetch_seconds": 26.630367391,
+  "parse_rate": 1.0,
+  "repo": "https://github.com/metosin/reitit",
+  "rev": "1d2fc6735f53e2026fed98e92322a29f7a35c371",
+  "summary": {
+    "blindspots": {
+      "macro-generated": 2,
+      "unresolved-symbol": 65
+    },
+    "diagnostics": [
+      {
+        "code": "analyzer-failed",
+        "message": "1 clj-kondo locals records could not be read and were skipped (first: invalid type: null, expected u32)",
+        "path": null
+      },
+      {
+        "code": "missing-root",
+        "message": "declared in project.clj but does not exist",
+        "path": "modules/reitit/src"
+      },
+      {
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed",
+        "path": "scripts/build.clj"
+      },
+      {
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed",
+        "path": "scripts/repl.clj"
+      },
+      {
+        "code": "missing-root",
+        "message": "declared in project.clj but does not exist",
+        "path": "src"
+      }
+    ],
+    "edges": {
+      "calls": 8319,
+      "contains": 1444,
+      "references": 1905,
+      "requires": 924
+    },
+    "files": 131,
+    "nodes": {
+      "external": 829,
+      "impl": 296,
+      "namespace": 130,
+      "platform": 9,
+      "symbol": 1018,
+      "unit": 37
+    },
+    "units": 37
+  }
+}

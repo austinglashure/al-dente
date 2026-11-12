@@ -6,7 +6,10 @@ use std::sync::Arc;
 use aldente_graph::query::{self, Direction, Filter, Resolution};
 use aldente_model::analyze::SnapshotOverview;
 use aldente_model::query::{FindResult, ShowResult};
-use aldente_model::{AggregationLevel, Certainty, EdgeKind, Envelope, ErrorCode, NodeId, NodeKind};
+use aldente_model::{
+    AggregationLevel, Certainty, EdgeKind, Envelope, ErrorCode, NodeId, NodeKind, Warning,
+    WarningCode,
+};
 use axum::extract::{RawQuery, State};
 use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
@@ -147,11 +150,19 @@ pub async fn graph(State(s): St, RawQuery(q): RawQuery) -> Response {
         .get("level")
         .and_then(token::<AggregationLevel>)
         .unwrap_or(default);
-    ok(
-        &s,
-        "graph",
-        query::fit(&s.snapshot.graph, level, &filter_from(&p)),
+    let (payload, coarser) = query::fit(&s.snapshot.graph, level, &filter_from(&p));
+    let mut env = Envelope::success("graph", Some(s.info.clone()), payload);
+    if coarser {
+        env.warnings.push(Warning {
+            code: WarningCode::Coarser,
+            message: "shown at a coarser level to stay within the size limit".to_owned(),
+        });
+    }
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        serde_json::to_string(&env).unwrap_or_default(),
     )
+        .into_response()
 }
 
 /// `GET /neighborhood?id=&depth=&direction=&min_certainty=`: symbol-level

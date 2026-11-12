@@ -33,6 +33,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo deny check        # needs cargo-deny; CI runs it on Linux, macOS and Windows
+cargo run --release -p acceptance   # real repositories from acceptance/repos.toml (network)
 ```
 
 UI (in `ui/`, needs Node 24+; only for changing the UI, since the built UI in `ui/dist` is committed and embedded in the binary):
@@ -63,7 +64,8 @@ Golden files live under `fixtures/<name>/golden/`. After an intended change, rev
 | `crates/aldente-server` | local HTTP API and embedded UI |
 | `ui/` | the GUI (React, Sigma.js); `ui/dist` is the committed build |
 | `crates/aldente-testkit` | test support: fixture paths, golden graph harness |
-| `crates/acceptance` | runner for real-repository acceptance checks (needs network) |
+| `crates/acceptance` | runner for `acceptance/repos.toml` (real repositories, needs network) |
+| `docs/milestones/` | milestone evidence: summaries, screenshots |
 | `fixtures/` | crafted repositories and golden graphs (`clj-mini/EXPECTED.md` is the ground truth, `mono-mini` is a three-unit monorepo); `hostile/` safety cases |
 | `docs/plan/` | the full design and phase plan |
 

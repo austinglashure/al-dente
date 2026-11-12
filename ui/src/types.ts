@@ -82,5 +82,6 @@ export interface Envelope<T> {
   schema: string;
   ok: boolean;
   data: T | null;
+  warnings: { code: string; message: string }[];
   error: { code: string; message: string; candidates?: string[] | null } | null;
 }

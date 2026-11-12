@@ -1,0 +1,46 @@
+{
+  "analyze_seconds": 1.850581799,
+  "fetch_seconds": 43.549492375,
+  "parse_rate": 1.0,
+  "repo": "https://github.com/day8/re-frame",
+  "rev": "1a1bf1df6570b17a148ebce70d500ec2da393cdc",
+  "summary": {
+    "blindspots": {
+      "macro-generated": 4,
+      "unresolved-symbol": 74
+    },
+    "diagnostics": [
+      {
+        "code": "analyzer-failed",
+        "message": "2 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)",
+        "path": null
+      },
+      {
+        "code": "skipped-dir",
+        "message": "deny-listed directory, not entered",
+        "path": "examples/simple/target"
+      },
+      {
+        "code": "skipped-dir",
+        "message": "deny-listed directory, not entered",
+        "path": "examples/todomvc/target"
+      }
+    ],
+    "edges": {
+      "calls": 6535,
+      "contains": 994,
+      "references": 1507,
+      "requires": 470
+    },
+    "files": 70,
+    "nodes": {
+      "external": 445,
+      "impl": 170,
+      "namespace": 62,
+      "platform": 17,
+      "symbol": 762,
+      "unit": 5
+    },
+    "units": 5
+  }
+}

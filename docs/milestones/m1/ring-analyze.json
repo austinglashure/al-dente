@@ -1,0 +1,51 @@
+{
+  "schema": "aldente/analyze/v1",
+  "ok": true,
+  "snapshot": {
+    "key": "b3:25cfcc8146e08be1633ad4d8920d4440939e51626d05ea61f1eb3a19d250ca0a",
+    "repo": "https://github.com/ring-clojure/ring",
+    "rev": "5f745bbc7daefa097d7e9cf6394b44dce51cf597",
+    "dirty": false,
+    "analyzer": "0.1.0"
+  },
+  "data": {
+    "units": 9,
+    "files": 72,
+    "nodes": {
+      "unit": 9,
+      "namespace": 72,
+      "symbol": 635,
+      "impl": 58,
+      "external": 391
+    },
+    "edges": {
+      "contains": 765,
+      "requires": 179,
+      "calls": 3266,
+      "references": 421
+    },
+    "blindspots": {
+      "unresolved-symbol": 67,
+      "macro-generated": 10
+    },
+    "diagnostics": [
+      {
+        "path": null,
+        "code": "analyzer-failed",
+        "message": "2 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)"
+      },
+      {
+        "path": null,
+        "code": "analyzer-failed",
+        "message": "20 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)"
+      },
+      {
+        "path": "update_versions.bb",
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed"
+      }
+    ]
+  },
+  "warnings": [],
+  "error": null
+}

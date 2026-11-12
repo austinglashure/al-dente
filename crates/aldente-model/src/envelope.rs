@@ -86,6 +86,8 @@ pub enum WarningCode {
     Truncated,
     /// The result is good but the snapshot could not be saved to the cache.
     NotCached,
+    /// The graph is shown at a coarser level than asked, to fit the payload cap.
+    Coarser,
 }
 
 /// A non-fatal note attached to a result.

@@ -39,10 +39,11 @@ export function App() {
   useEffect(() => {
     api
       .graph()
-      .then((p) => {
+      .then(({ data: p, warnings }) => {
         mergePayload(graph, p);
         if (p.truncated) setNotice('The graph was too large and has been truncated.');
-        else if (p.aggregated) setNotice(`Showing the ${p.aggregated.level} level to stay within the size limit.`);
+        else if (warnings.some((w) => w.code === 'coarser') && p.aggregated)
+          setNotice(`Showing the ${p.aggregated.level} level to stay within the size limit.`);
         relayout();
         redraw();
       })

@@ -6,5 +6,16 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+aldente-acquire.workspace = true
+aldente-clj.workspace = true
+aldente-graph.workspace = true
+aldente-model.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# Reads acceptance/repos.toml; the plan chose TOML for it and for rules/.
+toml.workspace = true
+
 [lints]
 workspace = true

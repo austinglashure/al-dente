@@ -225,12 +225,13 @@ pub fn filter(graph: &Graph, payload: GraphPayload, filter: &Filter) -> GraphPay
 }
 
 /// The graph at `level` (filtered) if it fits the payload cap; otherwise the
-/// next coarser level that fits (marked by `aggregated`); if even the unit
-/// level does not fit, its best-connected nodes up to the cap, `truncated`.
+/// next coarser level that fits; if even the unit level does not fit, its
+/// best-connected nodes up to the cap, `truncated`. The flag says whether a
+/// coarser level than requested was used.
 ///
 /// Example: a 50,000-symbol repository asked at `Symbol` level gets its
-/// namespace graph with `aggregated: namespace`.
-pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> GraphPayload {
+/// namespace graph and `true`.
+pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> (GraphPayload, bool) {
     let order = [
         AggregationLevel::Symbol,
         AggregationLevel::Namespace,
@@ -244,11 +245,11 @@ pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> GraphPayload {
             if *l != level {
                 p.aggregated = Some(Aggregation { level: *l });
             }
-            return p;
+            return (p, *l != level);
         }
         last = p;
     }
-    cap(last)
+    (cap(last), true)
 }
 
 /// Keeps the best-connected nodes up to the cap and the edges among them,
@@ -489,10 +490,29 @@ mod tests {
     }
 
     #[test]
+    fn fit_reports_only_real_fallbacks() {
+        let g = graph();
+        let (p, coarser) = fit(&g, AggregationLevel::Namespace, &Filter::default());
+        assert!(!coarser, "the requested level fits; no fallback");
+        assert!(!p.truncated);
+        let mut big = Graph::default();
+        for i in 0..(MAX_NODES + 1) {
+            let mut n = node(&format!("clj:.//big/f{i}"));
+            n.namespace = Some("big".into());
+            n.unit = Some(NodeId::from_str("unit:.").unwrap());
+            big.nodes.insert(n.id.clone(), n);
+        }
+        let (p, coarser) = fit(&big, AggregationLevel::Symbol, &Filter::default());
+        assert!(coarser, "too many symbols: shown at a coarser level");
+        assert!(p.nodes.len() <= MAX_NODES);
+    }
+
+    #[test]
     fn fit_keeps_small_graphs_and_cap_trims_big_ones() {
         let g = graph();
-        let p = fit(&g, AggregationLevel::Symbol, &Filter::default());
+        let (p, coarser) = fit(&g, AggregationLevel::Symbol, &Filter::default());
         assert!(!p.truncated);
+        assert!(!coarser);
         assert_eq!(p.aggregated, None);
         let mut big = GraphPayload::default();
         for i in 0..(MAX_NODES + 5) {
