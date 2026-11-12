@@ -1,6 +1,6 @@
 ---
 source: crates/aldente-testkit/src/golden.rs
-assertion_line: 63
+assertion_line: 66
 ---
 # nodes 109
 node clj:.//shop.audit namespace langs:clj
@@ -112,7 +112,7 @@ node ext:clj//react external
 node ext:clj//react/createElement external
 node js:console.log platform
 node unit:. unit langs:clj,cljs
-# edges 166
+# edges 174
 edge clj:.//shop.audit -contains-> clj:.//shop.audit/record!
 edge clj:.//shop.audit/record! -calls(certain direct)-> ext:clj//clojure.core/println @ src/shop/audit.clj:5:3
 edge clj:.//shop.core -contains-> clj:.//shop.core/-main
@@ -137,6 +137,10 @@ edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.payment/char
 edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.pricing/price @ src/shop/core.clj:16:17
 edge clj:.//shop.core/checkout -calls(certain direct)-> clj:.//shop.util/with-timing @ src/shop/core.clj:15:3
 edge clj:.//shop.core/checkout -calls(certain direct)-> ext:clj//clojure.core/let @ src/shop/core.clj:16:5
+edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:book @ src/shop/core.clj:16:17
+edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:default @ src/shop/core.clj:16:17
+edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:food @ src/shop/core.clj:16:17
+edge clj:.//shop.core/checkout -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:gift @ src/shop/core.clj:16:17
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/new-id
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/now-ms
 edge clj:.//shop.interop -contains-> clj:.//shop.interop/shout
@@ -204,9 +208,13 @@ edge clj:.//shop.pricing-test -requires-> ext:clj//clojure.test @ test/shop/pric
 edge clj:.//shop.pricing-test/book-is-half-off -calls(certain direct)-> clj:.//shop.pricing/price @ test/shop/pricing_test.clj:9:12
 edge clj:.//shop.pricing-test/book-is-half-off -calls(certain direct)-> ext:clj//clojure.core/= @ test/shop/pricing_test.clj:9:7
 edge clj:.//shop.pricing-test/book-is-half-off -calls(certain direct)-> ext:clj//clojure.test/is @ test/shop/pricing_test.clj:9:3
+edge clj:.//shop.pricing-test/book-is-half-off -dispatches(likely multimethod-dispatch)-> clj:.//shop.pricing/price@:book @ test/shop/pricing_test.clj:9:12
+edge clj:.//shop.pricing-test/book-is-half-off -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:default @ test/shop/pricing_test.clj:9:12
 edge clj:.//shop.pricing-test/food-is-taxed -calls(certain direct)-> clj:.//shop.pricing/price @ test/shop/pricing_test.clj:6:15
 edge clj:.//shop.pricing-test/food-is-taxed -calls(certain direct)-> ext:clj//clojure.core/< @ test/shop/pricing_test.clj:6:7
 edge clj:.//shop.pricing-test/food-is-taxed -calls(certain direct)-> ext:clj//clojure.test/is @ test/shop/pricing_test.clj:6:3
+edge clj:.//shop.pricing-test/food-is-taxed -dispatches(likely multimethod-dispatch)-> clj:.//shop.pricing/price@:food @ test/shop/pricing_test.clj:6:15
+edge clj:.//shop.pricing-test/food-is-taxed -dispatches(possible multimethod-dispatch)-> clj:.//shop.pricing/price@:default @ test/shop/pricing_test.clj:6:15
 edge clj:.//shop.pricing/half-off -calls(certain direct)-> ext:clj//clojure.core// @ src/shop/pricing.clj:10:3
 edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:book
 edge clj:.//shop.pricing/price -contains-> clj:.//shop.pricing/price@:default

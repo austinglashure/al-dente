@@ -118,6 +118,7 @@ pub fn resolve(unit: &UnitInfo, run: &KondoRun, indexes: &[FileIndex]) -> Resolv
     r.impls();
     r.requires();
     r.usages();
+    r.multimethod_dispatch();
     r.macro_blind_spots();
     r.finish()
 }
@@ -140,6 +141,22 @@ struct Resolver<'a> {
     defmethod_impls: BTreeMap<(String, Pos), NodeId>,
     /// `(file, body span)` of each protocol impl body (not `reify`) → impl node.
     protocol_impls: Vec<(String, Span, NodeId)>,
+    /// Each multimethod's impls with their dispatch values as written.
+    multi_impls: BTreeMap<NodeId, Vec<(NodeId, String)>>,
+    /// Usages of multimethods, for R5 dispatch edges.
+    multi_uses: Vec<MultiUse>,
+}
+
+/// One usage of a multimethod: who uses it, where, and how.
+#[derive(Debug, Clone)]
+struct MultiUse {
+    scope: NodeId,
+    multi: NodeId,
+    file: String,
+    pos: Pos,
+    is_call: bool,
+    lang: Option<Lang>,
+    site: Option<Site>,
 }
 
 impl<'a> Resolver<'a> {
@@ -163,6 +180,8 @@ impl<'a> Resolver<'a> {
             stats: UsageStats::default(),
             defmethod_impls: BTreeMap::new(),
             protocol_impls: Vec::new(),
+            multi_impls: BTreeMap::new(),
+            multi_uses: Vec::new(),
         }
     }
 
@@ -326,6 +345,12 @@ impl<'a> Resolver<'a> {
                 else {
                     continue;
                 };
+                if let Some(multi_sym) = self.sym_id(&multi_ns, &multi) {
+                    self.multi_impls
+                        .entry(NodeId::Symbol(multi_sym))
+                        .or_default()
+                        .push((id.clone(), dispatch.clone()));
+                }
                 self.defmethod_impls
                     .insert((file.to_owned(), form.span.start), id);
             }
@@ -502,6 +527,21 @@ impl<'a> Resolver<'a> {
             let lang = u.lang.as_deref().and_then(Lang::from_token);
             let site = site_of(u);
             self.stats.sites += 1;
+            if self
+                .nodes
+                .get(&to)
+                .is_some_and(|n| n.subkind == Some(SymbolSubkind::Multimethod))
+            {
+                self.multi_uses.push(MultiUse {
+                    scope: scope.clone(),
+                    multi: to.clone(),
+                    file: u.filename.clone(),
+                    pos,
+                    is_call,
+                    lang,
+                    site: site.clone(),
+                });
+            }
             self.edge(scope, to, kind, Some(certainty), Some(reason), lang, site);
         }
     }
@@ -776,6 +816,146 @@ impl<'a> Resolver<'a> {
                 .indexes
                 .get(file)
                 .is_some_and(|ix| ix.quoted.iter().any(|q| q.contains(pos)))
+    }
+
+    /// R5: `dispatches` edges from each caller of a multimethod to the impls
+    /// that call may run. A keyword dispatch function (or `(fn [x] (:k x))`)
+    /// with a literal map argument selects the impl whose dispatch value
+    /// equals the map's value (`likely`, plus `:default` as `possible`); a
+    /// value that matches no impl selects `:default` (`likely`); a value with
+    /// a `derive` parent, any other argument or dispatch function, or a usage
+    /// as a value links every impl, `possible`.
+    ///
+    /// Example: `(area {:shape :circle})` gives `area@:circle` likely and
+    /// `area@:default` possible.
+    fn multimethod_dispatch(&mut self) {
+        let derived = self.derived_children();
+        let uses = std::mem::take(&mut self.multi_uses);
+        for u in &uses {
+            let Some(impls) = self.multi_impls.get(&u.multi).cloned() else {
+                continue;
+            };
+            let default = impls
+                .iter()
+                .find(|(_, d)| d == ":default")
+                .map(|(id, _)| id.clone());
+            let all = || {
+                impls
+                    .iter()
+                    .map(|(id, _)| (id.clone(), Certainty::Possible))
+                    .collect::<Vec<_>>()
+            };
+            let value = if u.is_call {
+                self.dispatch_keyword(&u.multi)
+                    .and_then(|k| self.literal_entry(&u.file, u.pos, &k))
+            } else {
+                None
+            };
+            let targets = match value {
+                Some(v) if derived.contains(&v) => all(),
+                Some(v) => match impls.iter().find(|(_, d)| *d == v) {
+                    Some((hit, _)) => {
+                        let mut t = vec![(hit.clone(), Certainty::Likely)];
+                        if let Some(d) = default.as_ref().filter(|d| *d != hit) {
+                            t.push((d.clone(), Certainty::Possible));
+                        }
+                        t
+                    }
+                    None => match &default {
+                        Some(d) => vec![(d.clone(), Certainty::Likely)],
+                        None => all(),
+                    },
+                },
+                None => all(),
+            };
+            for (target, certainty) in targets {
+                self.edge(
+                    u.scope.clone(),
+                    target,
+                    EdgeKind::Dispatches,
+                    Some(certainty),
+                    Some(Reason::MultimethodDispatch),
+                    u.lang,
+                    u.site.clone(),
+                );
+            }
+        }
+    }
+
+    /// Keywords that appear as the child in a `(derive child parent)` call
+    /// (or `(derive h child parent)`) anywhere in this unit.
+    ///
+    /// Example: `(derive :a/poodle :a/dog)` gives `{":a/poodle"}`.
+    fn derived_children(&self) -> BTreeSet<String> {
+        self.indexes
+            .values()
+            .flat_map(|ix| ix.calls.iter())
+            .filter(|c| local(Some(&c.head)) == "derive")
+            .filter_map(|c| match c.arg_info.len() {
+                2 => c.arg_info.first(),
+                3 => c.arg_info.get(1),
+                _ => None,
+            })
+            .map(|a| a.text.clone())
+            .collect()
+    }
+
+    /// The keyword a multimethod dispatches on, if its dispatch function is a
+    /// keyword or `(fn [x] (:k x))`.
+    ///
+    /// Example: `(defmulti area :shape)` gives `Some(":shape")`;
+    /// `(defmulti describe (fn [x y] …))` gives `None`.
+    fn dispatch_keyword(&self, multi: &NodeId) -> Option<String> {
+        let NodeId::Symbol(sym) = multi else {
+            return None;
+        };
+        let def = self
+            .run
+            .analysis
+            .var_definitions
+            .iter()
+            .find(|d| d.ns == sym.namespace().ns() && d.name == sym.name())?;
+        let ix = self.indexes.get(def.filename.as_str())?;
+        let start = Pos {
+            line: def.row,
+            col: def.col,
+        };
+        let defmulti = ix.calls.iter().find(|c| c.span.start == start)?;
+        let (i, arg) = defmulti
+            .arg_info
+            .iter()
+            .enumerate()
+            .skip(1)
+            .find(|(_, a)| !matches!(a.kind.as_str(), "str_lit" | "map_lit"))?;
+        match arg.kind.as_str() {
+            "kwd_lit" => Some(arg.text.clone()),
+            "list_lit" => {
+                let fn_start = defmulti.args.get(i)?.start;
+                let f = ix
+                    .calls
+                    .iter()
+                    .find(|c| c.span.start == fn_start && local(Some(&c.head)) == "fn")?;
+                let body = f.args.get(1)?;
+                let call = ix.calls.iter().find(|c| c.span.start == body.start)?;
+                call.head.starts_with(':').then(|| call.head.clone())
+            }
+            _ => None,
+        }
+    }
+
+    /// The value under `key` in the literal map that is the first argument of
+    /// the call at `pos`, if there is one.
+    ///
+    /// Example: for `(area {:shape :circle})`, key `:shape` gives `Some(":circle")`.
+    fn literal_entry(&self, file: &str, pos: Pos, key: &str) -> Option<String> {
+        let ix = self.indexes.get(file)?;
+        let call = ix.calls.iter().find(|c| c.span.start == pos)?;
+        let first = call.arg_info.first().filter(|a| a.kind == "map_lit")?;
+        first
+            .entries
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.clone())
     }
 
     /// R4: one `macro-generated` blind spot per macro defined here whose

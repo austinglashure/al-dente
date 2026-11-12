@@ -67,7 +67,24 @@ pub struct CallSite {
     pub span: Span,
     pub head: String,
     pub args: Vec<Span>,
+    /// One per argument, in order.
+    pub arg_info: Vec<ArgInfo>,
 }
+
+/// What an argument is, syntactically.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArgInfo {
+    /// The tree-sitter node kind, e.g. `map_lit`, `sym_lit`, `kwd_lit`.
+    pub kind: String,
+    /// The source text, cut at [`MAX_ARG_CHARS`] characters (symbols
+    /// without metadata).
+    pub text: String,
+    /// For a map literal: `(key, value)` source texts of its entries.
+    pub entries: Vec<(String, String)>,
+}
+
+/// Argument text longer than this is cut.
+pub const MAX_ARG_CHARS: usize = 200;
 
 /// Literal kinds harvested for later phases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -415,6 +432,7 @@ impl Ctx<'_> {
             span,
             head: head.clone(),
             args: vals[1..].iter().map(|n| self.span(*n)).collect(),
+            arg_info: vals[1..].iter().map(|n| self.arg_info(*n)).collect(),
         });
         let owner = local_name(&head);
         if IMPL_OWNERS.contains(&owner) {
@@ -458,6 +476,29 @@ impl Ctx<'_> {
                 }
                 _ => {}
             }
+        }
+    }
+
+    /// The kind, text and (for maps) entries of one argument.
+    ///
+    /// Example: `{:shape :circle}` gives kind `map_lit`, entries `[(":shape", ":circle")]`.
+    fn arg_info(&self, node: Node<'_>) -> ArgInfo {
+        let cut = |s: &str| s.chars().take(MAX_ARG_CHARS).collect::<String>();
+        let text = self.sym(node).unwrap_or_else(|| cut(self.text(node)));
+        let entries = if node.kind() == "map_lit" {
+            values(node)
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|kv| (cut(self.text(kv[0])), cut(self.text(kv[1]))))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        ArgInfo {
+            kind: node.kind().to_owned(),
+            text,
+            entries,
         }
     }
 

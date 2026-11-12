@@ -1,0 +1,105 @@
+---
+source: crates/aldente-testkit/src/golden.rs
+assertion_line: 66
+---
+# nodes 34
+node clj:.//mm.more namespace langs:clj
+node clj:.//mm.shapes namespace langs:clj
+node clj:.//mm.shapes/<top>@L25 impl langs:clj
+node clj:.//mm.shapes/area symbol/multimethod langs:clj
+node clj:.//mm.shapes/area@:circle impl langs:clj
+node clj:.//mm.shapes/area@:default impl langs:clj
+node clj:.//mm.shapes/area@:square impl langs:clj
+node clj:.//mm.shapes/area@:triangle impl langs:clj
+node clj:.//mm.shapes/describe symbol/multimethod langs:clj
+node clj:.//mm.shapes/describe@:default impl langs:clj
+node clj:.//mm.shapes/describe@[String String] impl langs:clj
+node clj:.//mm.shapes/greet symbol/multimethod langs:clj
+node clj:.//mm.shapes/greet@:en impl langs:clj
+node clj:.//mm.shapes/greet@:fr impl langs:clj
+node clj:.//mm.shapes/speak symbol/multimethod langs:clj
+node clj:.//mm.shapes/speak@:default impl langs:clj
+node clj:.//mm.shapes/speak@:mm.shapes/dog impl langs:clj
+node clj:.//mm.use namespace langs:clj
+node clj:.//mm.use/as-value symbol/fn langs:clj
+node clj:.//mm.use/circle-area symbol/fn langs:clj
+node clj:.//mm.use/french symbol/fn langs:clj
+node clj:.//mm.use/pair symbol/fn langs:clj
+node clj:.//mm.use/poodle symbol/fn langs:clj
+node clj:.//mm.use/unknown-area symbol/fn langs:clj
+node clj:.//mm.use/unmatched-area symbol/fn langs:clj
+node ext:clj//clojure.core/* external
+node ext:clj//clojure.core// external
+node ext:clj//clojure.core/derive external
+node ext:clj//clojure.core/fn external
+node ext:clj//clojure.core/map external
+node ext:clj//clojure.core/println external
+node ext:clj//clojure.core/str external
+node ext:clj//clojure.core/type external
+node unit:. unit langs:clj
+# edges 64
+edge clj:.//mm.more -requires-> clj:.//mm.shapes @ src/mm/more.clj:3:14
+edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/<top>@L25
+edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/area
+edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/describe
+edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/greet
+edge clj:.//mm.shapes -contains-> clj:.//mm.shapes/speak
+edge clj:.//mm.shapes/<top>@L25 -calls(certain direct)-> ext:clj//clojure.core/derive @ src/mm/shapes.clj:25:1
+edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:circle
+edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:default
+edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:square
+edge clj:.//mm.shapes/area -contains-> clj:.//mm.shapes/area@:triangle
+edge clj:.//mm.shapes/area@:circle -calls(certain direct)-> ext:clj//clojure.core/* @ src/mm/shapes.clj:7:39
+edge clj:.//mm.shapes/area@:square -calls(certain direct)-> ext:clj//clojure.core/* @ src/mm/shapes.clj:9:39
+edge clj:.//mm.shapes/area@:triangle -calls(certain direct)-> ext:clj//clojure.core/* @ src/mm/more.clj:5:53
+edge clj:.//mm.shapes/area@:triangle -calls(certain direct)-> ext:clj//clojure.core// @ src/mm/more.clj:5:50
+edge clj:.//mm.shapes/describe -calls(certain direct)-> ext:clj//clojure.core/fn @ src/mm/shapes.clj:13:20
+edge clj:.//mm.shapes/describe -calls(certain direct)-> ext:clj//clojure.core/type @ src/mm/shapes.clj:13:31 src/mm/shapes.clj:13:40
+edge clj:.//mm.shapes/describe -contains-> clj:.//mm.shapes/describe@:default
+edge clj:.//mm.shapes/describe -contains-> clj:.//mm.shapes/describe@[String String]
+edge clj:.//mm.shapes/describe@[String String] -calls(certain direct)-> ext:clj//clojure.core/str @ src/mm/shapes.clj:15:43
+edge clj:.//mm.shapes/greet -calls(certain direct)-> ext:clj//clojure.core/fn @ src/mm/shapes.clj:19:17
+edge clj:.//mm.shapes/greet -contains-> clj:.//mm.shapes/greet@:en
+edge clj:.//mm.shapes/greet -contains-> clj:.//mm.shapes/greet@:fr
+edge clj:.//mm.shapes/greet@:en -calls(certain direct)-> ext:clj//clojure.core/str @ src/mm/shapes.clj:21:26
+edge clj:.//mm.shapes/greet@:fr -calls(certain direct)-> ext:clj//clojure.core/str @ src/mm/shapes.clj:23:26
+edge clj:.//mm.shapes/speak -contains-> clj:.//mm.shapes/speak@:default
+edge clj:.//mm.shapes/speak -contains-> clj:.//mm.shapes/speak@:mm.shapes/dog
+edge clj:.//mm.shapes/speak@:mm.shapes/dog -calls(certain direct)-> ext:clj//clojure.core/println @ src/mm/shapes.clj:29:37
+edge clj:.//mm.use -contains-> clj:.//mm.use/as-value
+edge clj:.//mm.use -contains-> clj:.//mm.use/circle-area
+edge clj:.//mm.use -contains-> clj:.//mm.use/french
+edge clj:.//mm.use -contains-> clj:.//mm.use/pair
+edge clj:.//mm.use -contains-> clj:.//mm.use/poodle
+edge clj:.//mm.use -contains-> clj:.//mm.use/unknown-area
+edge clj:.//mm.use -contains-> clj:.//mm.use/unmatched-area
+edge clj:.//mm.use -requires-> clj:.//mm.more @ src/mm/use.clj:2:14
+edge clj:.//mm.use -requires-> clj:.//mm.shapes @ src/mm/use.clj:3:14
+edge clj:.//mm.use/as-value -calls(certain direct)-> ext:clj//clojure.core/map @ src/mm/use.clj:17:19
+edge clj:.//mm.use/as-value -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:circle @ src/mm/use.clj:17:24
+edge clj:.//mm.use/as-value -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:default @ src/mm/use.clj:17:24
+edge clj:.//mm.use/as-value -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:square @ src/mm/use.clj:17:24
+edge clj:.//mm.use/as-value -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:triangle @ src/mm/use.clj:17:24
+edge clj:.//mm.use/as-value -references(likely value-ref)-> clj:.//mm.shapes/area @ src/mm/use.clj:17:24
+edge clj:.//mm.use/circle-area -calls(certain direct)-> clj:.//mm.shapes/area @ src/mm/use.clj:5:22
+edge clj:.//mm.use/circle-area -dispatches(likely multimethod-dispatch)-> clj:.//mm.shapes/area@:circle @ src/mm/use.clj:5:22
+edge clj:.//mm.use/circle-area -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:default @ src/mm/use.clj:5:22
+edge clj:.//mm.use/french -calls(certain direct)-> clj:.//mm.shapes/greet @ src/mm/use.clj:13:17
+edge clj:.//mm.use/french -dispatches(likely multimethod-dispatch)-> clj:.//mm.shapes/greet@:fr @ src/mm/use.clj:13:17
+edge clj:.//mm.use/pair -calls(certain direct)-> clj:.//mm.shapes/describe @ src/mm/use.clj:11:15
+edge clj:.//mm.use/pair -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/describe@:default @ src/mm/use.clj:11:15
+edge clj:.//mm.use/pair -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/describe@[String String] @ src/mm/use.clj:11:15
+edge clj:.//mm.use/poodle -calls(certain direct)-> clj:.//mm.shapes/speak @ src/mm/use.clj:15:17
+edge clj:.//mm.use/poodle -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/speak@:default @ src/mm/use.clj:15:17
+edge clj:.//mm.use/poodle -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/speak@:mm.shapes/dog @ src/mm/use.clj:15:17
+edge clj:.//mm.use/unknown-area -calls(certain direct)-> clj:.//mm.shapes/area @ src/mm/use.clj:7:24
+edge clj:.//mm.use/unknown-area -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:circle @ src/mm/use.clj:7:24
+edge clj:.//mm.use/unknown-area -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:default @ src/mm/use.clj:7:24
+edge clj:.//mm.use/unknown-area -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:square @ src/mm/use.clj:7:24
+edge clj:.//mm.use/unknown-area -dispatches(possible multimethod-dispatch)-> clj:.//mm.shapes/area@:triangle @ src/mm/use.clj:7:24
+edge clj:.//mm.use/unmatched-area -calls(certain direct)-> clj:.//mm.shapes/area @ src/mm/use.clj:9:25
+edge clj:.//mm.use/unmatched-area -dispatches(likely multimethod-dispatch)-> clj:.//mm.shapes/area@:default @ src/mm/use.clj:9:25
+edge unit:. -contains-> clj:.//mm.more
+edge unit:. -contains-> clj:.//mm.shapes
+edge unit:. -contains-> clj:.//mm.use
+# truncated false

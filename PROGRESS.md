@@ -2,7 +2,7 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 2, WP2.2 (not started). Phase 0, Phase 1 and WP2.1 are done locally. "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 2, WP2.3 (not started). Phase 0, Phase 1, WP2.1 and WP2.2 are done locally. "CI green on all three systems" is unverified until the repo is pushed to GitHub.
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI

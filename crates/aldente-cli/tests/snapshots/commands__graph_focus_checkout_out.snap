@@ -1,21 +1,29 @@
 ---
 source: crates/aldente-cli/tests/commands.rs
-assertion_line: 152
+assertion_line: 199
 expression: "env.text(&[\"graph\", \"--level\", \"symbol\", \"--focus\", \"checkout\", \"--direction\",\n\"out\"])"
 ---
-nodes (7):
+nodes (11):
   clj:.//shop.core/checkout  symbol/fn
   clj:.//shop.inventory/reserve!  symbol/fn
   clj:.//shop.model/order-summary  symbol/fn
   clj:.//shop.payment/charge  symbol/protocol-method
   clj:.//shop.pricing/price  symbol/multimethod
+  clj:.//shop.pricing/price@:book  impl
+  clj:.//shop.pricing/price@:default  impl
+  clj:.//shop.pricing/price@:food  impl
+  clj:.//shop.pricing/price@:gift  impl
   clj:.//shop.util/with-timing  symbol/macro
   ext:clj//clojure.core/let  external
-edges (7):
+edges (11):
   clj:.//shop.core/checkout -> clj:.//shop.inventory/reserve!  calls certain direct
   clj:.//shop.core/checkout -> clj:.//shop.model/order-summary  calls certain direct
   clj:.//shop.core/checkout -> clj:.//shop.payment/charge  calls certain direct
   clj:.//shop.core/checkout -> clj:.//shop.pricing/price  calls certain direct
+  clj:.//shop.core/checkout -> clj:.//shop.pricing/price@:book  dispatches possible multimethod-dispatch
+  clj:.//shop.core/checkout -> clj:.//shop.pricing/price@:default  dispatches possible multimethod-dispatch
+  clj:.//shop.core/checkout -> clj:.//shop.pricing/price@:food  dispatches possible multimethod-dispatch
+  clj:.//shop.core/checkout -> clj:.//shop.pricing/price@:gift  dispatches possible multimethod-dispatch
   clj:.//shop.core/checkout -> clj:.//shop.util/with-timing  calls certain direct
   clj:.//shop.core/checkout -> ext:clj//clojure.core/let  calls certain direct
   clj:.//shop.util/with-timing -> ext:clj//clojure.core/let  references possible macro-body

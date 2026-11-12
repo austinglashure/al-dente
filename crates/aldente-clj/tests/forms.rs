@@ -161,6 +161,26 @@ fn anonymous_fn_bodies_are_call_sites_at_their_paren() {
 }
 
 #[test]
+fn call_arguments_carry_kind_text_and_map_entries() {
+    let ix = index_source(
+        RepoPath::parse("a.clj").unwrap(),
+        "(f {:shape :circle :r 2} x \"s\" (g))",
+    );
+    let call = ix.calls.iter().find(|c| c.head == "f").unwrap();
+    let kinds: Vec<&str> = call.arg_info.iter().map(|a| a.kind.as_str()).collect();
+    assert_eq!(kinds, ["map_lit", "sym_lit", "str_lit", "list_lit"]);
+    assert_eq!(call.arg_info[1].text, "x");
+    assert_eq!(
+        call.arg_info[0].entries,
+        [
+            (":shape".to_owned(), ":circle".to_owned()),
+            (":r".to_owned(), "2".to_owned())
+        ]
+    );
+    assert!(call.arg_info[1].entries.is_empty());
+}
+
+#[test]
 fn syntax_quotes_are_recorded() {
     let src = "(defmacro m [x] `(let [t# 1] (f ~x)))";
     let ix = index_source(RepoPath::parse("m.clj").unwrap(), src);

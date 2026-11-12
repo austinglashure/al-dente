@@ -62,7 +62,8 @@ pub fn assert_graph_snapshot(fixture: &str, level: AggregationLevel) {
     settings.set_prepend_module_to_snapshot(false);
     settings.set_omit_expression(true);
     settings.bind(|| {
-        insta::assert_snapshot!(format!("{fixture}__{}", level_name(level)), rendered);
+        let name = fixture.replace('/', "-");
+        insta::assert_snapshot!(format!("{name}__{}", level_name(level)), rendered);
     });
 }
 

@@ -5,7 +5,7 @@ expression: "env.text(&[\"analyze\"])"
 ---
 units 1, files 13
 nodes: unit 1, namespace 13, symbol 35, impl 12, external 47, platform 1
-edges: contains 60, requires 19, calls 74, references 13
-certainty: calls certain 74, references possible 4, references likely 9
+edges: contains 60, requires 19, calls 74, references 13, dispatches 8
+certainty: calls certain 74, references possible 4, references likely 9, dispatches possible 6, dispatches likely 2
 blind spots: macro-generated 1
 diagnostics: 0
