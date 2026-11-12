@@ -9,6 +9,7 @@
 mod api;
 mod params;
 mod security;
+mod timing;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -38,6 +39,8 @@ pub struct AppState {
     pub summary: AnalyzeSummary,
     pub token: String,
     pub port: u16,
+    /// Print one timing line per request to stderr (`serve --timings`).
+    pub timings: bool,
 }
 
 impl AppState {
@@ -60,6 +63,7 @@ impl AppState {
             summary,
             token,
             port,
+            timings: false,
         }
     }
 }

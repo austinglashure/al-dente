@@ -7,6 +7,7 @@ use aldente_acquire::key::{KeyInputs, snapshot_key};
 use aldente_acquire::units::{Discovery, discover};
 use aldente_acquire::walk::{Limits, walk};
 use aldente_adapter::{Adapter, AdapterError, AnalyzeCtx, FactBatch};
+use aldente_model::timing::Timings;
 use aldente_model::{BlindSpot, BlindSpotCategory, Diagnostic, DiagnosticCode, RepoPath, Site};
 
 use crate::build::{Graph, build};
@@ -32,16 +33,18 @@ pub fn analyze(
     adapters: &[&dyn Adapter],
 ) -> Result<Analyzed, AdapterError> {
     let discovery = discover(root, git, walk(root, &Limits::default()));
-    analyze_discovered(root, discovery, adapters)
+    analyze_discovered(root, discovery, adapters, &mut Timings::default())
 }
 
-/// Runs the adapters over an existing discovery and builds the graph.
+/// Runs the adapters over an existing discovery and builds the graph,
+/// recording each adapter's stages (per unit) and the build in `timings`.
 ///
 /// Example: see [`analyze`].
 fn analyze_discovered(
     root: &Path,
     discovery: Discovery,
     adapters: &[&dyn Adapter],
+    timings: &mut Timings,
 ) -> Result<Analyzed, AdapterError> {
     let mut batches = Vec::new();
     for unit in &discovery.report.units {
@@ -62,7 +65,13 @@ fn analyze_discovered(
                     files: &files,
                 },
             ) {
-                Ok(batch) => batches.push(batch),
+                Ok(mut batch) => {
+                    timings.merge(
+                        &format!("unit:{}", unit.dir),
+                        std::mem::take(&mut batch.timings),
+                    );
+                    batches.push(batch);
+                }
                 Err(e @ AdapterError::ToolMissing { .. }) => return Err(e),
                 Err(AdapterError::Failed(message)) => {
                     batches.push(failed(&unit.dir, &files, adapter.id(), &message))
@@ -70,7 +79,7 @@ fn analyze_discovered(
             }
         }
     }
-    let mut graph = build(&discovery.report.units, batches);
+    let mut graph = timings.time("build", || build(&discovery.report.units, batches));
     graph
         .diagnostics
         .extend(discovery.report.diagnostics.iter().cloned());
@@ -100,6 +109,8 @@ pub struct Outcome {
     pub cached: bool,
     /// Set when the fresh snapshot could not be saved; the result is still good.
     pub store_error: Option<String>,
+    /// Wall time per stage (`--timings`).
+    pub timings: Timings,
 }
 
 /// Resolves the target to its key first (walk and hashes only); a hit loads
@@ -113,18 +124,23 @@ pub fn analyze_cached(
     adapters: &[&dyn Adapter],
     ctx: &CacheContext<'_>,
 ) -> Result<Outcome, AdapterError> {
-    let discovery = discover(root, git, walk(root, &Limits::default()));
-    let key = snapshot_key(&ctx.inputs, &discovery.key_files());
+    let mut timings = Timings::default();
+    let walked = timings.time("walk", || walk(root, &Limits::default()));
+    let discovery = timings.time("discover", || discover(root, git, walked));
+    let key = timings.time("key", || snapshot_key(&ctx.inputs, &discovery.key_files()));
     let path = snapshot::path_for(ctx.snapshots, &key);
-    if !ctx.no_cache
-        && let Ok(Some(snap)) = snapshot::load(&path)
-        && snap.key == key
-    {
-        return Ok(Outcome {
-            snapshot: snap,
-            cached: true,
-            store_error: None,
-        });
+    if !ctx.no_cache {
+        let loaded = timings.time("snapshot-lookup", || snapshot::load(&path));
+        if let Ok(Some(snap)) = loaded
+            && snap.key == key
+        {
+            return Ok(Outcome {
+                snapshot: snap,
+                cached: true,
+                store_error: None,
+                timings,
+            });
+        }
     }
     let units = discovery.report.units.clone();
     let files = discovery
@@ -132,7 +148,7 @@ pub fn analyze_cached(
         .iter()
         .map(|f| (f.path.clone(), f.hash.clone()))
         .collect();
-    let analyzed = analyze_discovered(root, discovery, adapters)?;
+    let analyzed = analyze_discovered(root, discovery, adapters, &mut timings)?;
     let snap = Snapshot {
         key,
         repo: ctx.repo.clone(),
@@ -143,11 +159,15 @@ pub fn analyze_cached(
         files,
         graph: analyzed.graph,
     };
-    let store_error = snapshot::write(&path, &snap).err().map(|e| e.to_string());
+    let store_error = timings
+        .time("snapshot-save", || snapshot::write(&path, &snap))
+        .err()
+        .map(|e| e.to_string());
     Ok(Outcome {
         snapshot: snap,
         cached: false,
         store_error,
+        timings,
     })
 }
 
@@ -197,7 +217,11 @@ mod tests {
         }
         fn analyze(&self, _: &UnitInfo, _: AnalyzeCtx<'_>) -> Result<FactBatch, AdapterError> {
             self.0.fetch_add(1, Ordering::SeqCst);
-            Ok(FactBatch::default())
+            let mut batch = FactBatch::default();
+            batch
+                .timings
+                .record("fake-stage", std::time::Duration::from_millis(1));
+            Ok(batch)
         }
     }
 
@@ -289,5 +313,30 @@ mod tests {
                 .cached,
             "and the rebuild is cached"
         );
+    }
+
+    #[test]
+    fn timings_cover_each_stage_and_a_hit_only_loads() {
+        let dir = scratch("timings");
+        let (root, snaps) = (dir.join("repo"), dir.join("snapshots"));
+        let counter = Counting(AtomicUsize::new(0));
+        let labels = |o: &Outcome| -> Vec<String> {
+            o.timings.entries().iter().map(|(l, _)| l.clone()).collect()
+        };
+        let cold = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        assert_eq!(
+            labels(&cold),
+            [
+                "walk",
+                "discover",
+                "key",
+                "snapshot-lookup",
+                "fake-stage unit:.",
+                "build",
+                "snapshot-save"
+            ]
+        );
+        let hit = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        assert_eq!(labels(&hit), ["walk", "discover", "key", "snapshot-lookup"]);
     }
 }

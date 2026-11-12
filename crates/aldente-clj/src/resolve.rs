@@ -2554,6 +2554,7 @@ impl<'a> Resolver<'a> {
                 literals,
                 diagnostics,
                 blindspots,
+                timings: Default::default(),
             },
             stats: self.stats,
         }

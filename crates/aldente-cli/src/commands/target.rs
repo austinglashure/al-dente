@@ -20,6 +20,10 @@ pub struct TargetArgs {
     /// Branch, tag or commit to check out (URL targets only).
     #[arg(long = "ref", value_name = "REV")]
     pub git_ref: Option<String>,
+    /// Print wall time per pipeline stage to stderr (and, for `serve`, per
+    /// request).
+    #[arg(long)]
+    pub timings: bool,
 }
 
 /// An opened target.

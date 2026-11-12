@@ -15,6 +15,8 @@ pub struct FactBatch {
     pub literals: Vec<LiteralFact>,
     pub diagnostics: Vec<Diagnostic>,
     pub blindspots: Vec<BlindSpot>,
+    /// How long the adapter's own stages took (`--timings`); not facts.
+    pub timings: aldente_model::timing::Timings,
 }
 
 impl FactBatch {

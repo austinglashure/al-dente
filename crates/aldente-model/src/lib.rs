@@ -15,6 +15,7 @@ pub mod kinds;
 pub mod path;
 pub mod query;
 pub mod schema;
+pub mod timing;
 pub mod units;
 
 #[cfg(test)]

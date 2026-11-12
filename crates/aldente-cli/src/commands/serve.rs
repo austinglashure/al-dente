@@ -34,6 +34,7 @@ pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
         Ok(l) => l,
         Err(f) => return fail(TAG, &f, json),
     };
+    let timings = args.target.timings;
     let info = loaded.info();
     let root = loaded.target.root.clone();
     let extra = loaded.target.diagnostics.clone();
@@ -42,7 +43,10 @@ pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
     let state_info = info.clone();
     let no_open = args.no_open;
     let result = serve(
-        move |port| AppState::new(snapshot, root, state_info, &extra, token, port),
+        move |port| AppState {
+            timings,
+            ..AppState::new(snapshot, root, state_info, &extra, token, port)
+        },
         args.port,
         |url| {
             let port = url

@@ -310,3 +310,32 @@ fn find_by_subkind_and_flag() {
         Some(2)
     );
 }
+
+/// `--timings` prints per-stage wall times to stderr: every stage on a cold
+/// run, only the lookup on a cache hit; stdout and JSON are unchanged.
+#[test]
+fn timings_go_to_stderr() {
+    let env = Env::new("clj-mini", "timings");
+    let cold = env.run(&["analyze", "--timings"]);
+    assert_eq!(cold.status.code(), Some(0));
+    let err = String::from_utf8(cold.stderr).unwrap();
+    for stage in [
+        "walk",
+        "clj-kondo unit:.",
+        "form-index unit:.",
+        "resolve unit:.",
+        "build",
+        "snapshot-save",
+        "total",
+    ] {
+        assert!(err.contains(stage), "{stage} missing from:\n{err}");
+    }
+    let hit = env.run(&["analyze", "--timings", "--json"]);
+    let err = String::from_utf8(hit.stderr).unwrap();
+    assert!(
+        err.contains("snapshot-lookup") && !err.contains("clj-kondo"),
+        "{err}"
+    );
+    let j: Value = serde_json::from_slice(&hit.stdout).unwrap();
+    assert!(env.valid("analyze", &j["data"]), "{j:#}");
+}

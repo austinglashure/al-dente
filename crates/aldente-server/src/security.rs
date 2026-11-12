@@ -22,6 +22,13 @@ pub const CSP: &str = "default-src 'self'; connect-src 'self'; img-src 'self' da
 ///
 /// Example: `GET /api/v1/snapshot` with `Host: evil.example` gives 403.
 pub async fn guard(State(state): State<Arc<AppState>>, req: Request, next: Next) -> Response {
+    let started = std::time::Instant::now();
+    let method = req.method().to_string();
+    let target = req
+        .uri()
+        .path_and_query()
+        .map(|p| p.as_str().to_owned())
+        .unwrap_or_default();
     let mut res = match check(&state, req.headers(), req.uri().path()) {
         Err(status) => (status, status.canonical_reason().unwrap_or("refused")).into_response(),
         Ok(()) => match tokio::spawn(next.run(req)).await {
@@ -44,6 +51,23 @@ pub async fn guard(State(state): State<Arc<AppState>>, req: Request, next: Next)
         HeaderValue::from_static("no-referrer"),
     );
     headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    if state.timings {
+        let bytes = res
+            .headers()
+            .get(header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse().ok());
+        eprintln!(
+            "{}",
+            crate::timing::request_line(
+                &method,
+                &target,
+                res.status().as_u16(),
+                started.elapsed(),
+                bytes
+            )
+        );
+    }
     res
 }
 

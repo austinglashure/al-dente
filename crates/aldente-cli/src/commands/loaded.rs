@@ -12,6 +12,7 @@ use aldente_clj::kondo::Kondo;
 use aldente_graph::pipeline::{CacheContext, Outcome, analyze_cached};
 use aldente_graph::snapshot::SCHEMA_VERSION;
 use aldente_model::doctor::ToolStatus;
+use aldente_model::timing::Timings;
 use aldente_model::{ErrorCode, SnapshotInfo, Warning, WarningCode};
 
 use crate::commands::target::{Failure, Opened, TargetArgs, open};
@@ -70,7 +71,31 @@ fn maven_repo() -> Option<std::path::PathBuf> {
 ///
 /// Example: `load(&args, false)` on clj-mini analyzes once, then hits the cache.
 pub fn load(args: &TargetArgs, no_cache: bool) -> Result<Loaded, Failure> {
+    let started = std::time::Instant::now();
+    let loaded = load_timed(args, no_cache, started);
+    if args.timings
+        && let Ok(l) = &loaded
+    {
+        eprintln!("timings:\n{}", l.outcome.timings.report());
+        eprintln!(
+            "  (wall clock including target and tool checks: {:.3}s)",
+            started.elapsed().as_secs_f64()
+        );
+    }
+    loaded
+}
+
+/// [`load`] without the report; `open` and the tool checks are timed as
+/// `open-target` and `tool-checks`.
+///
+/// Example: see [`load`].
+fn load_timed(
+    args: &TargetArgs,
+    no_cache: bool,
+    started: std::time::Instant,
+) -> Result<Loaded, Failure> {
     let target = open(args)?;
+    let opened = started.elapsed();
     let os = std::env::consts::OS;
     let path_var = std::env::var_os("PATH");
     let kondo = tools::check(&CLJ_KONDO, path_var.as_deref(), os);
@@ -120,13 +145,21 @@ pub fn load(args: &TargetArgs, no_cache: bool) -> Result<Loaded, Failure> {
         layout.tmp.join("kondo-empty"),
     ))
     .with_maven_repo(maven);
-    let outcome =
+    let checks = started.elapsed().saturating_sub(opened);
+    let mut outcome =
         analyze_cached(&target.root, target.git, &[&adapter], &ctx).map_err(|e| match e {
             AdapterError::ToolMissing { tool, hint } => {
                 Failure::new(ErrorCode::ToolMissing, format!("{tool} is missing; {hint}"))
             }
             AdapterError::Failed(m) => internal(m),
         })?;
+    let mut timings = Timings::default();
+    timings.record("open-target", opened);
+    timings.record("tool-checks", checks);
+    for (label, took) in outcome.timings.entries() {
+        timings.record(label, *took);
+    }
+    outcome.timings = timings;
     if outcome.cached {
         eprintln!("aldente: using cached snapshot {}", outcome.snapshot.key);
     }

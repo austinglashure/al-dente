@@ -1,6 +1,7 @@
 //! The Clojure adapter: clj-kondo plus the form index, resolved by R1–R4.
 
 use aldente_adapter::{Adapter, AdapterError, AnalyzeCtx, FactBatch};
+use aldente_model::timing::Timings;
 use aldente_model::{Lang, UnitInfo};
 
 use crate::forms::index_files;
@@ -62,9 +63,9 @@ impl Adapter for CljAdapter {
     /// Example: on clj-mini gives about 90 nodes; a missing clj-kondo gives
     /// `AdapterError::ToolMissing`.
     fn analyze(&self, unit: &UnitInfo, ctx: AnalyzeCtx<'_>) -> Result<FactBatch, AdapterError> {
-        let run = self
-            .kondo
-            .analyze(ctx.root, ctx.files)
+        let mut timings = Timings::default();
+        let run = timings
+            .time("clj-kondo", || self.kondo.analyze(ctx.root, ctx.files))
             .map_err(|e| match e {
                 KondoError::Missing(_) => AdapterError::ToolMissing {
                     tool: "clj-kondo".into(),
@@ -75,11 +76,15 @@ impl Adapter for CljAdapter {
                 },
                 other => AdapterError::Failed(other.to_string()),
             })?;
-        let indexes = index_files(ctx.root, ctx.files);
+        let indexes = timings.time("form-index", || index_files(ctx.root, ctx.files));
         let mut ctx = Context::builtin().map_err(|e| AdapterError::Failed(e.to_string()))?;
         if let Some(repo) = &self.maven_repo {
-            ctx.jars = aldente_acquire::maven::jar_namespaces(repo, &unit.deps);
+            ctx.jars = timings.time("jar-listing", || {
+                aldente_acquire::maven::jar_namespaces(repo, &unit.deps)
+            });
         }
-        Ok(resolve(unit, &run, &indexes, &ctx).batch)
+        let mut batch = timings.time("resolve", || resolve(unit, &run, &indexes, &ctx).batch);
+        batch.timings = timings;
+        Ok(batch)
     }
 }
