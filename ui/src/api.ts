@@ -2,7 +2,20 @@
 // opened (`/?token=…`); it is kept in sessionStorage, removed from the
 // address bar, and sent as a header on every API call.
 
-import type { BlindspotReport, Envelope, FindResult, Payload, ShowResult, SnapshotOverview, TreeDir } from './types';
+import type {
+  BlindspotReport,
+  Checklist,
+  CraterResult,
+  Envelope,
+  FindResult,
+  LibrariesReport,
+  LibraryUsage,
+  Payload,
+  ShowResult,
+  SnapshotOverview,
+  TraceReport,
+  TreeDir,
+} from './types';
 
 const TOKEN_KEY = 'aldente-token';
 
@@ -73,6 +86,21 @@ export class Api {
     return res.text();
   }
 
+  /** POSTs `body` as text and returns the envelope's data, or throws its error message.
+   *  Example: `await api.post<TraceReport>('trace/normalize', {}, traceText)`. */
+  async post<T>(endpoint: string, params: Record<string, string | number | undefined>, body: string): Promise<T> {
+    const res = await fetch(apiPath(endpoint, params), {
+      method: 'POST',
+      headers: { 'x-aldente-token': this.token, 'content-type': 'text/plain' },
+      body,
+    });
+    const env = (await res.json()) as Envelope<T>;
+    if (!env.ok || env.data === null) {
+      throw new Error(env.error?.message ?? `request failed (${res.status})`);
+    }
+    return env.data;
+  }
+
   snapshot = () => this.json<SnapshotOverview>('snapshot');
   graph = () => this.envelope<Payload>('graph');
   /** The repository's directory tree. */
@@ -87,4 +115,26 @@ export class Api {
   search = (q: string) => this.json<FindResult>('search', { q, limit: 20 });
   source = (id: string) => this.text('source', { id, context: 2 });
   blindspots = () => this.json<BlindspotReport>('blindspots');
+  crater = (q: CraterQuery) => this.json<CraterResult>('crater', craterParams(q));
+  checklist = (q: CraterQuery) => this.json<Checklist>('checklist', craterParams(q));
+  normalizeTrace = (text: string) => this.post<TraceReport>('trace/normalize', {}, text);
+  craterTrace = (text: string, q: Omit<CraterQuery, 'ids'>) =>
+    this.post<CraterResult>('crater/trace', { direction: q.direction, depth: q.depth, min_certainty: q.minCertainty }, text);
+  libs = () => this.json<LibrariesReport>('libs');
+  lib = (id: string, by: 'namespace' | 'symbol' = 'namespace') => this.json<LibraryUsage>('lib', { id, by });
+}
+
+/** What a crater request asks for. `depth` 0 means unlimited. */
+export interface CraterQuery {
+  ids: string[];
+  direction: 'forward' | 'reverse' | 'both';
+  depth: number;
+  minCertainty: 'certain' | 'likely' | 'possible';
+}
+
+/** The query parameters of `/crater` and `/checklist`.
+ *  Example: `craterParams({ids: ['a'], direction: 'reverse', depth: 6, minCertainty: 'likely'})`
+ *  is `{ id: ['a'], direction: 'reverse', depth: 6, min_certainty: 'likely' }`. */
+export function craterParams(q: CraterQuery): Record<string, string | number | string[]> {
+  return { id: q.ids, direction: q.direction, depth: q.depth, min_certainty: q.minCertainty };
 }

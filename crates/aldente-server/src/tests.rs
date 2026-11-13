@@ -504,3 +504,94 @@ fn library_endpoints() {
     );
     assert_eq!(s.ok_get("/api/v1/lib?id=react&by=nope").0, 400);
 }
+
+/// A raw POST with a text body; returns status and body.
+///
+/// Example: `post(port, "/api/v1/trace/normalize", &headers, "java.lang.Error: x\n…")`.
+fn post(port: u16, path: &str, headers: &[(&str, &str)], body: &str) -> (u16, String) {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut req = format!(
+        "POST {path} HTTP/1.1\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n",
+        body.len()
+    );
+    for (k, v) in headers {
+        req.push_str(&format!("{k}: {v}\r\n"));
+    }
+    req.push_str("\r\n");
+    req.push_str(body);
+    stream.write_all(req.as_bytes()).unwrap();
+    let mut raw = Vec::new();
+    stream.read_to_end(&mut raw).unwrap();
+    let raw = String::from_utf8_lossy(&raw).into_owned();
+    let (head, body) = raw.split_once("\r\n\r\n").unwrap_or((&raw, ""));
+    let status = head
+        .split_whitespace()
+        .nth(1)
+        .unwrap_or("0")
+        .parse()
+        .unwrap();
+    (status, body.to_owned())
+}
+
+fn schema_ok(name: &str, data: &serde_json::Value) -> bool {
+    let schema = aldente_model::schema::schema_by_name(name).unwrap();
+    jsonschema::validator_for(&schema).unwrap().is_valid(data)
+}
+
+#[test]
+fn crater_checklist_and_trace_endpoints() {
+    let s = start("crater");
+    let (status, _, body) = s.ok_get("/api/v1/crater?id=f&min_certainty=possible");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["schema"], "aldente/crater/v1");
+    assert!(schema_ok("crater", &env["data"]), "{env:#}");
+    let ids: Vec<&str> = env["data"]["reach"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids, ["clj:.//a/f", "clj:.//a/g"]);
+
+    let (status, _, body) = s.ok_get("/api/v1/checklist?id=g&direction=reverse");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert!(schema_ok("checklist", &env["data"]), "{env:#}");
+    assert_eq!(env["data"]["rows"].as_array().unwrap().len(), 2);
+    assert_eq!(s.ok_get("/api/v1/crater").0, 400);
+    assert_eq!(s.ok_get("/api/v1/crater?id=nothing-like-this").0, 404);
+
+    let h = s.good();
+    let refs: Vec<(&str, &str)> = h.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let trace =
+        "java.lang.Error: boom\n\tat a$g.invokeStatic(a.clj:8)\n\tat a$f.invokeStatic(a.clj:6)\n";
+    let (status, body) = post(s.port, "/api/v1/trace/normalize", &refs, trace);
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert!(schema_ok("trace", &env["data"]), "{env:#}");
+    assert_eq!(env["data"]["traces"][0]["frames"][0]["node"], "clj:.//a/g");
+    assert_eq!(env["data"]["traces"][0]["frames"][0]["match"], "exact");
+
+    let (status, body) = post(s.port, "/api/v1/crater/trace", &refs, trace);
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert!(schema_ok("crater", &env["data"]), "{env:#}");
+    assert_eq!(env["data"]["direction"], "reverse");
+    let path: Vec<&str> = env["data"]["pinned"]["path"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
+    assert_eq!(path, ["clj:.//a/f", "clj:.//a/g"]);
+    assert_eq!(
+        post(s.port, "/api/v1/trace/normalize", &refs, "no trace here").0,
+        400
+    );
+    // Without the token the POST is refused like any API call.
+    assert_eq!(
+        post(s.port, "/api/v1/trace/normalize", &refs[..1], trace).0,
+        401
+    );
+}

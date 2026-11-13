@@ -11,6 +11,8 @@ export interface Tools {
   neighbors: (id: string) => void;
   focus: (id: string) => void;
   follow: (id: string) => void;
+  /** Opens the crater view seeded at a node. */
+  crater: (n: GNode, direction: 'forward' | 'reverse') => void;
 }
 
 /** The location of a node as `file:line:col`.
@@ -65,6 +67,16 @@ export function Details({ d, unit, tools, onClose }: { d: ShowResult; unit: Unit
         {!aggregate && (
           <button type="button" data-action="focus" onClick={() => tools.focus(n.id)} title="Show only this and its neighbors">
             Focus
+          </button>
+        )}
+        {!directory && (
+          <button type="button" data-action="crater-forward" onClick={() => tools.crater(n, 'forward')} title="Everything this can reach">
+            Crater forward
+          </button>
+        )}
+        {!directory && (
+          <button type="button" data-action="crater-reverse" onClick={() => tools.crater(n, 'reverse')} title="Everything that can reach this: what to re-verify after changing it">
+            Crater reverse
           </button>
         )}
         <button type="button" data-action="copy" onClick={() => void navigator.clipboard?.writeText(n.id)} title="Copy the full ID">

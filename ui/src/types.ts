@@ -135,3 +135,126 @@ export interface TreeFile {
   namespaces: string[];
   status: 'analyzed' | 'parse-error' | 'not-analyzed';
 }
+
+/** How one crater node was reached. */
+export interface Reach {
+  id: string;
+  distance: number;
+  path_certainty: 'certain' | 'likely' | 'possible';
+  via: string | null;
+  direction: 'forward' | 'reverse' | 'both';
+}
+
+/** What a stack trace says about a crater. */
+export interface PinnedTrace {
+  path: string[];
+  overlay: GEdge[];
+  faint: string[];
+  unmapped: { index: number; raw: string }[];
+  missing: { from: string; to: string }[];
+}
+
+/** An impact crater (`aldente schema crater`). */
+export interface CraterResult {
+  seeds: string[];
+  direction: 'forward' | 'reverse' | 'both';
+  depth: number;
+  min_certainty: string;
+  graph: Payload;
+  reach: Reach[];
+  counts: { by_certainty: Record<string, number>; by_unit: Record<string, number> };
+  boundary: string[];
+  hubs: string[];
+  stopped: string[];
+  hidden_below_min: number;
+  truncated: boolean;
+  diff: unknown;
+  pinned: PinnedTrace | null;
+}
+
+/** One place to verify after a change. */
+export interface ChecklistRow {
+  id: string;
+  kind: string;
+  name: string;
+  loc: Loc | null;
+  distance: number;
+  path_certainty: string;
+  coverage: string | null;
+  entry_point: boolean;
+}
+
+/** `aldente schema checklist`. */
+export interface Checklist {
+  seeds: string[];
+  direction: string;
+  depth: number;
+  min_certainty: string;
+  rows: ChecklistRow[];
+  hidden_below_min: number;
+  truncated: boolean;
+}
+
+/** One canonical stack frame (`aldente schema trace`). */
+export interface Frame {
+  index: number;
+  lang: string;
+  namespace: string | null;
+  name: string | null;
+  anonymous: boolean;
+  file: string | null;
+  line: number | null;
+  col: number | null;
+  raw: string;
+  noise: boolean;
+  node: string | null;
+  match: 'exact' | 'name' | 'line' | 'none';
+}
+
+/** One exception with its frames and causes. */
+export interface Trace {
+  exception: { type: string | null; message: string | null; data: string | null };
+  frames: Frame[];
+  omitted: number;
+  causes: Trace[];
+}
+
+export interface TraceReport {
+  format: string;
+  traces: Trace[];
+}
+
+/** One library in use (`aldente schema libs`). */
+export interface LibrarySummary {
+  id: string;
+  ecosystem: string;
+  coordinate: string;
+  attribution: { provides: string; certainty: string | null; reason: string | null }[];
+  symbols: number;
+  namespaces: number;
+  units: number;
+  versions: { unit: string; version: string | null }[];
+}
+
+export interface UsageRow {
+  from: string;
+  kind: string;
+  to: string;
+  certainty: string | null;
+  reason: string | null;
+  site: Site | null;
+}
+
+/** `aldente schema libs`. */
+export interface LibrariesReport {
+  libraries: LibrarySummary[];
+}
+
+/** `aldente schema lib-usage`. */
+export interface LibraryUsage {
+  library: string;
+  by: string;
+  attribution: LibrarySummary['attribution'];
+  groups: { id: string; rows: UsageRow[] }[];
+  require_only: { id: string; rows: UsageRow[] }[];
+}

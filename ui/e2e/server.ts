@@ -19,8 +19,20 @@ const binary = process.env.ALDENTE_BIN ?? join(repoRoot, 'target', 'debug', proc
  *  and resolves once it prints its URL.
  *  Example: `const s = await startServer('clj-mini'); await page.goto(s.url); s.close();` */
 export function startServer(fixture: string): Promise<Server> {
+  return startServerOn(join(repoRoot, 'fixtures', fixture));
+}
+
+/** The absolute path of a file under the repository root.
+ *  Example: `repoFile('fixtures/traces/jvm/01-plain.txt')`. */
+export function repoFile(path: string): string {
+  return join(repoRoot, path);
+}
+
+/** Like `startServer`, for any directory (copied first).
+ *  Example: `await startServerOn('/tmp/generated-repo')`. */
+export function startServerOn(source: string): Promise<Server> {
   const dir = mkdtempSync(join(tmpdir(), 'aldente-e2e-'));
-  cpSync(join(repoRoot, 'fixtures', fixture), join(dir, 'repo'), { recursive: true });
+  cpSync(source, join(dir, 'repo'), { recursive: true });
   const child: ChildProcess = spawn(binary, ['serve', '--no-open', '--json', join(dir, 'repo')], {
     env: { ...process.env, ALDENTE_CACHE_DIR: join(dir, 'cache') },
     stdio: ['ignore', 'pipe', 'inherit'],

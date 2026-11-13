@@ -4,12 +4,16 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Api, initToken } from './api';
+import { libraryHighlight } from './crater';
+import { CraterView, type CraterRequest } from './CraterView';
 import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
+import { LibraryList, LibraryPanel } from './Libraries';
+import { TraceDialog } from './TraceDialog';
 import { layout } from './layout';
 import { certaintyColor, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
-import type { BlindSpot, GNode, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
+import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
 import { TreeView, dirChildren, findDir, topDirIds } from './tree';
 import { TOP_CHOICES, loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
@@ -46,6 +50,10 @@ export function App() {
   const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
   const [tree, setTree] = useState<TreeDir | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [crater, setCrater] = useState<CraterRequest | null>(null);
+  const [traceOpen, setTraceOpen] = useState(false);
+  const [libs, setLibs] = useState<LibrarySummary[]>([]);
+  const [libUsage, setLibUsage] = useState<LibraryUsage | null>(null);
   const collapsedRef = useRef(collapsed);
   // Read at load time, so the root views (and the effect that loads the
   // first one) do not change identity when these do.
@@ -126,6 +134,10 @@ export function App() {
     api
       .blindspots()
       .then((r) => setSpots(r.blindspots))
+      .catch(fail);
+    api
+      .libs()
+      .then((r) => setLibs(r.libraries))
       .catch(fail);
     show(roots[initialPrefs.view], []);
   }, [api, show, fail, roots, initialPrefs]);
@@ -283,7 +295,31 @@ export function App() {
     [graph, neighbors, select],
   );
 
-  const tools: Tools = { open, expandHere: (id) => void expandHere(id), neighbors: (id) => void neighbors(id), focus, follow };
+  const openCrater = useCallback((n: GNode, direction: 'forward' | 'reverse') => {
+    setCrater({ kind: 'seeds', ids: [n.id], label: labelFor(n), direction });
+  }, []);
+
+  const tools: Tools = { open, expandHere: (id) => void expandHere(id), neighbors: (id) => void neighbors(id), focus, follow, crater: openCrater };
+
+  /** Selects a library: lists its call sites and highlights its users. */
+  const pickLibrary = useCallback(
+    (id: string) => {
+      api
+        .lib(id)
+        .then((u) => {
+          setLibUsage(u);
+          redraw();
+        })
+        .catch(fail);
+    },
+    [api, fail, redraw],
+  );
+  const libHighlight = useMemo(
+    () => (libUsage ? { nodes: libraryHighlight(libUsage, graph.nodes()), edges: new Set<string>() } : null),
+    // `version` changes whenever the canvas does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [libUsage, graph, version],
+  );
 
   const onDoubleClick = useCallback(
     (id: string) => {
@@ -406,6 +442,7 @@ export function App() {
             {error}
           </p>
         )}
+        <LibraryList libs={libs} selected={libUsage?.library ?? null} onSelect={pickLibrary} />
         <details className="blindspots" data-testid="blindspots" open={spots.length > 0 && spots.length <= 20}>
           <summary>Blind spots ({spots.length})</summary>
           <p className="muted small-print">What the analyzer cannot see through. Click one to show it.</p>
@@ -457,6 +494,10 @@ export function App() {
       )}
       {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}
       <main className="center">
+        {crater ? (
+          <CraterView key={JSON.stringify(crater)} api={api} request={crater} onClose={() => setCrater(null)} onSelect={select} />
+        ) : (
+        <>
         <nav className="breadcrumb" data-testid="breadcrumb" aria-label="What is open">
           {crumbs.map((c, i) => (
             <span key={`${i}-${c.label}`}>
@@ -503,6 +544,9 @@ export function App() {
               </select>
             </label>
           )}
+          <button type="button" className="paste-trace" data-testid="paste-trace" onClick={() => setTraceOpen(true)} title="Paste a stack trace and pin a crater to it">
+            Paste trace
+          </button>
           <span className="panel-toggles">
             <button
               type="button"
@@ -524,11 +568,35 @@ export function App() {
             </button>
           </span>
         </nav>
-        <GraphView graph={graph} version={version} selected={selected} isHidden={isHidden} isEdgeHidden={isEdgeHidden} visibleEdges={visibleEdges} onSelect={select} onDoubleClick={onDoubleClick} onDeselect={deselect} />
+        <GraphView
+          graph={graph}
+          version={version}
+          selected={selected}
+          isHidden={isHidden}
+          isEdgeHidden={isEdgeHidden}
+          visibleEdges={visibleEdges}
+          onSelect={select}
+          onDoubleClick={onDoubleClick}
+          onDeselect={deselect}
+          highlight={libHighlight}
+        />
+        </>
+        )}
       </main>
       {panels.rightOpen && <Splitter side="right" width={panels.right} onResize={(right) => setPanels({ right })} />}
       {panels.rightOpen && (
       <aside className="right">
+        {libUsage && (
+          <LibraryPanel
+            u={libUsage}
+            highlighted={libHighlight?.nodes.size ?? 0}
+            onClose={() => {
+              setLibUsage(null);
+              redraw();
+            }}
+            onFollow={follow}
+          />
+        )}
         {details ? (
           <Details d={details} unit={units.get(details.node.id)} tools={tools} onClose={deselect} />
         ) : (
@@ -540,6 +608,16 @@ export function App() {
         )}
         {source && <SourcePanel key={selected ?? ''} source={source} />}
       </aside>
+      )}
+      {traceOpen && (
+        <TraceDialog
+          api={api}
+          onClose={() => setTraceOpen(false)}
+          onPin={(text) => {
+            setTraceOpen(false);
+            setCrater({ kind: 'trace', text, label: 'a pasted trace' });
+          }}
+        />
       )}
     </div>
   );

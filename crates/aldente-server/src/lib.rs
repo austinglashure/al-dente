@@ -21,7 +21,7 @@ use aldente_model::{Diagnostic, SnapshotInfo};
 use axum::Router;
 use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use rust_embed::RustEmbed;
 
 /// The built UI, `ui/dist` at the repository root.
@@ -45,6 +45,8 @@ pub struct AppState {
     pub cache: aldente_graph::cache::Cache,
     /// The directory tree of the snapshot, built on first use.
     pub tree: std::sync::OnceLock<aldente_model::tree::TreeDir>,
+    /// The crater index of `snapshot.graph`, built on first use.
+    pub crater: std::sync::OnceLock<aldente_analysis::crater::CraterIndex>,
 }
 
 impl AppState {
@@ -81,7 +83,16 @@ impl AppState {
             timings: false,
             cache: aldente_graph::cache::Cache::default(),
             tree: std::sync::OnceLock::new(),
+            crater: std::sync::OnceLock::new(),
         }
+    }
+
+    /// The crater index (built once).
+    ///
+    /// Example: `state.crater_index().len()` is the number of nodes.
+    pub fn crater_index(&self) -> &aldente_analysis::crater::CraterIndex {
+        self.crater
+            .get_or_init(|| aldente_analysis::crater::CraterIndex::new(&self.snapshot.graph))
     }
 }
 
@@ -99,6 +110,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/search", get(api::search))
         .route("/api/v1/blindspots", get(api::blindspots))
         .route("/api/v1/libs", get(api::libs))
+        .route("/api/v1/crater", get(api::crater))
+        .route("/api/v1/checklist", get(api::checklist))
+        .route("/api/v1/trace/normalize", post(api::trace_normalize))
+        .route("/api/v1/crater/trace", post(api::crater_trace))
         .route("/api/v1/lib", get(api::lib))
         .route("/api/v1/tree", get(api::tree))
         .route("/api/v1/tree/graph", get(api::tree_graph));
