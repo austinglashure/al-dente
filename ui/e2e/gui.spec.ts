@@ -306,3 +306,25 @@ test.describe('requests', () => {
     }
   });
 });
+
+test.describe('remembered view', () => {
+  test('a reload reopens the namespace map with the chosen Top', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await expect(listed(page, 'unit:services/orders')).toBeVisible();
+      await page.getByTestId('view-namespaces').click();
+      await page.getByTestId('top').selectOption('500');
+      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+
+      await page.reload();
+      await expect(page.getByTestId('view-namespaces')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('top')).toHaveValue('500');
+      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await expect(listed(page, 'unit:services/orders')).toHaveCount(0);
+    } finally {
+      server.close();
+    }
+  });
+});

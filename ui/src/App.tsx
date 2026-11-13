@@ -10,6 +10,7 @@ import { layout } from './layout';
 import { certaintyColor, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GNode, Payload, ShowResult, UnitInfo } from './types';
+import { TOP_CHOICES, loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
 interface Crumb {
@@ -37,8 +38,10 @@ export function App() {
   const [panels, setPanels] = usePanels();
   const [spots, setSpots] = useState<BlindSpot[]>([]);
   const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
-  const [view, setView] = useState<'units' | 'namespaces'>('units');
-  const [top, setTop] = useState(250);
+  const [initialPrefs] = useState(loadViewPrefs);
+  const [view, setView] = useState<'units' | 'namespaces'>(initialPrefs.view);
+  const [top, setTop] = useState(initialPrefs.top);
+  useEffect(() => saveViewPrefs({ view, top }), [view, top]);
   const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
   // Read at load time, so the root views (and the effect that loads the
   // first one) do not change identity when these do.
@@ -119,8 +122,8 @@ export function App() {
       .blindspots()
       .then((r) => setSpots(r.blindspots))
       .catch(fail);
-    show(roots.units, []);
-  }, [api, show, fail, roots]);
+    show(roots[initialPrefs.view], []);
+  }, [api, show, fail, roots, initialPrefs]);
 
   // A new Top value reloads the namespace map.
   useEffect(() => {
@@ -428,7 +431,7 @@ export function App() {
                   setNotice(null);
                 }}
               >
-                {[100, 250, 500, 2000].map((n) => (
+                {TOP_CHOICES.map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
