@@ -171,7 +171,7 @@ pub fn resolve<'a>(
 ) -> Resolved {
     let mut t = Timings::default();
     let mut r = t.time_detail("resolve:setup", || Resolver::new(unit, run, indexes, ctx));
-    let steps: [(&str, fn(&mut Resolver<'a>)); 14] = [
+    let steps: [Step<'a>; 14] = [
         ("resolve:namespaces", Resolver::namespaces),
         ("resolve:definitions", Resolver::definitions),
         ("resolve:impls", Resolver::impls),
@@ -197,6 +197,9 @@ pub fn resolve<'a>(
     out.batch.timings = t;
     out
 }
+
+/// One resolver step and its `--timings` label.
+type Step<'a> = (&'static str, fn(&mut Resolver<'a>));
 
 /// What keeps edges distinct: `(from, to, kind, reason, lang)`.
 type EdgeKey = (NodeId, NodeId, EdgeKind, Option<Reason>, Option<Lang>);
