@@ -47,6 +47,8 @@ pub struct AppState {
     pub tree: std::sync::OnceLock<aldente_model::tree::TreeDir>,
     /// The crater index of `snapshot.graph`, built on first use.
     pub crater: std::sync::OnceLock<aldente_analysis::crater::CraterIndex>,
+    /// The static coverage estimate, computed on first use.
+    pub coverage: std::sync::OnceLock<aldente_model::coverage::CoverageReport>,
 }
 
 impl AppState {
@@ -84,7 +86,21 @@ impl AppState {
             cache: aldente_graph::cache::Cache::default(),
             tree: std::sync::OnceLock::new(),
             crater: std::sync::OnceLock::new(),
+            coverage: std::sync::OnceLock::new(),
         }
+    }
+
+    /// The static coverage estimate (computed once).
+    ///
+    /// Example: for clj-mini, `shop.pricing/price` is `direct`.
+    pub fn coverage(&self) -> &aldente_model::coverage::CoverageReport {
+        self.coverage.get_or_init(|| {
+            aldente_analysis::coverage::coverage(
+                &self.snapshot.graph,
+                aldente_analysis::coverage::DEFAULT_DEPTH,
+                None,
+            )
+        })
     }
 
     /// The crater index (built once).

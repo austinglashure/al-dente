@@ -149,17 +149,6 @@ pub struct RemovedSymbol {
     pub former_callers: Option<Vec<NodeId>>,
 }
 
-/// Whether tests exercise a symbol. Filled from Phase 4 on.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(rename_all = "kebab-case")]
-pub enum Coverage {
-    Tested,
-    Indirect,
-    Untested,
-}
-
 /// One place to verify after a change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[schemars(transform = crate::schema::all_keys_required)]
@@ -171,8 +160,8 @@ pub struct ChecklistRow {
     pub loc: Option<Location>,
     pub distance: u32,
     pub path_certainty: Certainty,
-    /// Null until coverage is computed (Phase 4).
-    pub coverage: Option<Coverage>,
+    /// Estimated test coverage; null when not computed.
+    pub coverage: Option<crate::coverage::CoverageStatus>,
     pub entry_point: bool,
 }
 

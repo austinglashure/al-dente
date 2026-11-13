@@ -4,9 +4,9 @@ expression: "env.text(&[\"crater\", \"shop.pricing/half-off\", \"--direction\", 
 ---
 reverse crater of clj:.//shop.pricing/half-off   depth 6   min likely   4 symbols
 certain
-  src/shop/pricing.clj:9:1        shop.pricing/half-off
+  src/shop/pricing.clj:9:1        shop.pricing/half-off  indirect
 likely
-  src/shop/pricing.clj:12:1       shop.pricing/price@:book
+  src/shop/pricing.clj:12:1       shop.pricing/price@:book  direct
   test/shop/pricing_test.clj:8:1  shop.pricing-test/book-is-half-off  entry-point
-  src/shop/pricing.clj:5:1        shop.pricing/price
+  src/shop/pricing.clj:5:1        shop.pricing/price  direct
 3 more at possible (--min-certainty possible)

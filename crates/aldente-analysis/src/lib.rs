@@ -3,6 +3,7 @@
 //! See `docs/plan/02-architecture.md`.
 
 pub mod churn;
+pub mod coverage;
 pub mod crater;
 pub mod glob;
 pub mod libraries;

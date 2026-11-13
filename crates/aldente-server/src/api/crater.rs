@@ -104,7 +104,11 @@ pub async fn checklist(State(s): St, RawQuery(q): RawQuery) -> Response {
             &s,
             "checklist",
             aldente_model::crater::Checklist {
-                rows: aldente_analysis::crater::checklist(&s.snapshot.graph, &r),
+                rows: {
+                    let mut rows = aldente_analysis::crater::checklist(&s.snapshot.graph, &r);
+                    aldente_analysis::coverage::annotate_checklist(&mut rows, s.coverage());
+                    rows
+                },
                 seeds: r.seeds,
                 direction: r.direction,
                 depth: r.depth,

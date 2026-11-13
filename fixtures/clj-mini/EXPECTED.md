@@ -256,3 +256,20 @@ Symbols and impls nothing reaches from an entry point (`-main`, `^:export init`)
 | `shop.ui.subs/reg-sub@:cart/items` | subscribed only from `cart-view` |
 
 Everything else is alive: `shop.audit/record!` (literal `requiring-resolve` from `audit-hook`), the four `price` methods (dispatch from `checkout` and the tests), `Card` (through `->Card`), `Chargeable` (its impls are alive).
+
+## Static coverage (Phase 4, WP4.4)
+
+Tests are `shop.pricing-test/food-is-taxed` and `book-is-half-off`. Depth limit 4. Hand-derived from the source and the edge tables above:
+
+| Symbol | Status | Why |
+|---|---|---|
+| `shop.pricing/price` | direct | both tests call it (certain) |
+| `shop.pricing/price@:food` | direct | `food-is-taxed` dispatches to it with a literal `:food` (likely) |
+| `shop.pricing/price@:book` | direct | `book-is-half-off` dispatches with `:book` (likely) |
+| `shop.pricing/price@:default` | weak | the tests reach it only through `possible` dispatch |
+| `shop.util/apply-discount`, `shop.pricing/half-off` | indirect | from `price@:book`, distance 2 |
+| `shop.util/clamp` | indirect | from `apply-discount`, distance 3 |
+| `shop.pricing/price@:gift` | untested | no test dispatches `:gift`; only `checkout` does, which no test reaches |
+| every other symbol and impl (`shop.core/checkout`, `shop.inventory/restock!`, …) | untested | |
+
+`coverage/lcov.info` is a hand-written Cloverage-style LCOV report (paths relative to the source root). Imported, it gives `price@:food`, `half-off` and `shop.inventory/restock!` measured 1.0 and `price@:book` measured 0.0, so the disagreement list is exactly: `price@:book` (`estimated-covered-measured-zero`) and `restock!` (`measured-covered-estimated-untested`).

@@ -200,7 +200,16 @@ pub fn run(args: &CraterArgs, json: bool) -> anyhow::Result<ExitCode> {
             direction: result.direction,
             depth: result.depth,
             min_certainty: result.min_certainty,
-            rows: checklist(graph, &result),
+            rows: {
+                let mut rows = checklist(graph, &result);
+                let cov = aldente_analysis::coverage::coverage(
+                    graph,
+                    aldente_analysis::coverage::DEFAULT_DEPTH,
+                    None,
+                );
+                aldente_analysis::coverage::annotate_checklist(&mut rows, &cov);
+                rows
+            },
             hidden_below_min: result.hidden_below_min,
             truncated: result.truncated,
             diff: result.diff.clone(),

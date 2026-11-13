@@ -7,6 +7,7 @@ pub mod blindspot;
 pub mod cache;
 pub mod certainty;
 pub mod churn;
+pub mod coverage;
 pub mod crater;
 pub mod diagnostic;
 pub mod doctor;

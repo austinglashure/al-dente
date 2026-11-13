@@ -29,6 +29,8 @@ enum Command {
     Cache(commands::cache::CacheArgs),
     /// Change frequency and co-change coupling from git history.
     Churn(commands::churn::ChurnArgs),
+    /// Estimated test coverage per symbol, namespace and unit.
+    Coverage(commands::coverage::CoverageArgs),
     /// The impact crater: everything seeds can reach, or that reaches them.
     Crater(commands::crater::CraterArgs),
     /// Check that git, clj-kondo and the cache directory are usable.
@@ -67,6 +69,7 @@ fn main() -> std::process::ExitCode {
         Command::Show(args) => commands::show::run(args, cli.json),
         Command::Cache(args) => commands::cache::run(args, cli.json),
         Command::Churn(args) => commands::churn::run(args, cli.json),
+        Command::Coverage(args) => commands::coverage::run(args, cli.json),
         Command::Crater(args) => commands::crater::run(args, cli.json),
         Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),
