@@ -1,0 +1,23 @@
+---
+source: crates/aldente-analysis/src/hotspots/tests.rs
+assertion_line: 52
+expression: render(&r)
+---
+findings:
+0.500 dead-code clj:services/billing//billing.core/charge! []
+    billing.core/charge!: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:services/orders//config/port []
+    config/port: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:services/orders//orders.core/charge! []
+    orders.core/charge!: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:services/orders//orders.core/port []
+    orders.core/port: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+risk (top 10):
+0.3852 importance=0.385 exposure=1.00 clj:services/billing//billing.core/-main
+0.3696 importance=0.370 exposure=1.00 clj:services/billing//config/port
+0.3696 importance=0.370 exposure=1.00 clj:services/orders//config/port
+0.2400 importance=0.800 exposure=0.30 clj:libs/common//common.util/sum
+0.1852 importance=0.185 exposure=1.00 clj:services/billing//billing.core/charge!
+0.1852 importance=0.185 exposure=1.00 clj:services/orders//orders.core/charge!
+0.1852 importance=0.185 exposure=1.00 clj:services/orders//orders.core/port
+0.0185 importance=0.185 exposure=0.10 clj:services/orders//orders.core/total

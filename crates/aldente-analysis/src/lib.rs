@@ -6,6 +6,7 @@ pub mod churn;
 pub mod coverage;
 pub mod crater;
 pub mod glob;
+pub mod hotspots;
 pub mod libraries;
 pub mod measures;
 pub mod textdiff;

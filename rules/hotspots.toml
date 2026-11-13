@@ -1,0 +1,55 @@
+# Hotspot findings (docs/plan/09-network-and-coverage.md, "Findings, not just
+# numbers"). Percentiles are within the repository, 0–100: 99 means the top
+# 1 percent. A node must also have a value above zero to count.
+# Compiled into the binary; `aldente hotspots --rules <file>` reads a copy
+# instead, so thresholds change without recompiling. Never read from an
+# analyzed repository.
+
+[god-object]
+# God-object score (mean percentile of fan-out, hub, size, core, namespaces called).
+percentile = 99.0
+
+[must-be-bulletproof]
+# PageRank (importance that collects where calls lead).
+pagerank-percentile = 98.0
+# Or: dominates more than this share of the code reachable from entry points.
+dominator-share = 0.10
+
+[bottleneck]
+betweenness-percentile = 99.0
+# Also require the node to be an articulation point.
+articulation = true
+
+[cycle]
+# Namespace and unit cycles are always findings; symbol-level ones from this size.
+symbol-min-size = 4
+
+[hidden-coupling]
+# Needs history (`--with-churn`).
+min-support = 3
+min-confidence = 0.5
+
+[risky-untested]
+risk-percentile = 95.0
+# Only symbols whose estimated status is one of these.
+statuses = ["untested", "weak"]
+
+[misplaced-code]
+# A symbol whose community has at least this many members and this share of
+# them in one other namespace.
+min-community = 4
+min-share = 0.6
+
+[dead-code]
+enabled = true
+
+[risk]
+# importance = pagerank·w1 + fan-in·w2 + dominator reach·w3, each scaled to 0..1.
+pagerank = 0.5
+fan-in = 0.3
+dominator = 0.2
+# exposure by estimated status (or 1 − measured coverage).
+untested = 1.0
+weak = 0.7
+indirect = 0.3
+direct = 0.1

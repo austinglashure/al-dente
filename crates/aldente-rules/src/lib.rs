@@ -4,6 +4,7 @@
 //! analyzed repository: its configuration is data, not rules.
 
 pub mod clj;
+pub mod hotspots;
 pub mod keyword_dispatch;
 pub mod trace;
 

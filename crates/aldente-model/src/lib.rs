@@ -13,6 +13,7 @@ pub mod diagnostic;
 pub mod doctor;
 pub mod envelope;
 pub mod graph;
+pub mod hotspots;
 pub mod id;
 pub mod kinds;
 pub mod libraries;

@@ -1,0 +1,55 @@
+---
+source: crates/aldente-analysis/src/hotspots/tests.rs
+assertion_line: 46
+expression: render(&r)
+---
+findings:
+0.978 risky-untested clj:.//shop.inventory/stock [exposure=1.000 importance=0.770 risk=0.770]
+    shop.inventory/stock is heavily used (importance 0.77) but no test reaches it; add a test that calls it.
+0.956 risky-untested clj:.//shop.model/format-money [exposure=1.000 importance=0.755 risk=0.755]
+    shop.model/format-money is heavily used (importance 0.76) but no test reaches it; add a test that calls it.
+0.696 must-be-bulletproof clj:.//shop.core/checkout [dominates=17.000 fan_in=1.000 pagerank=0.021 pagerank_percentile=69.565]
+    shop.core/checkout: every path from the entry points to 17 functions passes through it; test it directly and harden its error handling.
+0.500 dead-code clj:.//shop.interop/new-id []
+    shop.interop/new-id: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.interop/shout []
+    shop.interop/shout: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.inventory/available []
+    shop.inventory/available: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.inventory/restock! []
+    shop.inventory/restock!: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.payment/->Voucher []
+    shop.payment/->Voucher: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.payment/Voucher []
+    shop.payment/Voucher: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.payment/free-charger []
+    shop.payment/free-charger: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.payment/map->Card []
+    shop.payment/map->Card: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.payment/map->Voucher []
+    shop.payment/map->Voucher: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.plugins/load-plugin []
+    shop.plugins/load-plugin: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.plugins/run-script []
+    shop.plugins/run-script: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.ui.events/reg-event-db@:order/submitted []
+    shop.ui.events/reg-event-db@:order/submitted: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.ui.events/reg-event-fx@:order/submit []
+    shop.ui.events/reg-event-fx@:order/submit: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.ui.subs/reg-sub@:cart/items []
+    shop.ui.subs/reg-sub@:cart/items: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.ui.views/cart-view []
+    shop.ui.views/cart-view: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+0.500 dead-code clj:.//shop.ui.views/submit-button []
+    shop.ui.views/submit-button: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller.
+risk (top 10):
+0.7700 importance=0.770 exposure=1.00 clj:.//shop.inventory/stock
+0.7554 importance=0.755 exposure=1.00 clj:.//shop.model/format-money
+0.5426 importance=0.543 exposure=1.00 clj:.//shop.payment/charge
+0.5255 importance=0.526 exposure=1.00 clj:.//shop.core/checkout
+0.4345 importance=0.435 exposure=1.00 clj:.//shop.ui.events/reg-event-db@:order/submitted
+0.4008 importance=0.401 exposure=1.00 clj:.//shop.audit/record!
+0.3946 importance=0.395 exposure=1.00 clj:.//shop.core/-main
+0.3864 importance=0.386 exposure=1.00 clj:.//shop.plugins/audit-hook
+0.3839 importance=0.384 exposure=1.00 clj:.//shop.ui.events/reg-event-fx@:order/submit
+0.3839 importance=0.384 exposure=1.00 clj:.//shop.ui.subs/reg-sub@:cart/items
