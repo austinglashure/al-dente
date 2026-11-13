@@ -1,5 +1,5 @@
 // The bar above the canvas: the breadcrumb of what is open, the overview
-// switch, the Top selector, "Paste trace" and the panel toggles.
+// switch, the Top selector, "Paste trace", Help and the panel toggles.
 
 import type { Panels } from './panels';
 import { TOP_CHOICES } from './viewPrefs';
@@ -18,6 +18,7 @@ interface Props {
   top: number;
   onTop: (n: number) => void;
   onPasteTrace: () => void;
+  onHelp: () => void;
   panels: Panels;
   setPanels: (p: Partial<Panels>) => void;
 }
@@ -67,6 +68,9 @@ export function CanvasBar(p: Props) {
       )}
       <button type="button" className="paste-trace" data-testid="paste-trace" onClick={p.onPasteTrace} title="Paste a stack trace and pin a crater to it">
         Paste trace
+      </button>
+      <button type="button" className="help-button" data-testid="help" onClick={p.onHelp} title="What the measures, findings and coverage statuses mean">
+        Help
       </button>
       <span className="panel-toggles">
         <button

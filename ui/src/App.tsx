@@ -16,6 +16,7 @@ import { CanvasBar } from './CanvasBar';
 import { LeftPanel } from './LeftPanel';
 import { LibraryPanel } from './Libraries';
 import { SourcePanel } from './SourcePanel';
+import { HelpDialog } from './HelpDialog';
 import { TraceDialog } from './TraceDialog';
 import { layout, layoutRuns } from './layout';
 import { edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
@@ -55,6 +56,7 @@ export function App() {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [crater, setCrater] = useState<CraterRequest | null>(null);
   const [traceOpen, setTraceOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [libs, setLibs] = useState<LibrarySummary[]>([]);
   const [libUsage, setLibUsage] = useState<LibraryUsage | null>(null);
   const [overlay, setOverlay] = useState<OverlayKind>('risk');
@@ -436,6 +438,7 @@ export function App() {
             setNotice(null);
           }}
           onPasteTrace={() => setTraceOpen(true)}
+          onHelp={() => setHelpOpen(true)}
           panels={panels}
           setPanels={setPanels}
         />
@@ -486,6 +489,7 @@ export function App() {
         </details>
       </aside>
       )}
+      {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
       {traceOpen && (
         <TraceDialog
           api={api}

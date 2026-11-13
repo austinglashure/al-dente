@@ -154,6 +154,19 @@ test.describe('panels', () => {
     await expect(page.getByTestId('hint')).toBeVisible();
   });
 
+  test('Help opens the measures guide with diagrams, and closes', async ({ page }) => {
+    guardNetwork(page);
+    await page.goto(server.url);
+    await page.getByTestId('help').click();
+    const dialog = page.getByTestId('help-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('[data-guide-entry="pagerank"]')).toContainText('What it tells you');
+    await expect(dialog.locator('[data-guide-entry="dominates"] svg')).toBeVisible();
+    await page.screenshot({ path: 'test-results/help-dialog.png' });
+    await page.getByTestId('help-close').click();
+    await expect(dialog).toHaveCount(0);
+  });
+
   test('panels can be hidden and resized, and remember it', async ({ page }) => {
     guardNetwork(page);
     await page.goto(server.url);

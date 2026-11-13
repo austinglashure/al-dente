@@ -63,7 +63,7 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .tree .name.dir { color: #54278f; }
 .tree li.file { padding-left: 1.2em; }
 .tree li.file.not-analyzed span { font-style: italic; }
-.paste-trace { margin-left: 12px; font-size: 0.85rem; border: 1px solid #c6dbef !important; border-radius: 4px; padding: 1px 8px !important; }
+.paste-trace, .help-button { margin-left: 12px; font-size: 0.85rem; border: 1px solid #c6dbef !important; border-radius: 4px; padding: 1px 8px !important; }
 .crater-view { display: flex; flex-direction: column; height: 100%; }
 .crater-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid #ddd; background: #fafafa; }
 .crater-bar label { display: inline-flex; align-items: center; gap: 4px; margin: 0; font-size: 0.85rem; }
@@ -117,3 +117,15 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .measures-row span { text-align: right; overflow: hidden; }
 .measures-row:hover { background: #f5f5f5; }
 .measures-row.selected { background: #deebf7; }
+
+/* Help: measures guide */
+.guide h3 { margin: 18px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
+.guide h4 { margin: 12px 0 4px; }
+.guide h4 code { font-size: 0.75rem; font-weight: normal; }
+.guide p { margin: 4px 0; line-height: 1.45; }
+.guide-contents { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.85rem; margin: 6px 0 4px; }
+.guide-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 16px; align-items: start; }
+.guide-figure { margin: 0; }
+.guide-figure svg { width: 100%; height: auto; display: block; }
+@media (max-width: 640px) { .guide-row { grid-template-columns: 1fr; } }
+.help-button { margin-left: 6px; }
