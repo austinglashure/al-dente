@@ -9,6 +9,7 @@
 //! Namespaces this unit does not define become `external` targets; the
 //! graph build re-targets those that another unit defines.
 
+mod comments;
 mod definitions;
 mod dispatch;
 mod dynamic;
@@ -186,7 +187,7 @@ pub fn resolve<'a>(
 ) -> Resolved {
     let mut t = Timings::default();
     let mut r = t.time_detail("resolve:setup", || Resolver::new(unit, run, indexes, ctx));
-    let steps: [Step<'a>; 14] = [
+    let steps: [Step<'a>; 15] = [
         ("resolve:namespaces", Resolver::namespaces),
         ("resolve:definitions", Resolver::definitions),
         ("resolve:impls", Resolver::impls),
@@ -204,6 +205,7 @@ pub fn resolve<'a>(
         ("resolve:macro-blind-spots", Resolver::macro_blind_spots),
         ("resolve:libraries", Resolver::libraries),
         ("resolve:server-handlers", Resolver::server_handlers),
+        ("resolve:comment-blocks", Resolver::comment_blocks),
     ];
     for (label, step) in steps {
         t.time_detail(label, || step(&mut r));

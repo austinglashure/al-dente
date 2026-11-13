@@ -1320,3 +1320,42 @@ fn top_namespaces_by_call_counts() {
     assert_eq!(same.nodes.len(), all.nodes.len());
     assert!(!same.truncated);
 }
+
+/// Calls inside `(comment …)` are `possible` (M3 decision, 2026-11-13):
+/// every row of `fixtures/clj-rules/comment-blocks/EXPECTED.md`.
+#[test]
+fn comment_block_calls_are_possible() {
+    use Certainty::{Certain, Possible};
+    let g = analyze_fixture(&fixture_dir("clj-rules/comment-blocks")).graph;
+    let short = |id: &NodeId| id.to_string().trim_start_matches("clj:.//").to_owned();
+    let calls: BTreeSet<(String, String, Certainty)> = g
+        .edges
+        .iter()
+        .filter(|e| e.kind == EdgeKind::Calls && !e.to.to_string().starts_with("ext:"))
+        .map(|e| (short(&e.from), short(&e.to), e.certainty.unwrap()))
+        .collect();
+    let want: BTreeSet<(String, String, Certainty)> = [
+        ("app.core/used", "app.core/helper", Certain),
+        ("app.core/also", "app.core/helper", Certain),
+        ("app.core/<top>@L8", "app.core/helper", Possible),
+        ("app.core/<top>@L8", "app.core/used", Possible),
+        (
+            "app.core/<top>@L8",
+            "hole:dynamic-eval@src/app/core.clj:11:3",
+            Possible,
+        ),
+        ("app.core/<top>@L15", "app.core/also", Possible),
+    ]
+    .into_iter()
+    .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c))
+    .collect();
+    assert_eq!(calls, want);
+    // Everything else inside the forms (calls into clojure.core) is possible too.
+    for e in g
+        .edges
+        .iter()
+        .filter(|e| e.from.to_string().contains("<top>"))
+    {
+        assert_eq!(e.certainty, Some(Possible), "{} -> {}", e.from, e.to);
+    }
+}

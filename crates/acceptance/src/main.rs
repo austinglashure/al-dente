@@ -43,6 +43,9 @@ struct Repo {
     lang: String,
     #[serde(default)]
     fact: Vec<Fact>,
+    /// M3: a real stack trace from this repository (path from the
+    /// workspace root); with `--m3`, every repository frame must map `exact`.
+    trace: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -246,6 +249,17 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
             out_dir.join(format!("{}-m3-handcheck.txt", repo.name)),
             text,
         )?;
+        if let Some(trace) = &repo.trace {
+            let root_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+            let text = std::fs::read_to_string(root_dir.join(trace))
+                .with_context(|| format!("reading {trace}"))?;
+            let (mapped, total) = m3::trace_check(&outcome.snapshot.graph, &text)?;
+            println!("trace {trace}: {mapped} of {total} repository frames map exact");
+            if mapped != total || total == 0 {
+                println!("  FAIL not every repository frame maps exact");
+                failed += 1;
+            }
+        }
     }
     Ok(failed)
 }

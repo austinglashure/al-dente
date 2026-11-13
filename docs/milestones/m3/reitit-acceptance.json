@@ -1,10 +1,13 @@
 {
-  "analyze_seconds": 1.5592445179999999,
+  "analyze_seconds": 1.485856464,
   "edges_by_kind_certainty_reason": {
-    "calls/certain/direct": 7672,
-    "calls/certain/dynamic": 7,
-    "calls/certain/interop": 200,
+    "calls/certain/direct": 7386,
+    "calls/certain/dynamic": 6,
+    "calls/certain/interop": 190,
     "calls/likely/keyword-dispatch": 5,
+    "calls/possible/direct": 286,
+    "calls/possible/dynamic": 1,
+    "calls/possible/interop": 10,
     "calls/possible/param-flow": 14,
     "contains/-/-": 1574,
     "dispatches/likely/protocol-dispatch": 1,
@@ -14,13 +17,15 @@
     "provides/certain/direct": 22,
     "provides/likely/name-match": 72,
     "provides/possible/name-match": 59,
-    "references/certain/interop": 70,
-    "references/likely/value-ref": 1695,
+    "references/certain/interop": 68,
+    "references/likely/value-ref": 1627,
+    "references/possible/interop": 2,
     "references/possible/keyword-dispatch": 1,
     "references/possible/macro-body": 10,
+    "references/possible/value-ref": 68,
     "requires/-/-": 777
   },
-  "fetch_seconds": 26.328762134,
+  "fetch_seconds": 27.307009008,
   "orphans": {
     "eligible": 615,
     "largest": [
@@ -168,9 +173,9 @@
     ],
     "edge_certainty": {
       "calls": {
-        "certain": 7879,
+        "certain": 7582,
         "likely": 5,
-        "possible": 14
+        "possible": 311
       },
       "dispatches": {
         "likely": 1,
@@ -182,9 +187,9 @@
         "possible": 59
       },
       "references": {
-        "certain": 70,
-        "likely": 1695,
-        "possible": 11
+        "certain": 68,
+        "likely": 1627,
+        "possible": 81
       }
     },
     "edges": {

@@ -292,3 +292,25 @@ fn render(craters: &[Timed], index_seconds: f64, sample: &[SampleEntry]) -> Stri
     }
     s
 }
+
+/// Normalizes `text` against `g` and counts the repository frames (those
+/// whose namespace the graph defines) and how many of them map `exact`.
+///
+/// Example: ring's `wrap-cookies-duration.txt` gives `(8, 8)`.
+pub fn trace_check(g: &Graph, text: &str) -> anyhow::Result<(usize, usize)> {
+    use aldente_model::trace::{MatchLevel, Trace};
+    let report = aldente_analysis::trace::normalize(text, g)?;
+    let index = aldente_analysis::trace::TraceIndex::new(g);
+    let mut stack: Vec<&Trace> = report.traces.iter().collect();
+    let (mut mapped, mut total) = (0, 0);
+    while let Some(t) = stack.pop() {
+        stack.extend(t.causes.iter());
+        for f in &t.frames {
+            if f.namespace.as_deref().is_some_and(|ns| index.is_repo(ns)) {
+                total += 1;
+                mapped += usize::from(f.match_level == MatchLevel::Exact);
+            }
+        }
+    }
+    Ok((mapped, total))
+}

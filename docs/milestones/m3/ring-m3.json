@@ -1,5 +1,5 @@
 {
-  "index_seconds": 0.003953512,
+  "index_seconds": 0.004167628,
   "craters": [
     {
       "seed": "clj:ring-core//ring.middleware.cookies/wrap-cookies",
@@ -8,7 +8,7 @@
       "nodes": 62,
       "hidden_below_min": 4,
       "truncated": false,
-      "seconds": 0.000156037
+      "seconds": 0.000166098
     },
     {
       "seed": "clj:ring-core//ring.middleware.cookies/wrap-cookies",
@@ -17,7 +17,7 @@
       "nodes": 34,
       "hidden_below_min": 0,
       "truncated": false,
-      "seconds": 0.00011499
+      "seconds": 0.000121721
     },
     {
       "seed": "clj:ring-core//ring.util.io/string-input-stream",
@@ -26,7 +26,7 @@
       "nodes": 3,
       "hidden_below_min": 0,
       "truncated": false,
-      "seconds": 0.000011765
+      "seconds": 0.000012548
     },
     {
       "seed": "clj:ring-core//ring.util.io/string-input-stream",
@@ -35,7 +35,7 @@
       "nodes": 37,
       "hidden_below_min": 0,
       "truncated": false,
-      "seconds": 0.000094773
+      "seconds": 0.000099877
     },
     {
       "seed": "clj:ring-core//ring.middleware.session/wrap-session",
@@ -44,7 +44,7 @@
       "nodes": 75,
       "hidden_below_min": 41,
       "truncated": true,
-      "seconds": 0.000169679
+      "seconds": 0.000178387
     },
     {
       "seed": "clj:ring-core//ring.middleware.session/wrap-session",
@@ -53,7 +53,7 @@
       "nodes": 17,
       "hidden_below_min": 0,
       "truncated": false,
-      "seconds": 0.00006096
+      "seconds": 0.000062908
     }
   ],
   "sample": [

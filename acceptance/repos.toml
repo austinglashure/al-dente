@@ -17,6 +17,9 @@ name = "ring"
 url = "https://github.com/ring-clojure/ring"
 rev = "5f745bbc7daefa097d7e9cf6394b44dce51cf597"
 lang = "clj"
+# M3: produced by running ring-core's documented failure (see
+# fixtures/traces/jvm/ring/gen.clj).
+trace = "fixtures/traces/jvm/ring/wrap-cookies-duration.txt"
 
 [[repo.fact]]
 kind = "node"

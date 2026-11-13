@@ -1,59 +1,59 @@
 {
-  "index_seconds": 0.009687242,
+  "index_seconds": 0.009391419,
   "craters": [
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "fan_in": 89,
+      "fan_in": 84,
       "direction": "forward",
       "nodes": 320,
       "hidden_below_min": 79,
       "truncated": true,
-      "seconds": 0.003705442
+      "seconds": 0.001013078
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "fan_in": 89,
+      "fan_in": 84,
       "direction": "reverse",
-      "nodes": 137,
-      "hidden_below_min": 3,
+      "nodes": 105,
+      "hidden_below_min": 35,
       "truncated": false,
-      "seconds": 0.00042148
+      "seconds": 0.000322234
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/ring-handler",
-      "fan_in": 84,
+      "fan_in": 79,
       "direction": "forward",
       "nodes": 48,
       "hidden_below_min": 40,
       "truncated": false,
-      "seconds": 0.000139263
+      "seconds": 0.000135277
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/ring-handler",
-      "fan_in": 84,
+      "fan_in": 79,
       "direction": "reverse",
-      "nodes": 132,
-      "hidden_below_min": 3,
+      "nodes": 100,
+      "hidden_below_min": 35,
       "truncated": false,
-      "seconds": 0.000340168
+      "seconds": 0.000273621
     },
     {
       "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-      "fan_in": 41,
+      "fan_in": 38,
       "direction": "forward",
       "nodes": 16,
       "hidden_below_min": 1,
       "truncated": false,
-      "seconds": 0.00006109
+      "seconds": 0.000056686
     },
     {
       "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-      "fan_in": 41,
+      "fan_in": 38,
       "direction": "reverse",
-      "nodes": 70,
-      "hidden_below_min": 0,
+      "nodes": 59,
+      "hidden_below_min": 11,
       "truncated": false,
-      "seconds": 0.000185403
+      "seconds": 0.000162747
     }
   ],
   "sample": [
@@ -94,229 +94,164 @@
       ]
     },
     {
+      "seed": "clj:modules/reitit-ring//reitit.ring/router",
+      "id": "clj:.//reitit.go-perf-test/routing-test",
+      "distance": 2,
+      "path_certainty": "certain",
+      "steps": [
+        {
+          "from": "clj:.//reitit.go-perf-test/routing-test",
+          "to": "clj:.//reitit.go-perf-test/app",
+          "edge": "calls certain direct",
+          "site": "perf-test/clj/reitit/go_perf_test.clj:324:51",
+          "text": "(assert (= {:status 200, :body \"/user/repos\"} (app req)))"
+        },
+        {
+          "from": "clj:.//reitit.go-perf-test/app",
+          "to": "clj:modules/reitit-ring//reitit.ring/router",
+          "edge": "calls certain direct",
+          "site": "perf-test/clj/reitit/go_perf_test.clj:297:5",
+          "text": "(ring/router"
+        }
+      ]
+    },
+    {
+      "seed": "clj:modules/reitit-ring//reitit.ring/router",
+      "id": "clj:.//reitit.static-perf-test/bench-handler",
+      "distance": 2,
+      "path_certainty": "certain",
+      "steps": [
+        {
+          "from": "clj:.//reitit.static-perf-test/bench-handler",
+          "to": "clj:.//reitit.static-perf-test/app1",
+          "edge": "calls certain direct",
+          "site": "perf-test/clj/reitit/static_perf_test.clj:79:5",
+          "text": "(app1 {:request-method :get, :uri \"/ping\"}))"
+        },
+        {
+          "from": "clj:.//reitit.static-perf-test/app1",
+          "to": "clj:modules/reitit-ring//reitit.ring/router",
+          "edge": "calls certain direct",
+          "site": "perf-test/clj/reitit/static_perf_test.clj:29:5",
+          "text": "(ring/router"
+        }
+      ]
+    },
+    {
       "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-      "id": "clj:examples/frontend-links//frontend.core/<top>@L143",
-      "distance": 3,
+      "id": "clj:examples/frontend-prompt//frontend.core/init!",
+      "distance": 2,
       "path_certainty": "likely",
       "steps": [
         {
-          "from": "clj:examples/frontend-links//frontend.core/<top>@L143",
-          "to": "clj:examples/frontend-links//frontend.core/init!",
-          "edge": "calls certain direct",
-          "site": "examples/frontend-links/src/frontend/core.cljs:143:1",
-          "text": "(init!)"
-        },
-        {
-          "from": "clj:examples/frontend-links//frontend.core/init!",
-          "to": "clj:examples/frontend-links//frontend.core/router",
+          "from": "clj:examples/frontend-prompt//frontend.core/init!",
+          "to": "clj:examples/frontend-prompt//frontend.core/router",
           "edge": "references likely value-ref",
-          "site": "examples/frontend-links/src/frontend/core.cljs:137:5",
+          "site": "examples/frontend-prompt/src/frontend/core.cljs:63:5",
           "text": "router"
         },
         {
-          "from": "clj:examples/frontend-links//frontend.core/router",
+          "from": "clj:examples/frontend-prompt//frontend.core/router",
           "to": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
           "edge": "references likely value-ref",
-          "site": "examples/frontend-links/src/frontend/core.cljs:68:39",
+          "site": "examples/frontend-prompt/src/frontend/core.cljs:37:39",
           "text": "(rf/router routes {:data {:coercion rss/coercion}}))"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:examples/ring-malli-lite-swagger//example.server/<top>@L122",
-      "distance": 3,
+      "id": "clj:examples/ring-example//example.server/start",
+      "distance": 2,
       "path_certainty": "likely",
       "steps": [
         {
-          "from": "clj:examples/ring-malli-lite-swagger//example.server/<top>@L122",
-          "to": "clj:examples/ring-malli-lite-swagger//example.server/start",
-          "edge": "calls certain direct",
-          "site": "examples/ring-malli-lite-swagger/src/example/server.clj:123:3",
-          "text": "(start))"
-        },
-        {
-          "from": "clj:examples/ring-malli-lite-swagger//example.server/start",
-          "to": "clj:examples/ring-malli-lite-swagger//example.server/app",
+          "from": "clj:examples/ring-example//example.server/start",
+          "to": "clj:examples/ring-example//example.server/app",
           "edge": "references likely value-ref",
-          "site": "examples/ring-malli-lite-swagger/src/example/server.clj:119:22",
+          "site": "examples/ring-example/src/example/server.clj:29:22",
           "text": "(jetty/run-jetty #'app {:port 3000, :join? false})"
         },
         {
-          "from": "clj:examples/ring-malli-lite-swagger//example.server/app",
+          "from": "clj:examples/ring-example//example.server/app",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "examples/ring-malli-lite-swagger/src/example/server.clj:23:5",
+          "site": "examples/ring-example/src/example/server.clj:15:5",
           "text": "(ring/router"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.json-perf/<top>@L117",
-      "distance": 2,
-      "path_certainty": "likely",
-      "steps": [
-        {
-          "from": "clj:.//reitit.json-perf/<top>@L117",
-          "to": "clj:.//reitit.json-perf/reitit-app",
-          "edge": "references likely value-ref",
-          "site": "perf-test/clj/reitit/json_perf.clj:132:22",
-          "text": "(http/start-server reitit-app {:port 3002}))"
-        },
-        {
-          "from": "clj:.//reitit.json-perf/reitit-app",
-          "to": "clj:modules/reitit-ring//reitit.ring/router",
-          "edge": "calls certain direct",
-          "site": "perf-test/clj/reitit/json_perf.clj:58:5",
-          "text": "(ring/router"
-        }
-      ]
-    },
-    {
-      "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.nodejs-perf-test/routing-test",
-      "distance": 2,
-      "path_certainty": "certain",
-      "steps": [
-        {
-          "from": "clj:.//reitit.nodejs-perf-test/routing-test",
-          "to": "clj:.//reitit.nodejs-perf-test/app",
-          "edge": "calls certain direct",
-          "site": "perf-test/clj/reitit/nodejs_perf_test.clj:79:56",
-          "text": "(assert (= {:status 200, :body \"Got product id foo\"} (app {:request-method :get, :uri \"/product/foo\"})))"
-        },
-        {
-          "from": "clj:.//reitit.nodejs-perf-test/app",
-          "to": "clj:modules/reitit-ring//reitit.ring/router",
-          "edge": "calls certain direct",
-          "site": "perf-test/clj/reitit/nodejs_perf_test.clj:28:5",
-          "text": "(ring/router"
-        }
-      ]
-    },
-    {
-      "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:examples/buddy-auth//example.server/<top>@L155",
-      "distance": 2,
-      "path_certainty": "likely",
-      "steps": [
-        {
-          "from": "clj:examples/buddy-auth//example.server/<top>@L155",
-          "to": "clj:examples/buddy-auth//example.server/app",
-          "edge": "references likely value-ref",
-          "site": "examples/buddy-auth/src/example/server.clj:165:7",
-          "text": "app"
-        },
-        {
-          "from": "clj:examples/buddy-auth//example.server/app",
-          "to": "clj:modules/reitit-ring//reitit.ring/router",
-          "edge": "calls certain direct",
-          "site": "examples/buddy-auth/src/example/server.clj:139:5",
-          "text": "(ring/router"
-        }
-      ]
-    },
-    {
-      "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-      "id": "clj:examples/frontend-re-frame//frontend-re-frame.core/init",
-      "distance": 2,
-      "path_certainty": "likely",
-      "steps": [
-        {
-          "from": "clj:examples/frontend-re-frame//frontend-re-frame.core/init",
-          "to": "clj:examples/frontend-re-frame//frontend-re-frame.core/router",
-          "edge": "references likely value-ref",
-          "site": "examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:146:41",
-          "text": "(rd/render [router-component {:router router}]"
-        },
-        {
-          "from": "clj:examples/frontend-re-frame//frontend-re-frame.core/router",
-          "to": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-          "edge": "references likely value-ref",
-          "site": "examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:105:23",
-          "text": "{:data {:coercion rss/coercion}}))"
-        }
-      ]
-    },
-    {
-      "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:examples/ring-malli-lite-swagger//example.server/start",
-      "distance": 2,
-      "path_certainty": "likely",
-      "steps": [
-        {
-          "from": "clj:examples/ring-malli-lite-swagger//example.server/start",
-          "to": "clj:examples/ring-malli-lite-swagger//example.server/app",
-          "edge": "references likely value-ref",
-          "site": "examples/ring-malli-lite-swagger/src/example/server.clj:119:22",
-          "text": "(jetty/run-jetty #'app {:port 3000, :join? false})"
-        },
-        {
-          "from": "clj:examples/ring-malli-lite-swagger//example.server/app",
-          "to": "clj:modules/reitit-ring//reitit.ring/router",
-          "edge": "calls certain direct",
-          "site": "examples/ring-malli-lite-swagger/src/example/server.clj:23:5",
-          "text": "(ring/router"
-        }
-      ]
-    },
-    {
-      "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.coercion-perf-test/app",
+      "id": "clj:.//reitit.bide-perf-test/ring-app",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.coercion-perf-test/app",
+          "from": "clj:.//reitit.bide-perf-test/ring-app",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "perf-test/clj/reitit/coercion_perf_test.clj:153:9",
+          "site": "perf-test/clj/reitit/bide_perf_test.clj:68:5",
           "text": "(ring/router"
         }
       ]
     },
     {
-      "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-      "id": "clj:.//reitit.coercion-test/data-spec-example-test",
+      "seed": "clj:modules/reitit-ring//reitit.ring/router",
+      "id": "clj:.//reitit.coercion-perf-test/schema-perf-test",
       "distance": 1,
-      "path_certainty": "likely",
+      "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.coercion-test/data-spec-example-test",
-          "to": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
-          "edge": "references likely value-ref",
-          "site": "test/cljc/reitit/coercion_test.cljc:177:56",
-          "text": ":coercion reitit.coercion.spec/coercion"
+          "from": "clj:.//reitit.coercion-perf-test/schema-perf-test",
+          "to": "clj:modules/reitit-ring//reitit.ring/router",
+          "edge": "calls certain direct",
+          "site": "perf-test/clj/reitit/coercion_perf_test.clj:225:15",
+          "text": "(ring/router"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.lupapiste-perf-test/bench-cqrs!",
+      "id": "clj:.//reitit.http-test/deprecated-default-options-handler-test",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.lupapiste-perf-test/bench-cqrs!",
+          "from": "clj:.//reitit.http-test/deprecated-default-options-handler-test",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "perf-test/clj/reitit/lupapiste_perf_test.clj:360:42",
-          "text": "reitit-ring-f (ring/ring-handler (ring/router routes))"
+          "site": "test/clj/reitit/http_test.clj:193:32",
+          "text": "(is (thrown? ExceptionInfo (ring/router [] {::ring/default-options-handler (fn [_])})))))"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.openapi-test/multiple-openapi-apis-test",
+      "id": "clj:.//reitit.openapi-test/all-parameter-types-test",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.openapi-test/multiple-openapi-apis-test",
+          "from": "clj:.//reitit.openapi-test/all-parameter-types-test",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "test/cljc/reitit/openapi_test.clj:342:14",
+          "site": "test/cljc/reitit/openapi_test.clj:434:18",
+          "text": "(ring/router"
+        }
+      ]
+    },
+    {
+      "seed": "clj:modules/reitit-ring//reitit.ring/router",
+      "id": "clj:.//reitit.openapi-test/openapi-malli-tests",
+      "distance": 1,
+      "path_certainty": "certain",
+      "steps": [
+        {
+          "from": "clj:.//reitit.openapi-test/openapi-malli-tests",
+          "to": "clj:modules/reitit-ring//reitit.ring/router",
+          "edge": "calls certain direct",
+          "site": "test/cljc/reitit/openapi_test.clj:927:14",
           "text": "(ring/router"
         }
       ]
@@ -338,106 +273,136 @@
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.ring-coercion-test/response-coercion-test",
+      "id": "clj:.//reitit.ring-coercion-test/per-content-type-test",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.ring-coercion-test/response-coercion-test",
+          "from": "clj:.//reitit.ring-coercion-test/per-content-type-test",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "test/cljc/reitit/ring_coercion_test.cljc:764:21",
+          "site": "test/cljc/reitit/ring_coercion_test.cljc:651:25",
           "text": "(ring/router"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.ring-test/default-options-endpoint-test",
+      "id": "clj:.//reitit.ring-test/async-ring-test",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.ring-test/default-options-endpoint-test",
+          "from": "clj:.//reitit.ring-test/async-ring-test",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "test/cljc/reitit/ring_test.cljc:255:18",
+          "site": "test/cljc/reitit/ring_test.cljc:468:16",
+          "text": "router (ring/router"
+        }
+      ]
+    },
+    {
+      "seed": "clj:modules/reitit-ring//reitit.ring/router",
+      "id": "clj:.//reitit.ring-test/file-resource-handler-test",
+      "distance": 1,
+      "path_certainty": "certain",
+      "steps": [
+        {
+          "from": "clj:.//reitit.ring-test/file-resource-handler-test",
+          "to": "clj:modules/reitit-ring//reitit.ring/router",
+          "edge": "calls certain direct",
+          "site": "test/cljc/reitit/ring_test.cljc:570:27",
           "text": "(ring/router"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.ring-test/query-method-test",
+      "id": "clj:.//reitit.ring-test/router-available-in-default-branch",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.ring-test/query-method-test",
+          "from": "clj:.//reitit.ring-test/router-available-in-default-branch",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "test/cljc/reitit/ring_test.cljc:318:14",
+          "site": "test/cljc/reitit/ring_test.cljc:865:7",
+          "text": "(ring/router [])"
+        }
+      ]
+    },
+    {
+      "seed": "clj:modules/reitit-ring//reitit.ring/router",
+      "id": "clj:.//reitit.ring.middleware.muuntaja-test/muuntaja-swagger-parts-test",
+      "distance": 1,
+      "path_certainty": "certain",
+      "steps": [
+        {
+          "from": "clj:.//reitit.ring.middleware.muuntaja-test/muuntaja-swagger-parts-test",
+          "to": "clj:modules/reitit-ring//reitit.ring/router",
+          "edge": "calls certain direct",
+          "site": "test/clj/reitit/ring/middleware/muuntaja_test.clj:100:14",
           "text": "(ring/router"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.ring.middleware.exception-test/spec-coercion-exception-test",
+      "id": "clj:.//reitit.static-perf-test/app2",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.ring.middleware.exception-test/spec-coercion-exception-test",
+          "from": "clj:.//reitit.static-perf-test/app2",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "test/clj/reitit/ring/middleware/exception_test.clj:201:14",
+          "site": "perf-test/clj/reitit/static_perf_test.clj:36:5",
           "text": "(ring/router"
         }
       ]
     },
     {
       "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:.//reitit.swagger-test/all-parameter-types-test",
+      "id": "clj:.//reitit.swagger-test/swagger-schema-tests",
       "distance": 1,
       "path_certainty": "certain",
       "steps": [
         {
-          "from": "clj:.//reitit.swagger-test/all-parameter-types-test",
+          "from": "clj:.//reitit.swagger-test/swagger-schema-tests",
           "to": "clj:modules/reitit-ring//reitit.ring/router",
           "edge": "calls certain direct",
-          "site": "test/cljc/reitit/swagger_test.clj:449:14",
+          "site": "test/cljc/reitit/swagger_test.clj:592:18",
           "text": "(ring/router"
         }
       ]
     },
     {
-      "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:examples/buddy-auth//example.server/app",
+      "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
+      "id": "clj:examples/frontend-re-frame//frontend-re-frame.core/router",
       "distance": 1,
-      "path_certainty": "certain",
+      "path_certainty": "likely",
       "steps": [
         {
-          "from": "clj:examples/buddy-auth//example.server/app",
-          "to": "clj:modules/reitit-ring//reitit.ring/router",
-          "edge": "calls certain direct",
-          "site": "examples/buddy-auth/src/example/server.clj:139:5",
-          "text": "(ring/router"
+          "from": "clj:examples/frontend-re-frame//frontend-re-frame.core/router",
+          "to": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
+          "edge": "references likely value-ref",
+          "site": "examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:105:23",
+          "text": "{:data {:coercion rss/coercion}}))"
         }
       ]
     },
     {
-      "seed": "clj:modules/reitit-ring//reitit.ring/router",
-      "id": "clj:examples/openapi//example.server/app",
+      "seed": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
+      "id": "clj:examples/ring-example//example.dspec/routes",
       "distance": 1,
-      "path_certainty": "certain",
+      "path_certainty": "likely",
       "steps": [
         {
-          "from": "clj:examples/openapi//example.server/app",
-          "to": "clj:modules/reitit-ring//reitit.ring/router",
-          "edge": "calls certain direct",
-          "site": "examples/openapi/src/example/server.clj:52:5",
-          "text": "(ring/router"
+          "from": "clj:examples/ring-example//example.dspec/routes",
+          "to": "clj:modules/reitit-spec//reitit.coercion.spec/coercion",
+          "edge": "references likely value-ref",
+          "site": "examples/ring-example/src/example/dspec.clj:5:24",
+          "text": "[\"/dspec\" {:coercion reitit.coercion.spec/coercion}"
         }
       ]
     }

@@ -52,3 +52,11 @@ the Node trace `node.txt`, with this machine's paths replaced by `/srv/app/`
 trace's positions in each browser's format (Chrome uses V8's format, as Node
 does; Firefox and Safari use `name@url:line:col`, Safari with bare names),
 served from `http://localhost:8080/out/`. No browser was run.
+
+## `jvm/ring/`
+
+`wrap-cookies-duration.txt` is a real trace from ring-core's own code at
+the M3 acceptance commit: `gen.clj` reproduces the test
+`wrap-cookies-throws-exception-when-not-using-intervals-correctly-java`
+and `gen.sh <ring clone>` runs it (Austin approved running ring's code for
+this, 2026-11-13). The acceptance runner normalizes it against ring's graph.

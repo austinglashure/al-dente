@@ -1,5 +1,5 @@
 {
-  "analyze_seconds": 0.496230108,
+  "analyze_seconds": 0.476674694,
   "edges_by_kind_certainty_reason": {
     "calls/certain/direct": 3149,
     "calls/certain/dynamic": 2,
@@ -17,7 +17,7 @@
     "references/possible/macro-body": 80,
     "requires/-/-": 179
   },
-  "fetch_seconds": 0.820473988,
+  "fetch_seconds": 0.574066735,
   "orphans": {
     "eligible": 305,
     "largest": [
