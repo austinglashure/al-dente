@@ -1,8 +1,9 @@
 //! Merging fact batches into one graph.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use aldente_adapter::{FactBatch, LiteralFact};
+use aldente_model::timing::Timings;
 use aldente_model::{
     BlindSpot, Certainty, Diagnostic, Edge, EdgeKind, Lang, NamespaceId, Node, NodeId, NodeKind,
     Reason, SymbolFlag, SymbolId, UnitInfo,
@@ -35,6 +36,18 @@ type EdgeKey = (NodeId, NodeId, EdgeKind, Option<Reason>, Option<Lang>);
 /// Example: in mono-mini, `orders.core/total -calls-> ext:clj//common.util/sum`
 /// becomes `-calls-> clj:libs/common//common.util/sum`.
 pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
+    build_timed(units, batches, &mut Timings::default())
+}
+
+/// [`build`], recording its phases as `--timings` details.
+///
+/// Example: `build_timed(&units, batches, &mut timings)` adds `· build:merge`.
+pub fn build_timed(units: &[UnitInfo], batches: Vec<FactBatch>, t: &mut Timings) -> Graph {
+    let mut clock = std::time::Instant::now();
+    let mut lap = |t: &mut Timings, label: &str| {
+        t.detail(label, clock.elapsed());
+        clock = std::time::Instant::now();
+    };
     let mut g = Graph::default();
     for unit in units {
         let id = NodeId::Unit(unit.dir.clone());
@@ -59,7 +72,9 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
             },
         );
     }
-    let mut edges: BTreeMap<EdgeKey, Edge> = BTreeMap::new();
+    // Hash maps while merging; the edges are sorted once at the end, by the
+    // same key a BTreeMap would have used, so the output is unchanged.
+    let mut edges: HashMap<EdgeKey, Edge> = HashMap::new();
     for batch in batches {
         for node in batch.nodes {
             merge_node(&mut g.nodes, node);
@@ -71,6 +86,7 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
         g.diagnostics.extend(batch.diagnostics);
         g.literals.extend(batch.literals);
     }
+    lap(t, "build:merge");
     mark_services(&mut g.nodes);
     let unit_contains: Vec<Edge> = g
         .nodes
@@ -81,8 +97,10 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
     for e in unit_contains {
         add_edge(&mut edges, e);
     }
+    lap(t, "build:contains");
     let edges = link_across_units(&g.nodes, edges);
-    let used: BTreeSet<&NodeId> = edges.values().flat_map(|e| [&e.from, &e.to]).collect();
+    lap(t, "build:link");
+    let used: HashSet<&NodeId> = edges.values().flat_map(|e| [&e.from, &e.to]).collect();
     let orphan_externals: Vec<NodeId> = g
         .nodes
         .values()
@@ -98,7 +116,10 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
         Some(id @ NodeId::External(_)) => g.nodes.contains_key(id),
         _ => true,
     });
-    g.edges = edges.into_values().collect();
+    lap(t, "build:orphans");
+    let mut keyed: Vec<(EdgeKey, Edge)> = edges.into_iter().collect();
+    keyed.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+    g.edges = keyed.into_iter().map(|(_, e)| e).collect();
     for e in &mut g.edges {
         e.sites.sort();
         e.sites.dedup();
@@ -108,6 +129,7 @@ pub fn build(units: &[UnitInfo], batches: Vec<FactBatch>) -> Graph {
     g.diagnostics.sort();
     g.diagnostics.dedup();
     g.literals.sort();
+    lap(t, "build:sort");
     g
 }
 
@@ -132,7 +154,7 @@ fn merge_node(nodes: &mut BTreeMap<NodeId, Node>, node: Node) {
 /// Adds an edge, merging sites into an existing edge with the same key.
 ///
 /// Example: two batches each with one site on `a -calls-> b` give one edge with two sites.
-fn add_edge(edges: &mut BTreeMap<EdgeKey, Edge>, edge: Edge) {
+fn add_edge(edges: &mut HashMap<EdgeKey, Edge>, edge: Edge) {
     let key = (
         edge.from.clone(),
         edge.to.clone(),
@@ -189,15 +211,15 @@ fn mark_services(nodes: &mut BTreeMap<NodeId, Node>) {
 /// Example: see [`build`].
 fn link_across_units(
     nodes: &BTreeMap<NodeId, Node>,
-    edges: BTreeMap<EdgeKey, Edge>,
-) -> BTreeMap<EdgeKey, Edge> {
+    edges: HashMap<EdgeKey, Edge>,
+) -> HashMap<EdgeKey, Edge> {
     let mut defined: BTreeMap<&str, Vec<&NamespaceId>> = BTreeMap::new();
     for id in nodes.keys() {
         if let NodeId::Namespace(ns) = id {
             defined.entry(ns.ns()).or_default().push(ns);
         }
     }
-    let mut out = BTreeMap::new();
+    let mut out = HashMap::new();
     for edge in edges.into_values() {
         let candidates: Vec<NodeId> = match &edge.to {
             NodeId::External(ext) => {

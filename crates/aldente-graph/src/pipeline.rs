@@ -11,7 +11,7 @@ use aldente_model::timing::Timings;
 use aldente_model::{BlindSpot, BlindSpotCategory, Diagnostic, DiagnosticCode, RepoPath, Site};
 use rayon::prelude::*;
 
-use crate::build::{Graph, build};
+use crate::build::{Graph, build_timed};
 use crate::snapshot::{self, Snapshot};
 
 /// Discovery plus the graph.
@@ -86,7 +86,13 @@ fn analyze_discovered(
             }
         }
     }
-    let mut graph = timings.time("build", || build(&discovery.report.units, batches));
+    let started = std::time::Instant::now();
+    let mut details = Timings::default();
+    let mut graph = build_timed(&discovery.report.units, batches, &mut details);
+    timings.record("build", started.elapsed());
+    for (label, took) in details.entries() {
+        timings.record(label, *took);
+    }
     graph
         .diagnostics
         .extend(discovery.report.diagnostics.iter().cloned());
@@ -327,8 +333,22 @@ mod tests {
         let dir = scratch("timings");
         let (root, snaps) = (dir.join("repo"), dir.join("snapshots"));
         let counter = Counting(AtomicUsize::new(0));
+        // Stages exactly; detail lines (`· …`) only checked for presence.
         let labels = |o: &Outcome| -> Vec<String> {
-            o.timings.entries().iter().map(|(l, _)| l.clone()).collect()
+            o.timings
+                .entries()
+                .iter()
+                .map(|(l, _)| l.clone())
+                .filter(|l| !l.starts_with(aldente_model::timing::DETAIL))
+                .collect()
+        };
+        let details = |o: &Outcome| -> Vec<String> {
+            o.timings
+                .entries()
+                .iter()
+                .map(|(l, _)| l.clone())
+                .filter(|l| l.starts_with(aldente_model::timing::DETAIL))
+                .collect()
         };
         let cold = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
         assert_eq!(
@@ -338,12 +358,19 @@ mod tests {
                 "discover",
                 "key",
                 "snapshot-lookup",
-                "· units (in parallel, wall clock)",
                 "fake-stage unit:.",
                 "build",
                 "snapshot-save"
             ]
         );
+        let d = details(&cold);
+        for want in [
+            "· units (in parallel, wall clock)",
+            "· build:merge",
+            "· build:link",
+        ] {
+            assert!(d.iter().any(|l| l == want), "{want} in {d:?}");
+        }
         let hit = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
         assert_eq!(labels(&hit), ["walk", "discover", "key", "snapshot-lookup"]);
     }
