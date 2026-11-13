@@ -13,6 +13,8 @@ aldente-graph.workspace = true
 aldente-model.workspace = true
 # rules/trace-noise.toml.
 aldente-rules.workspace = true
+# Source map v3 lookups for ClojureScript traces (WP3.4; named in the plan).
+sourcemap.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

@@ -76,8 +76,15 @@ impl<'a> TraceIndex<'a> {
 pub fn map_frames(index: &TraceIndex<'_>, noise: &Noise, frames: &mut [Frame]) {
     for f in frames {
         let repo = index.repo_ns(f).is_some();
-        f.noise = !repo && f.namespace.as_deref().is_some_and(|ns| noise.is_noise(ns));
-        let (node, level) = map_frame(index, f);
+        let js_file_noise =
+            f.lang == FrameLang::Js && f.file.as_deref().is_some_and(|p| noise.is_noise(p));
+        f.noise =
+            !repo && (js_file_noise || f.namespace.as_deref().is_some_and(|ns| noise.is_noise(ns)));
+        let (node, level) = if f.lang == FrameLang::Js {
+            map_js_by_name(index, f)
+        } else {
+            map_frame(index, f)
+        };
         f.node = node;
         f.match_level = level;
     }
@@ -136,6 +143,39 @@ fn map_frame(index: &TraceIndex<'_>, f: &Frame) -> (Option<NodeId>, MatchLevel) 
     match enclosing() {
         Some(n) => protocol_method(defs, n, f).unwrap_or((Some(n.id.clone()), MatchLevel::Exact)),
         None => (None, MatchLevel::None),
+    }
+}
+
+/// A JavaScript frame that no source map covered: its line is a position
+/// in compiled code, so only the name can match, at level `name`. Without
+/// a namespace (Safari prints bare names) the name must be unique across
+/// the repository.
+///
+/// Example: `app$core$parse_qty@…/core.js:7:8` without a map gives
+/// `clj:.//app.core/parse-qty`, `name`.
+fn map_js_by_name(index: &TraceIndex<'_>, f: &Frame) -> (Option<NodeId>, MatchLevel) {
+    let Some(name) = f.name.as_deref() else {
+        return (None, MatchLevel::None);
+    };
+    let found: Vec<&Node> = match f.namespace.as_deref() {
+        Some(ns) => index
+            .by_ns
+            .get(ns)
+            .and_then(|d| d.by_name.get(name))
+            .cloned()
+            .unwrap_or_default(),
+        None => index
+            .by_ns
+            .values()
+            .filter_map(|d| d.by_name.get(name))
+            .flatten()
+            .copied()
+            .collect(),
+    };
+    let ids: std::collections::BTreeSet<&NodeId> = found.iter().map(|n| &n.id).collect();
+    match ids.into_iter().collect::<Vec<_>>().as_slice() {
+        [one] => (Some((*one).clone()), MatchLevel::Name),
+        _ => (None, MatchLevel::None),
     }
 }
 

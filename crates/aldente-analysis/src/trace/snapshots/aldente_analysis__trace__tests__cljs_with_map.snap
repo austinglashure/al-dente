@@ -1,0 +1,28 @@
+---
+source: crates/aldente-analysis/src/trace/tests.rs
+expression: out
+---
+node.txt
+  app.core/parse-qty src/app/core.cljs:7 -> clj:.//app.core/parse-qty Exact
+  app.core/line-total src/app/core.cljs:11 -> clj:.//app.core/line-total Exact
+  app.core/order-total src/app/core.cljs:14 -> clj:.//app.core/order-total Exact
+  app.core/valid?->ok! src/app/core.cljs:17 -> clj:.//app.core/valid?->ok! Exact
+  app.core/main src/app/core.cljs:22 -> clj:.//app.core/main Exact
+chrome.txt
+  app.core/parse-qty src/app/core.cljs:7 -> clj:.//app.core/parse-qty Exact
+  app.core/line-total src/app/core.cljs:11 -> clj:.//app.core/line-total Exact
+  app.core/order-total src/app/core.cljs:14 -> clj:.//app.core/order-total Exact
+  app.core/valid?->ok! src/app/core.cljs:17 -> clj:.//app.core/valid?->ok! Exact
+  app.core/main src/app/core.cljs:22 -> clj:.//app.core/main Exact
+firefox.txt
+  app.core/parse-qty src/app/core.cljs:7 -> clj:.//app.core/parse-qty Exact
+  app.core/line-total src/app/core.cljs:11 -> clj:.//app.core/line-total Exact
+  app.core/order-total src/app/core.cljs:14 -> clj:.//app.core/order-total Exact
+  app.core/valid?->ok! src/app/core.cljs:17 -> clj:.//app.core/valid?->ok! Exact
+  app.core/main src/app/core.cljs:22 -> clj:.//app.core/main Exact
+safari.txt
+  app.core/parse-qty src/app/core.cljs:7 -> clj:.//app.core/parse-qty Exact
+  app.core/line-total src/app/core.cljs:11 -> clj:.//app.core/line-total Exact
+  app.core/order-total src/app/core.cljs:14 -> clj:.//app.core/order-total Exact
+  app.core/valid?->ok! src/app/core.cljs:17 -> clj:.//app.core/valid?->ok! Exact
+  app.core/main src/app/core.cljs:22 -> clj:.//app.core/main Exact

@@ -102,3 +102,34 @@ fn input_without_a_trace_is_a_usage_error() {
     let out = run("none", &["trace", "normalize", "-"], "just a log line\n");
     assert_eq!(out.status.code(), Some(2));
 }
+
+#[test]
+fn source_maps_resolve_cljs_frames() {
+    let dir = root().join("fixtures/traces/cljs");
+    let trace = dir.join("node.txt").display().to_string();
+    let map = dir.join("out/app/core.js.map").display().to_string();
+    // The cljs fixture's own source is the target here.
+    let tmp = std::env::temp_dir().join(format!("aldente-trace-{}-cljs", std::process::id()));
+    let _ = std::fs::remove_dir_all(&tmp);
+    copy(&dir.join("gen"), &tmp.join("repo"));
+    let out = Command::new(env!("CARGO_BIN_EXE_aldente"))
+        .args(["trace", "normalize", &trace, "--source-map", &map, "--json"])
+        .arg(tmp.join("repo"))
+        .env("ALDENTE_CACHE_DIR", tmp.join("cache"))
+        .output()
+        .unwrap();
+    let _ = std::fs::remove_dir_all(&tmp);
+    let j: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let frame = &j["data"]["traces"][0]["frames"][0];
+    assert_eq!(frame["file"], "src/app/core.cljs", "{j:#}");
+    assert_eq!(frame["line"], 7);
+    assert_eq!(frame["node"], "clj:.//app.core/parse-qty");
+    assert_eq!(frame["match"], "exact");
+    assert_eq!(j["data"]["format"], "js");
+    let bad = run(
+        "badmap",
+        &["trace", "normalize", &trace, "--source-map", &trace],
+        "",
+    );
+    assert_eq!(bad.status.code(), Some(2));
+}

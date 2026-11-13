@@ -183,3 +183,80 @@ fn corpus_frames_map_exactly_against_the_corpus_source() {
     }
     insta::assert_snapshot!("corpus_mapping", out);
 }
+
+/// The cljs fixture's graph and its source map.
+fn cljs_setup() -> (Graph, Vec<super::SourceMapFile>) {
+    let graph = analyze_fixture(&fixture_dir("traces/cljs/gen")).graph;
+    let path = traces_dir("cljs").join("out/app/core.js.map");
+    let map =
+        super::SourceMapFile::parse("out/app/core.js.map", &std::fs::read(path).unwrap()).unwrap();
+    (graph, vec![map])
+}
+
+/// `(namespace/name, file:line, node, match)` of every `app.*` frame.
+fn app_frames(report: &aldente_model::trace::TraceReport) -> Vec<String> {
+    report.traces[0]
+        .frames
+        .iter()
+        .filter(|f| f.namespace.as_deref() == Some("app.core") || f.node.is_some())
+        .map(|f| {
+            format!(
+                "{}/{} {}:{} -> {} {:?}",
+                f.namespace.as_deref().unwrap_or("?"),
+                f.name.as_deref().unwrap_or("?"),
+                f.file.as_deref().unwrap_or("?"),
+                f.line.unwrap_or(0),
+                f.node.as_ref().map(ToString::to_string).unwrap_or_default(),
+                f.match_level
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn cljs_traces_with_a_source_map_resolve_to_cljs_lines_and_nodes() {
+    let (graph, maps) = cljs_setup();
+    let mut out = String::new();
+    for name in ["node.txt", "chrome.txt", "firefox.txt", "safari.txt"] {
+        let text = std::fs::read_to_string(traces_dir("cljs").join(name)).unwrap();
+        let report = super::normalize_with(&text, &graph, &maps).unwrap();
+        assert_eq!(report.format, TraceFormat::Js, "{name}");
+        let frames = app_frames(&report);
+        assert_eq!(frames.len(), 5, "{name}: {frames:#?}");
+        for f in &report.traces[0].frames {
+            if f.node.is_some() {
+                assert_eq!(f.match_level, MatchLevel::Exact, "{name}: {}", f.raw);
+                assert_eq!(f.file.as_deref(), Some("src/app/core.cljs"), "{name}");
+            }
+        }
+        let _ = writeln!(out, "{name}");
+        for f in frames {
+            let _ = writeln!(out, "  {f}");
+        }
+    }
+    insta::assert_snapshot!("cljs_with_map", out);
+}
+
+#[test]
+fn cljs_traces_without_a_map_match_by_name() {
+    let (graph, _) = cljs_setup();
+    for name in ["node.txt", "chrome.txt", "firefox.txt", "safari.txt"] {
+        let text = std::fs::read_to_string(traces_dir("cljs").join(name)).unwrap();
+        let report = normalize(&text, &graph).unwrap();
+        let mapped: Vec<_> = report.traces[0]
+            .frames
+            .iter()
+            .filter(|f| f.node.is_some())
+            .collect();
+        assert_eq!(mapped.len(), 5, "{name}");
+        for f in mapped {
+            assert_eq!(f.match_level, MatchLevel::Name, "{name}: {}", f.raw);
+        }
+        let first = &report.traces[0].frames[0];
+        assert_eq!(
+            first.node.as_ref().map(ToString::to_string).as_deref(),
+            Some("clj:.//app.core/parse-qty"),
+            "{name}"
+        );
+    }
+}

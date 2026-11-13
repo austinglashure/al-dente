@@ -44,6 +44,8 @@ aldente-analysis = { path = "crates/aldente-analysis" }
 # dev-only
 jsonschema = { version = "0.61", default-features = false }
 proptest = "1"
+# Source map v3 for ClojureScript traces (08-crater-and-traces.md names it).
+sourcemap = { version = "9", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

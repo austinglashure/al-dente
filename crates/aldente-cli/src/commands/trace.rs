@@ -4,7 +4,7 @@
 use std::io::Read;
 use std::path::PathBuf;
 
-use aldente_analysis::trace::normalize;
+use aldente_analysis::trace::{SourceMapFile, normalize_with};
 use aldente_model::trace::{Frame, MatchLevel, Trace, TraceReport};
 use aldente_model::{Envelope, ErrorCode, ExitCode};
 use clap::{Args, Subcommand};
@@ -39,6 +39,11 @@ pub struct NormalizeArgs {
     /// Also list noise frames one by one instead of folding them.
     #[arg(long)]
     all: bool,
+    /// A source map (v3) for ClojureScript frames (repeatable). Its path
+    /// tells which compiled file it describes: `out/app/core.js.map` covers
+    /// frames in `…/out/app/core.js`.
+    #[arg(long = "source-map", value_name = "PATH")]
+    source_maps: Vec<PathBuf>,
 }
 
 const TAG: &str = "trace";
@@ -53,11 +58,15 @@ pub fn run(args: &TraceArgs, json: bool) -> anyhow::Result<ExitCode> {
         Ok(t) => t,
         Err(f) => return fail(TAG, &f, json),
     };
+    let maps = match read_maps(&args.source_maps) {
+        Ok(m) => m,
+        Err(f) => return fail(TAG, &f, json),
+    };
     let loaded = match load(&args.target, false) {
         Ok(l) => l,
         Err(f) => return fail(TAG, &f, json),
     };
-    let report = match normalize(&text, &loaded.outcome.snapshot.graph) {
+    let report = match normalize_with(&text, &loaded.outcome.snapshot.graph, &maps) {
         Ok(r) => r,
         Err(e) => return fail(TAG, &Failure::new(ErrorCode::Usage, e.to_string()), json),
     };
@@ -67,6 +76,30 @@ pub fn run(args: &TraceArgs, json: bool) -> anyhow::Result<ExitCode> {
         print_lines(render(&report, args.all).iter().map(String::as_str))?;
     }
     Ok(ExitCode::Success)
+}
+
+/// Reads and parses each `--source-map`.
+///
+/// Example: `read_maps(&["out/app/core.js.map".into()])` gives one map.
+pub fn read_maps(paths: &[PathBuf]) -> Result<Vec<SourceMapFile>, Failure> {
+    paths
+        .iter()
+        .map(|p| {
+            let shown = p.display().to_string();
+            let bytes = std::fs::File::open(p)
+                .and_then(|f| {
+                    let mut b = Vec::new();
+                    f.take(MAX_INPUT).read_to_end(&mut b).map(|_| b)
+                })
+                .map_err(|e| Failure::new(ErrorCode::Usage, format!("cannot read {shown}: {e}")))?;
+            SourceMapFile::parse(&shown, &bytes).map_err(|e| {
+                Failure::new(
+                    ErrorCode::Usage,
+                    format!("{shown} is not a source map: {e}"),
+                )
+            })
+        })
+        .collect()
 }
 
 /// Reads the trace from a file or stdin, at most [`MAX_INPUT`] bytes.

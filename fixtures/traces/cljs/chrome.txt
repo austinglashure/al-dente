@@ -1,0 +1,10 @@
+Error: bad qty: x
+    at app$core$parse_qty (http://localhost:8080/out/app/core.js:7:8)
+    at app$core$line_total (http://localhost:8080/out/app/core.js:14:119)
+    at http://localhost:8080/out/cljs/core.js:18041:89
+    at Object.sval (http://localhost:8080/out/cljs/core.js:11907:110)
+    at cljs$core$reduce (http://localhost:8080/out/cljs/core.js:8554:25)
+    at app$core$order_total (http://localhost:8080/out/app/core.js:17:25)
+    at app$core$valid_QMARK___GT_ok_BANG_ (http://localhost:8080/out/app/core.js:20:29)
+    at app$core$main (http://localhost:8080/out/app/core.js:25:47)
+    at HTMLButtonElement.<anonymous> (http://localhost:8080/out/main.js:40:3)

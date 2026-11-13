@@ -39,3 +39,16 @@ Traces produced by `fixtures/clj-mini`'s own code (`jvm/clj-mini/gen.clj`,
 run with `jvm/clj-mini/gen.sh`). Every `shop.*` frame must map `exact`.
 `run-script-eval.*` reaches `half-off` through `eval`, a call the static
 graph cannot see (WP3.5's missing-edge report).
+
+## `cljs/`
+
+`cljs/gen/src/app/core.cljs` compiled by ClojureScript 1.11.60
+(`:optimizations :none`, source maps on) and run under Node 26 by
+`cljs/gen/gen.sh`, which keeps `out/app/core.js`, `out/app/core.js.map` and
+the Node trace `node.txt`, with this machine's paths replaced by `/srv/app/`
+(and the map's `file` field cut to `core.js`).
+
+`chrome.txt`, `firefox.txt` and `safari.txt` are **hand-made** from the Node
+trace's positions in each browser's format (Chrome uses V8's format, as Node
+does; Firefox and Safari use `name@url:line:col`, Safari with bare names),
+served from `http://localhost:8080/out/`. No browser was run.
