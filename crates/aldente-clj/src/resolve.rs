@@ -9,9 +9,10 @@
 //! Namespaces this unit does not define become `external` targets; the
 //! graph build re-targets those that another unit defines.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use aldente_adapter::{FactBatch, LiteralFact};
+use aldente_model::timing::Timings;
 use aldente_model::{
     BlindSpot, BlindSpotCategory, Certainty, Diagnostic, Edge, EdgeKind, ExternalId, ImplId, Lang,
     LibraryId, Location, NamespaceId, Node, NodeId, NodeKind, PlatformId, Reason, RepoPath, Site,
@@ -162,23 +163,39 @@ impl Context {
 ///
 /// Example: on clj-mini gives `clj:.//shop.core/checkout` (fn) with a
 /// certain `calls` edge to `clj:.//shop.pricing/price` at `src/shop/core.clj:16:17`.
-pub fn resolve(unit: &UnitInfo, run: &KondoRun, indexes: &[FileIndex], ctx: &Context) -> Resolved {
-    let mut r = Resolver::new(unit, run, indexes, ctx);
-    r.namespaces();
-    r.definitions();
-    r.impls();
-    r.registrations();
-    r.requires();
-    r.usages();
-    r.keyword_dispatch();
-    r.multimethod_dispatch();
-    r.protocol_dispatch();
-    r.param_flow();
-    r.interop();
-    r.macro_blind_spots();
-    r.libraries();
-    r.server_handlers();
-    r.finish()
+pub fn resolve<'a>(
+    unit: &'a UnitInfo,
+    run: &'a KondoRun,
+    indexes: &'a [FileIndex],
+    ctx: &'a Context,
+) -> Resolved {
+    let mut t = Timings::default();
+    let mut r = t.time_detail("resolve:setup", || Resolver::new(unit, run, indexes, ctx));
+    let steps: [(&str, fn(&mut Resolver<'a>)); 14] = [
+        ("resolve:namespaces", Resolver::namespaces),
+        ("resolve:definitions", Resolver::definitions),
+        ("resolve:impls", Resolver::impls),
+        ("resolve:registrations", Resolver::registrations),
+        ("resolve:requires", Resolver::requires),
+        ("resolve:usages", Resolver::usages),
+        ("resolve:keyword-dispatch", Resolver::keyword_dispatch),
+        (
+            "resolve:multimethod-dispatch",
+            Resolver::multimethod_dispatch,
+        ),
+        ("resolve:protocol-dispatch", Resolver::protocol_dispatch),
+        ("resolve:param-flow", Resolver::param_flow),
+        ("resolve:interop", Resolver::interop),
+        ("resolve:macro-blind-spots", Resolver::macro_blind_spots),
+        ("resolve:libraries", Resolver::libraries),
+        ("resolve:server-handlers", Resolver::server_handlers),
+    ];
+    for (label, step) in steps {
+        t.time_detail(label, || step(&mut r));
+    }
+    let mut out = t.time_detail("resolve:finish", || r.finish());
+    out.batch.timings = t;
+    out
 }
 
 /// What keeps edges distinct: `(from, to, kind, reason, lang)`.
@@ -207,6 +224,13 @@ struct Resolver<'a> {
     method_impls: BTreeMap<NodeId, Vec<(NodeId, String)>>,
     /// Usages of protocol methods, for R6 dispatch edges.
     method_uses: Vec<MultiUse>,
+    /// clj-kondo var usages by file.
+    usages_by_file: HashMap<&'a str, Vec<&'a VarUsage>>,
+    /// clj-kondo var usages by target `(ns, name)`.
+    usages_by_target: HashMap<(&'a str, &'a str), Vec<&'a VarUsage>>,
+    /// Var definitions by file, and by `(ns, name)` (the first one).
+    defs_by_file: HashMap<&'a str, Vec<&'a VarDefinition>>,
+    defs_by_name: HashMap<(&'a str, &'a str), &'a VarDefinition>,
     /// The R11 keyword-dispatch catalog.
     catalog: &'a Catalog,
     /// All rule catalogs and the jar listings.
@@ -294,6 +318,25 @@ impl<'a> Resolver<'a> {
             multi_uses: Vec::new(),
             method_impls: BTreeMap::new(),
             method_uses: Vec::new(),
+            usages_by_file: group(&run.analysis.var_usages, |u| u.filename.as_str()),
+            usages_by_target: run
+                .analysis
+                .var_usages
+                .iter()
+                .filter_map(|u| Some(((u.to.as_deref()?, u.name.as_str()), u)))
+                .fold(HashMap::new(), |mut m, (k, u)| {
+                    m.entry(k).or_insert_with(Vec::new).push(u);
+                    m
+                }),
+            defs_by_file: group(&run.analysis.var_definitions, |d| d.filename.as_str()),
+            defs_by_name: run
+                .analysis
+                .var_definitions
+                .iter()
+                .fold(HashMap::new(), |mut m, d| {
+                    m.entry((d.ns.as_str(), d.name.as_str())).or_insert(d);
+                    m
+                }),
             catalog: &ctx.rules.keyword,
             ctx,
             reg_impls: Vec::new(),
@@ -472,9 +515,8 @@ impl<'a> Resolver<'a> {
         else {
             return false;
         };
-        self.run.analysis.var_usages.iter().any(|u| {
-            u.filename == def.filename
-                && upos(u) == Some(value.start)
+        self.usages_in(&def.filename).iter().any(|u| {
+            upos(u) == Some(value.start)
                 && STATEFUL_INITS.contains(&u.name.as_str())
                 && matches!(u.to.as_deref(), Some("clojure.core" | "cljs.core"))
         })
@@ -890,9 +932,10 @@ impl<'a> Resolver<'a> {
                 continue;
             };
             handlers.extend(
-                usages.iter().filter(|v| {
-                    v.filename == u.filename && upos(v).is_some_and(|p| arg.contains(p))
-                }),
+                self.usages_in(&u.filename)
+                    .iter()
+                    .copied()
+                    .filter(|v| upos(v).is_some_and(|p| arg.contains(p))),
             );
         }
         for v in handlers {
@@ -1040,6 +1083,20 @@ impl<'a> Resolver<'a> {
         );
     }
 
+    /// The clj-kondo var usages in `file`.
+    ///
+    /// Example: `usages_in("src/shop/core.clj")` lists that file's usages.
+    fn usages_in(&self, file: &str) -> &[&'a VarUsage] {
+        self.usages_by_file.get(file).map_or(&[], Vec::as_slice)
+    }
+
+    /// The var definitions in `file`.
+    ///
+    /// Example: `defs_in("src/shop/core.clj")` lists `checkout`, `-main`, ….
+    fn defs_in(&self, file: &str) -> &[&'a VarDefinition] {
+        self.defs_by_file.get(file).map_or(&[], Vec::as_slice)
+    }
+
     /// The call site that starts at `pos` in `file`.
     ///
     /// Example: the position of `(rf/dispatch [:a])` gives that call.
@@ -1054,15 +1111,9 @@ impl<'a> Resolver<'a> {
     /// Example: `(defmethod price :book …)` in shop.pricing gives
     /// `("shop.pricing", "price")`.
     fn defmethod_target(&self, file: &str, form: &TopForm) -> Option<(String, String)> {
-        self.run
-            .analysis
-            .var_usages
+        self.usages_in(file)
             .iter()
-            .find(|u| {
-                u.filename == file
-                    && u.defmethod == Some(true)
-                    && upos(u).is_some_and(|p| form.span.contains(p))
-            })
+            .find(|u| u.defmethod == Some(true) && upos(u).is_some_and(|p| form.span.contains(p)))
             .and_then(|u| Some((u.to.clone()?, u.name.clone())))
     }
 
@@ -1447,13 +1498,11 @@ impl<'a> Resolver<'a> {
                 _ => Vec::new(),
             };
             let inside: Vec<VarUsage> = self
-                .run
-                .analysis
-                .var_usages
+                .usages_in(&u.filename)
                 .iter()
-                .filter(|v| v.filename == u.filename && upos(v).is_some_and(|p| span.contains(p)))
+                .filter(|v| upos(v).is_some_and(|p| span.contains(p)))
                 .filter(|v| u.name != "with-redefs" || names.contains(&v.name))
-                .cloned()
+                .map(|v| (*v).clone())
                 .collect();
             for v in inside {
                 if let Some((NodeId::Symbol(s), _)) = self.target(&v) {
@@ -1558,11 +1607,9 @@ impl<'a> Resolver<'a> {
             return Some(id);
         }
         let innermost = self
-            .run
-            .analysis
-            .var_definitions
+            .defs_in(file)
             .iter()
-            .filter(|d| d.filename == file && def_span_contains(d, pos))
+            .filter(|d| def_span_contains(d, pos))
             .min_by_key(|d| {
                 (
                     d.end_row.unwrap_or(d.row) - d.row,
@@ -1982,11 +2029,11 @@ impl<'a> Resolver<'a> {
             let Some((arity, param)) = found else {
                 continue;
             };
-            let Some(def) = analysis.var_definitions.iter().find(|d| {
-                d.filename == usage.filename
-                    && d.row == form.span.start.line
-                    && d.col == form.span.start.col
-            }) else {
+            let Some(def) = self
+                .defs_in(&usage.filename)
+                .iter()
+                .find(|d| d.row == form.span.start.line && d.col == form.span.start.col)
+            else {
                 continue;
             };
             let Some(f) = self.sym_id(&def.ns, &def.name) else {
@@ -2000,16 +2047,12 @@ impl<'a> Resolver<'a> {
         for (f, arities, arity, param, site) in flows {
             let NodeId::Symbol(sym) = &f else { continue };
             let callers: Vec<VarUsage> = self
-                .run
-                .analysis
-                .var_usages
+                .usages_by_target
+                .get(&(sym.namespace().ns(), sym.name()))
+                .map_or(&[][..], Vec::as_slice)
                 .iter()
-                .filter(|u| {
-                    u.to.as_deref() == Some(sym.namespace().ns())
-                        && u.name == sym.name()
-                        && self.is_call(u)
-                })
-                .cloned()
+                .filter(|u| self.is_call(u))
+                .map(|u| (*u).clone())
                 .collect();
             for caller in callers {
                 let Some(pos) = upos(&caller) else { continue };
@@ -2039,12 +2082,10 @@ impl<'a> Resolver<'a> {
                     continue;
                 }
                 let passed = self
-                    .run
-                    .analysis
-                    .var_usages
+                    .usages_in(&caller.filename)
                     .iter()
-                    .find(|u| u.filename == caller.filename && upos(u) == Some(span.start))
-                    .cloned();
+                    .find(|u| upos(u) == Some(span.start))
+                    .map(|u| (*u).clone());
                 let Some(passed) = passed else { continue };
                 if let Some((to, _)) = self.target(&passed) {
                     self.edge(
@@ -2359,12 +2400,7 @@ impl<'a> Resolver<'a> {
         let NodeId::Symbol(sym) = multi else {
             return None;
         };
-        let def = self
-            .run
-            .analysis
-            .var_definitions
-            .iter()
-            .find(|d| d.ns == sym.namespace().ns() && d.name == sym.name())?;
+        let def = *self.defs_by_name.get(&(sym.namespace().ns(), sym.name()))?;
         let ix = self.indexes.get(def.filename.as_str())?;
         let start = Pos {
             line: def.row,
@@ -2603,6 +2639,17 @@ fn merge_languages(edges: Vec<Edge>) -> (Vec<Edge>, usize) {
         out.push(merged);
     }
     (out, dropped)
+}
+
+/// Items grouped by a borrowed key, in input order within each group.
+///
+/// Example: usages grouped by file name.
+fn group<'a, T>(items: &'a [T], key: impl Fn(&'a T) -> &'a str) -> HashMap<&'a str, Vec<&'a T>> {
+    let mut out: HashMap<&'a str, Vec<&'a T>> = HashMap::new();
+    for item in items {
+        out.entry(key(item)).or_default().push(item);
+    }
+    out
 }
 
 /// R1 subkind from `defined-by` (and the name for record constructors).

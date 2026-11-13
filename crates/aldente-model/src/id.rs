@@ -476,53 +476,153 @@ impl PartialOrd for NodeId {
 
 impl Ord for NodeId {
     /// IDs sort by their string form, so sorted output reads alphabetically.
+    /// Compares the two pieces lists byte by byte instead of formatting
+    /// both IDs: IDs are the keys of every map, so this is a hot path.
     ///
     /// Example: `clj:.//a/x` sorts before `ext:clj//clojure.core/map`.
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.to_string().cmp(&other.to_string())
+        let (a, b) = (self.pieces(), other.pieces());
+        a.iter()
+            .flat_map(str::bytes)
+            .cmp(b.iter().flat_map(str::bytes))
     }
 }
 
-impl fmt::Display for NodeId {
-    /// Writes the canonical string form described in the module docs.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+/// The pieces an ID's string form is the concatenation of (at most 12).
+/// Pieces borrow from the ID except escaped names and hole coordinates.
+struct Pieces<'a> {
+    parts: [Cow<'a, str>; 12],
+    len: usize,
+}
+
+impl<'a> Pieces<'a> {
+    /// Starts an empty list.
+    ///
+    /// Example: `Pieces::new().push("unit:")`.
+    fn new() -> Pieces<'a> {
+        Pieces {
+            parts: Default::default(),
+            len: 0,
+        }
+    }
+
+    /// Appends a piece; pieces past the twelfth are a bug and are dropped
+    /// (the test over every ID shape keeps this from happening).
+    ///
+    /// Example: `p.push("clj")`.
+    fn push(&mut self, piece: impl Into<Cow<'a, str>>) -> &mut Pieces<'a> {
+        if let Some(slot) = self.parts.get_mut(self.len) {
+            *slot = piece.into();
+            self.len += 1;
+        }
+        self
+    }
+
+    /// The pieces in order.
+    ///
+    /// Example: for `unit:a`, `["unit:", "a"]`.
+    fn iter(&self) -> impl Iterator<Item = &str> {
+        self.parts.iter().take(self.len).map(|c| c.as_ref())
+    }
+}
+
+impl NodeId {
+    /// The pieces of the canonical string form.
+    ///
+    /// Example: `clj:.//a/f` gives `["clj", ":", ".", "//", "a", "/", "f"]`.
+    fn pieces(&self) -> Pieces<'_> {
+        let mut p = Pieces::new();
         match self {
-            NodeId::Repo => f.write_str("repo:."),
-            NodeId::Unit(dir) => write!(f, "unit:{dir}"),
-            NodeId::Namespace(ns) => write!(f, "{ns}"),
-            NodeId::Symbol(sym) => write!(f, "{sym}"),
-            NodeId::Impl(i) => write!(f, "{}@{}", i.symbol, i.discriminator),
+            NodeId::Repo => {
+                p.push("repo:.");
+            }
+            NodeId::Unit(dir) => {
+                p.push("unit:").push(dir.as_str());
+            }
+            NodeId::Namespace(ns) => push_namespace(&mut p, ns),
+            NodeId::Symbol(sym) => push_symbol(&mut p, sym),
+            NodeId::Impl(i) => {
+                push_symbol(&mut p, &i.symbol);
+                p.push("@").push(i.discriminator.as_str());
+            }
             NodeId::External(e) => {
-                write!(f, "ext:{}//{}", e.lang.as_str(), e.ns)?;
-                match &e.name {
-                    Some(name) => write!(f, "/{}", escape_name(name)),
-                    None => Ok(()),
+                p.push("ext:")
+                    .push(e.lang.as_str())
+                    .push("//")
+                    .push(e.ns.as_str());
+                if let Some(name) = &e.name {
+                    p.push("/").push(escape_name(name));
                 }
             }
-            NodeId::Library(l) if l.coordinate.is_empty() => write!(f, "lib:{}", l.ecosystem),
-            NodeId::Library(l) => write!(f, "lib:{}:{}", l.ecosystem, l.coordinate),
-            NodeId::Platform(PlatformId::Java {
-                class,
-                member: None,
-            }) => write!(f, "java:{class}"),
-            NodeId::Platform(PlatformId::Java {
-                class,
-                member: Some(m),
-            }) => write!(f, "java:{class}#{m}"),
-            NodeId::Platform(PlatformId::Js { path }) => write!(f, "js:{path}"),
-            NodeId::Hole(h) => write!(
-                f,
-                "hole:{}@{}:{}:{}",
-                h.category.as_str(),
-                h.file,
-                h.line,
-                h.col
-            ),
-            NodeId::Endpoint(t) => write!(f, "endpoint:{t}"),
-            NodeId::Datastore(t) => write!(f, "datastore:{t}"),
-            NodeId::Host(t) => write!(f, "host:{t}"),
-            NodeId::State(t) => write!(f, "state:{t}"),
+            NodeId::Library(l) => {
+                p.push("lib:").push(l.ecosystem.as_str());
+                if !l.coordinate.is_empty() {
+                    p.push(":").push(l.coordinate.as_str());
+                }
+            }
+            NodeId::Platform(PlatformId::Java { class, member }) => {
+                p.push("java:").push(class.as_str());
+                if let Some(m) = member {
+                    p.push("#").push(m.as_str());
+                }
+            }
+            NodeId::Platform(PlatformId::Js { path }) => {
+                p.push("js:").push(path.as_str());
+            }
+            NodeId::Hole(h) => {
+                p.push("hole:")
+                    .push(h.category.as_str())
+                    .push("@")
+                    .push(h.file.as_str())
+                    .push(":")
+                    .push(h.line.to_string())
+                    .push(":")
+                    .push(h.col.to_string());
+            }
+            NodeId::Endpoint(t) => {
+                p.push("endpoint:").push(t.as_str());
+            }
+            NodeId::Datastore(t) => {
+                p.push("datastore:").push(t.as_str());
+            }
+            NodeId::Host(t) => {
+                p.push("host:").push(t.as_str());
+            }
+            NodeId::State(t) => {
+                p.push("state:").push(t.as_str());
+            }
         }
+        p
+    }
+}
+
+/// Pushes `<lang>:<unit>//<ns>`.
+///
+/// Example: for `clj:.//a`, pushes `clj`, `:`, `.`, `//`, `a`.
+fn push_namespace<'a>(p: &mut Pieces<'a>, ns: &'a NamespaceId) {
+    p.push(ns.lang.as_str())
+        .push(":")
+        .push(ns.unit.as_str())
+        .push("//")
+        .push(ns.ns.as_str());
+}
+
+/// Pushes `<namespace>/<escaped name>`.
+///
+/// Example: for `clj:.//a/f%40g`, the last piece is `f%40g`.
+fn push_symbol<'a>(p: &mut Pieces<'a>, sym: &'a SymbolId) {
+    push_namespace(p, &sym.ns);
+    p.push("/").push(escape_name(&sym.name));
+}
+
+impl fmt::Display for NodeId {
+    /// Writes the canonical string form described in the module docs: the
+    /// concatenated [`NodeId::pieces`].
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for piece in self.pieces().iter() {
+            f.write_str(piece)?;
+        }
+        Ok(())
     }
 }
 
@@ -695,6 +795,56 @@ impl JsonSchema for NodeId {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// IDs chosen so that comparing parts instead of strings would differ:
+    /// `-` (0x2D) sorts before `/` (0x2F), escapes, numbers, every prefix.
+    fn tricky() -> Vec<NodeId> {
+        [
+            "repo:.",
+            "unit:.",
+            "unit:a",
+            "unit:a-b",
+            "unit:a/b",
+            "clj:a//x",
+            "clj:a-b//x",
+            "clj:a/b//x",
+            "clj:.//a",
+            "clj:.//a.b",
+            "clj:.//a-b",
+            "clj:.//a/f",
+            "clj:.//a/f-g",
+            "clj:.//a/f%40g",
+            "clj:.//a/f@:k",
+            "clj:.//a/f@[String String]",
+            "clj:.//a//",
+            "cljs:.//a/f",
+            "ext:clj//clojure.core",
+            "ext:clj//clojure.core/map",
+            "ext:clj//clojure.core-x/map",
+            "lib:unknown",
+            "lib:maven:a/b",
+            "lib:npm:react",
+            "java:java.util.UUID",
+            "java:java.util.UUID#randomUUID",
+            "js:console.log",
+            "hole:dynamic-eval@src/a.clj:12:3",
+            "hole:dynamic-eval@src/a.clj:9:30",
+            "hole:dynamic-resolve@src/a.clj:1:1",
+        ]
+        .iter()
+        .map(|s| s.parse::<NodeId>().unwrap())
+        .collect()
+    }
+
+    #[test]
+    fn ordering_is_exactly_string_ordering() {
+        let ids = tricky();
+        for a in &ids {
+            for b in &ids {
+                assert_eq!(a.cmp(b), a.to_string().cmp(&b.to_string()), "{a} vs {b}");
+            }
+        }
+    }
     use crate::path::PathStyle;
     use crate::strategies::arb_node_id;
     use proptest::prelude::*;

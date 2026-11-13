@@ -84,6 +84,10 @@ impl Adapter for CljAdapter {
             });
         }
         let mut batch = timings.time("resolve", || resolve(unit, &run, &indexes, &ctx).batch);
+        // The resolver's steps, as details under `resolve`.
+        for (label, took) in std::mem::take(&mut batch.timings).entries() {
+            timings.record(label, *took);
+        }
         batch.timings = timings;
         Ok(batch)
     }
