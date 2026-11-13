@@ -38,6 +38,7 @@ export function App() {
   const [hideTests, setHideTests] = useState(false);
   const [hideExternals, setHideExternals] = useState(true);
   const [hideInterop, setHideInterop] = useState(false);
+  const [hideCore, setHideCore] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
   const [panels, setPanels] = usePanels();
@@ -331,8 +332,8 @@ export function App() {
   );
 
   const isHidden = useCallback(
-    (id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), { hideTests, hideExternals, hideInterop }),
-    [graph, hideTests, hideExternals, hideInterop],
+    (id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), { hideTests, hideExternals, hideInterop, hideCore }),
+    [graph, hideTests, hideExternals, hideInterop, hideCore],
   );
 
   const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
@@ -352,7 +353,7 @@ export function App() {
 
   const visible = graph
     .mapNodes((_id, a) => a.node)
-    .filter((n) => !hidden(n, { hideTests, hideExternals, hideInterop }))
+    .filter((n) => !hidden(n, { hideTests, hideExternals, hideInterop, hideCore }))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
 
   const runSearch = (e: React.FormEvent) => {
@@ -422,6 +423,18 @@ export function App() {
             }}
           />{' '}
           Hide interop exits (Java, JS)
+        </label>
+        <label title="clojure.core and cljs.core: let, or, map, str, … Shown again when unchecked.">
+          <input
+            type="checkbox"
+            data-testid="hide-core"
+            checked={hideCore}
+            onChange={(e) => {
+              setHideCore(e.target.checked);
+              redraw();
+            }}
+          />{' '}
+          Hide Clojure core (let, or, map…)
         </label>
         <fieldset className="legend" data-testid="legend">
           <legend>Edges by certainty</legend>

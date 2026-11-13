@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropNodes, edgeKey, edgeShown, hasSource, hidden, isTest, labelFor, mergePayload, newGraph } from './model';
+import { dropNodes, edgeKey, edgeShown, hasSource, hidden, isCore, isTest, labelFor, mergePayload, newGraph } from './model';
 import { apiPath, tokenFrom } from './api';
 import type { GNode, Payload } from './types';
 
@@ -42,6 +42,19 @@ describe('toggles', () => {
     expect(isTest(node('clj:.//shop.pricing-test', 'namespace'))).toBe(true);
     expect(hidden(node('ext:clj//clojure.core/map', 'external'), { hideTests: false, hideExternals: true })).toBe(true);
     expect(hidden(node('clj:.//a/f'), { hideTests: true, hideExternals: true })).toBe(false);
+  });
+
+  it('hides clojure.core and cljs.core on their own toggle', () => {
+    const off = { hideTests: false, hideExternals: false };
+    expect(isCore(node('ext:clj//clojure.core/let', 'external'))).toBe(true);
+    expect(isCore(node('ext:clj//cljs.core/str', 'external'))).toBe(true);
+    expect(isCore(node('ext:clj//clojure.core', 'external'))).toBe(true);
+    expect(isCore(node('ext:clj//clojure.core.async/go', 'external'))).toBe(false);
+    expect(isCore(node('ext:clj//clojure.string/join', 'external'))).toBe(false);
+    expect(isCore(node('clj:.//clojure.core/mine'))).toBe(false);
+    expect(hidden(node('ext:clj//clojure.core/let', 'external'), off)).toBe(false);
+    expect(hidden(node('ext:clj//clojure.core/let', 'external'), { ...off, hideCore: true })).toBe(true);
+    expect(hidden(node('ext:clj//reagent.core/atom', 'external'), { ...off, hideCore: true })).toBe(false);
   });
 });
 

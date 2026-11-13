@@ -85,12 +85,22 @@ export function isTest(n: GNode): boolean {
   return (n.flags ?? []).includes('test') || n.subkind === 'test' || n.name.endsWith('-test') || (n.namespace ?? '').endsWith('-test');
 }
 
+/** Whether a node is the Clojure or ClojureScript core library
+ *  (`clojure.core`, `cljs.core`, their functions and macros), not other
+ *  `clojure.*` namespaces.
+ *  Example: `ext:clj//clojure.core/let` is; `ext:clj//clojure.string/join` is not. */
+export function isCore(n: GNode): boolean {
+  return n.kind === 'external' && /^ext:[a-z]+\/\/(clojure|cljs)\.core(\/|$)/.test(n.id);
+}
+
 /** Which kinds of node the toggles hide. */
 export interface HideOptions {
   hideTests: boolean;
   hideExternals: boolean;
   /** Platform nodes: Java and JavaScript interop exits. */
   hideInterop?: boolean;
+  /** `clojure.core` and `cljs.core` (`let`, `or`, `map`, …). */
+  hideCore?: boolean;
 }
 
 /** Whether a node is hidden by the toggles.
@@ -99,7 +109,8 @@ export function hidden(n: GNode, opts: HideOptions): boolean {
   return (
     (opts.hideExternals && n.kind === 'external') ||
     (opts.hideTests && isTest(n)) ||
-    (opts.hideInterop === true && n.kind === 'platform')
+    (opts.hideInterop === true && n.kind === 'platform') ||
+    (opts.hideCore === true && isCore(n))
   );
 }
 
