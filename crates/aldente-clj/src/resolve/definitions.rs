@@ -33,6 +33,41 @@ impl<'a> Resolver<'a> {
                 node.flags.insert(SymbolFlag::Test);
             }
         }
+        self.implicit_namespace();
+    }
+
+    /// One `user` node for the unit's scripts (files with forms but no `ns`
+    /// form), located at the first script, so their code has a home.
+    ///
+    /// Example: `gen.clj` with `(defn f …)` and no `ns` gives `clj:.//user`.
+    fn implicit_namespace(&mut self) {
+        let scripts = scripts(self.run, self.indexes.values().copied());
+        let Some(first) = scripts.first() else {
+            return;
+        };
+        let Some(ns) = self.ns_id(IMPLICIT_NS) else {
+            return;
+        };
+        let id = NodeId::Namespace(ns);
+        let file = first.path.as_str().to_owned();
+        let langs: BTreeSet<Lang> = scripts
+            .iter()
+            .map(|ix| lang_of(None, ix.path.as_str()))
+            .collect();
+        let node = self.nodes.entry(id.clone()).or_insert_with(|| Node {
+            id: id.clone(),
+            kind: NodeKind::Namespace,
+            subkind: None,
+            name: IMPLICIT_NS.to_owned(),
+            namespace: None,
+            unit: Some(NodeId::Unit(self.unit.dir.clone())),
+            langs: BTreeSet::new(),
+            flags: BTreeSet::new(),
+            loc: location(&file, 1, 1, None, None),
+            doc: None,
+            signature: None,
+        });
+        node.langs.extend(langs);
     }
 
     /// R14: a namespace in a file under one of the unit's test roots, or

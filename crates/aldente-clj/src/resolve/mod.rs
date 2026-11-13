@@ -215,6 +215,28 @@ pub fn resolve<'a>(
     out
 }
 
+/// The namespace Clojure evaluates a file without an `ns` form in.
+const IMPLICIT_NS: &str = "user";
+
+/// Files with top-level forms but no `ns` form (scripts), sorted.
+///
+/// Example: `gen.clj` holding `(require …) (let …)` is a script.
+fn scripts<'a>(
+    run: &KondoRun,
+    indexes: impl IntoIterator<Item = &'a FileIndex>,
+) -> Vec<&'a FileIndex> {
+    indexes
+        .into_iter()
+        .filter(|ix| !ix.forms.is_empty())
+        .filter(|ix| {
+            !run.analysis
+                .namespace_definitions
+                .iter()
+                .any(|n| n.filename == ix.path.as_str())
+        })
+        .collect()
+}
+
 /// One resolver step and its `--timings` label.
 type Step<'a> = (&'static str, fn(&mut Resolver<'a>));
 
@@ -327,6 +349,7 @@ impl<'a> Resolver<'a> {
                 .namespace_definitions
                 .iter()
                 .map(|n| n.name.clone())
+                .chain((!scripts(run, indexes).is_empty()).then(|| IMPLICIT_NS.to_owned()))
                 .collect(),
             nodes: BTreeMap::new(),
             edges: BTreeMap::new(),

@@ -7,8 +7,9 @@
 use std::collections::BTreeSet;
 
 use aldente_graph::query::{Direction, neighborhood};
-use aldente_model::{AggregationLevel, Certainty, EdgeKind, NodeId};
+use aldente_model::{AggregationLevel, Certainty, EdgeKind, NodeId, NodeKind};
 use aldente_testkit::{analyze_fixture, assert_graph_snapshot, fixture_dir};
+use std::str::FromStr;
 
 /// `(from, to, certainty)` of every edge of `kind`, with `clj:.//` stripped.
 ///
@@ -1358,4 +1359,44 @@ fn comment_block_calls_are_possible() {
     {
         assert_eq!(e.certainty, Some(Possible), "{} -> {}", e.from, e.to);
     }
+}
+
+/// A file without an `ns` form lives in `user`: every row of
+/// `fixtures/clj-rules/no-ns/EXPECTED.md`, and no edge to a missing node.
+#[test]
+fn a_script_without_ns_lives_in_user() {
+    let g = analyze_fixture(&fixture_dir("clj-rules/no-ns")).graph;
+    let id = |s: &str| NodeId::from_str(&format!("clj:.//{s}")).unwrap();
+    for e in &g.edges {
+        for end in [&e.from, &e.to] {
+            let local = matches!(
+                end.kind(),
+                NodeKind::Namespace | NodeKind::Symbol | NodeKind::Impl
+            );
+            assert!(
+                !local || g.nodes.contains_key(end),
+                "{} -> {}: {end} has no node",
+                e.from,
+                e.to
+            );
+        }
+    }
+    let ns = g.nodes.get(&id("user")).expect("namespace user");
+    assert_eq!(ns.kind, NodeKind::Namespace);
+    let contains: BTreeSet<String> = g
+        .edges
+        .iter()
+        .filter(|e| e.kind == EdgeKind::Contains && e.from == id("user"))
+        .map(|e| e.to.to_string())
+        .collect();
+    for child in ["user/shout", "user/<top>@L2", "user/<top>@L6"] {
+        assert!(
+            contains.contains(&id(child).to_string()),
+            "{child} in {contains:?}"
+        );
+    }
+    assert!(g.edges.iter().any(|e| e.kind == EdgeKind::Calls
+        && e.from == id("user/<top>@L6")
+        && e.to == id("user/shout")
+        && e.certainty == Some(Certainty::Certain)));
 }
