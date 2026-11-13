@@ -14,6 +14,51 @@ use rayon::prelude::*;
 use crate::build::{Graph, build_timed};
 use crate::snapshot::{self, Snapshot};
 
+/// A point in the pipeline worth telling the user about.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Step<'a> {
+    /// Walking the tree and hashing files.
+    Walking,
+    /// The walk is done.
+    Discovered { files: usize, units: usize },
+    /// An unchanged tree: the stored snapshot is used.
+    CacheHit,
+    /// Starting the adapters: `jobs` (unit, adapter) pairs.
+    Analyzing { jobs: usize },
+    /// An adapter started a stage on a unit (`clj-kondo`, `resolve`, …).
+    UnitStage {
+        unit: &'a str,
+        files: usize,
+        stage: &'a str,
+    },
+    /// A unit finished; `done` of `total`.
+    UnitDone {
+        unit: &'a str,
+        done: usize,
+        total: usize,
+    },
+    /// Merging facts into the graph.
+    Building,
+    /// Writing the snapshot.
+    Saving,
+}
+
+/// Receives pipeline steps. Called from worker threads.
+pub trait Progress: Sync {
+    /// Reports one step.
+    ///
+    /// Example: `progress.step(Step::Walking)`.
+    fn step(&self, step: Step<'_>);
+}
+
+/// Progress that reports nothing.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Silent;
+
+impl Progress for Silent {
+    fn step(&self, _: Step<'_>) {}
+}
+
 /// Discovery plus the graph.
 #[derive(Debug, Clone)]
 pub struct Analyzed {
@@ -34,7 +79,7 @@ pub fn analyze(
     adapters: &[&dyn Adapter],
 ) -> Result<Analyzed, AdapterError> {
     let discovery = discover(root, git, walk(root, &Limits::default()));
-    analyze_discovered(root, discovery, adapters, &mut Timings::default())
+    analyze_discovered(root, discovery, adapters, &mut Timings::default(), &Silent)
 }
 
 /// Runs the adapters over an existing discovery and builds the graph,
@@ -46,6 +91,7 @@ fn analyze_discovered(
     discovery: Discovery,
     adapters: &[&dyn Adapter],
     timings: &mut Timings,
+    progress: &dyn Progress,
 ) -> Result<Analyzed, AdapterError> {
     // One job per (unit, claiming adapter), run in parallel; results are
     // collected in unit order, so the graph does not depend on scheduling.
@@ -65,9 +111,36 @@ fn analyze_discovered(
         }
     }
     let started = std::time::Instant::now();
+    progress.step(Step::Analyzing { jobs: jobs.len() });
+    let done = std::sync::atomic::AtomicUsize::new(0);
+    let total = jobs.len();
     let results: Vec<Result<FactBatch, AdapterError>> = jobs
         .par_iter()
-        .map(|(unit, adapter, files)| adapter.analyze(unit, AnalyzeCtx { root, files }))
+        .map(|(unit, adapter, files)| {
+            let name = unit.dir.as_str();
+            let stage = |stage: &str| {
+                progress.step(Step::UnitStage {
+                    unit: name,
+                    files: files.len(),
+                    stage,
+                })
+            };
+            let result = adapter.analyze(
+                unit,
+                AnalyzeCtx {
+                    root,
+                    files,
+                    stage: &stage,
+                },
+            );
+            let done = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            progress.step(Step::UnitDone {
+                unit: name,
+                done,
+                total,
+            });
+            result
+        })
         .collect();
     timings.detail("units (in parallel, wall clock)", started.elapsed());
     let mut batches = Vec::new();
@@ -87,6 +160,7 @@ fn analyze_discovered(
         }
     }
     let started = std::time::Instant::now();
+    progress.step(Step::Building);
     let mut details = Timings::default();
     let mut graph = build_timed(&discovery.report.units, batches, &mut details);
     timings.record("build", started.elapsed());
@@ -136,10 +210,16 @@ pub fn analyze_cached(
     git: bool,
     adapters: &[&dyn Adapter],
     ctx: &CacheContext<'_>,
+    progress: &dyn Progress,
 ) -> Result<Outcome, AdapterError> {
     let mut timings = Timings::default();
+    progress.step(Step::Walking);
     let walked = timings.time("walk", || walk(root, &Limits::default()));
     let discovery = timings.time("discover", || discover(root, git, walked));
+    progress.step(Step::Discovered {
+        files: discovery.analyzed.len(),
+        units: discovery.report.units.len(),
+    });
     let key = timings.time("key", || snapshot_key(&ctx.inputs, &discovery.key_files()));
     let path = snapshot::path_for(ctx.snapshots, &key);
     if !ctx.no_cache {
@@ -147,6 +227,7 @@ pub fn analyze_cached(
         if let Ok(Some(snap)) = loaded
             && snap.key == key
         {
+            progress.step(Step::CacheHit);
             return Ok(Outcome {
                 snapshot: snap,
                 cached: true,
@@ -161,7 +242,7 @@ pub fn analyze_cached(
         .iter()
         .map(|f| (f.path.clone(), f.hash.clone()))
         .collect();
-    let analyzed = analyze_discovered(root, discovery, adapters, &mut timings)?;
+    let analyzed = analyze_discovered(root, discovery, adapters, &mut timings, progress)?;
     let snap = Snapshot {
         key,
         repo: ctx.repo.clone(),
@@ -172,6 +253,7 @@ pub fn analyze_cached(
         files,
         graph: analyzed.graph,
     };
+    progress.step(Step::Saving);
     let store_error = timings
         .time("snapshot-save", || snapshot::write(&path, &snap))
         .err()
@@ -270,11 +352,13 @@ mod tests {
         let dir = scratch("hit");
         let (root, snaps) = (dir.join("repo"), dir.join("snapshots"));
         let counter = Counting(AtomicUsize::new(0));
-        let first = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let first =
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert!(!first.cached);
         assert_eq!(first.store_error, None);
         let started = std::time::Instant::now();
-        let second = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let second =
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert!(second.cached);
         assert!(started.elapsed() < std::time::Duration::from_secs(1));
         assert_eq!(
@@ -290,9 +374,11 @@ mod tests {
         let dir = scratch("change");
         let (root, snaps) = (dir.join("repo"), dir.join("snapshots"));
         let counter = Counting(AtomicUsize::new(0));
-        let first = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let first =
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         std::fs::write(root.join("src/a.clj"), "(ns a) (defn f [])").unwrap();
-        let second = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let second =
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert_ne!(first.snapshot.key, second.snapshot.key);
         assert!(!second.cached);
         assert_eq!(counter.0.load(Ordering::SeqCst), 2);
@@ -303,9 +389,10 @@ mod tests {
         let dir = scratch("force");
         let (root, snaps) = (dir.join("repo"), dir.join("snapshots"));
         let counter = Counting(AtomicUsize::new(0));
-        let first = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let first =
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert!(
-            !analyze_cached(&root, false, &[&counter], &ctx(&snaps, true))
+            !analyze_cached(&root, false, &[&counter], &ctx(&snaps, true), &Silent)
                 .unwrap()
                 .cached
         );
@@ -317,14 +404,62 @@ mod tests {
                 [],
             )
             .unwrap();
-        let rebuilt = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let rebuilt =
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert!(!rebuilt.cached, "an older schema is ignored and rebuilt");
         assert_eq!(counter.0.load(Ordering::SeqCst), 3);
         assert!(
-            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false))
+            analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent)
                 .unwrap()
                 .cached,
             "and the rebuild is cached"
+        );
+    }
+
+    /// Records steps as text.
+    #[derive(Default)]
+    struct Recorder(std::sync::Mutex<Vec<String>>);
+
+    impl Progress for Recorder {
+        fn step(&self, step: Step<'_>) {
+            let text = match step {
+                Step::Walking => "walking".to_owned(),
+                Step::Discovered { files, units } => format!("discovered {files} {units}"),
+                Step::CacheHit => "hit".to_owned(),
+                Step::Analyzing { jobs } => format!("analyzing {jobs}"),
+                Step::UnitStage { .. } => "stage".to_owned(),
+                Step::UnitDone { done, total, .. } => format!("done {done}/{total}"),
+                Step::Building => "building".to_owned(),
+                Step::Saving => "saving".to_owned(),
+            };
+            self.0.lock().unwrap().push(text);
+        }
+    }
+
+    #[test]
+    fn progress_reports_each_step_and_a_hit() {
+        let dir = scratch("progress");
+        let (root, snaps) = (dir.join("repo"), dir.join("snapshots"));
+        let counter = Counting(AtomicUsize::new(0));
+        let rec = Recorder::default();
+        analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &rec).unwrap();
+        let steps = rec.0.lock().unwrap().clone();
+        assert_eq!(
+            steps,
+            [
+                "walking",
+                "discovered 1 1",
+                "analyzing 1",
+                "done 1/1",
+                "building",
+                "saving"
+            ]
+        );
+        let rec = Recorder::default();
+        analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &rec).unwrap();
+        assert_eq!(
+            rec.0.lock().unwrap().as_slice(),
+            ["walking", "discovered 1 1", "hit"]
         );
     }
 
@@ -350,7 +485,7 @@ mod tests {
                 .filter(|l| l.starts_with(aldente_model::timing::DETAIL))
                 .collect()
         };
-        let cold = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let cold = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert_eq!(
             labels(&cold),
             [
@@ -371,7 +506,7 @@ mod tests {
         ] {
             assert!(d.iter().any(|l| l == want), "{want} in {d:?}");
         }
-        let hit = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
+        let hit = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false), &Silent).unwrap();
         assert_eq!(labels(&hit), ["walk", "discover", "key", "snapshot-lookup"]);
     }
 

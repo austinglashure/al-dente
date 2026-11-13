@@ -73,6 +73,8 @@ dependencies = [
  "aldente-testkit",
  "insta",
  "proptest",
+ "serde",
+ "serde_json",
  "sourcemap",
  "thiserror",
 ]

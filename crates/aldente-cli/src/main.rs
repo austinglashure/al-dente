@@ -3,6 +3,7 @@
 mod commands;
 mod formats;
 mod output;
+mod progress;
 
 use clap::{Parser, Subcommand};
 

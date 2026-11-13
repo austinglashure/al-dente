@@ -18,7 +18,7 @@ use aldente_acquire::tools::{self, CLJ_KONDO};
 use aldente_clj::adapter::{CljAdapter, VERSION as CLJ_VERSION};
 use aldente_clj::kondo::Kondo;
 use aldente_graph::Graph;
-use aldente_graph::pipeline::{CacheContext, Outcome, analyze_cached};
+use aldente_graph::pipeline::{CacheContext, Outcome, Silent, analyze_cached};
 use aldente_graph::snapshot::SCHEMA_VERSION;
 use aldente_model::{BlindSpotCategory, DiagnosticCode, EdgeKind, NodeId};
 use anyhow::{Context, bail};
@@ -176,8 +176,8 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
     ))
     .with_maven_repo(aldente_acquire::maven::default_repository());
     let analyzing = Instant::now();
-    let outcome: Outcome =
-        analyze_cached(&root, true, &[&adapter], &ctx).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let outcome: Outcome = analyze_cached(&root, true, &[&adapter], &ctx, &Silent)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
     let analyzed = analyzing.elapsed();
     let summary = aldente_graph::summary::summarize(&outcome.snapshot, &acquired.diagnostics);
     let mut failed = 0;

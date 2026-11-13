@@ -46,12 +46,25 @@ pub struct LiteralFact {
 
 /// What an adapter may read. Files are the unit's own, already walked with
 /// the safety rules (inside the root, no symlinks, size-capped).
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct AnalyzeCtx<'a> {
     /// Canonical repository root.
     pub root: &'a Path,
     /// The unit's analyzed source files, sorted.
     pub files: &'a [RepoPath],
+    /// Called with a short stage name as the adapter starts each stage
+    /// (`clj-kondo`, `form-index`, `resolve`), for progress messages. May be
+    /// called from several threads at once.
+    pub stage: &'a (dyn Fn(&str) + Sync),
+}
+
+impl std::fmt::Debug for AnalyzeCtx<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AnalyzeCtx")
+            .field("root", &self.root)
+            .field("files", &self.files)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Why an adapter could not analyze a unit.

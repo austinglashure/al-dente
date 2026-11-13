@@ -64,6 +64,8 @@ impl Adapter for CljAdapter {
     /// `AdapterError::ToolMissing`.
     fn analyze(&self, unit: &UnitInfo, ctx: AnalyzeCtx<'_>) -> Result<FactBatch, AdapterError> {
         let mut timings = Timings::default();
+        let stage = ctx.stage;
+        stage("clj-kondo");
         let run = timings
             .time("clj-kondo", || self.kondo.analyze(ctx.root, ctx.files))
             .map_err(|e| match e {
@@ -76,6 +78,7 @@ impl Adapter for CljAdapter {
                 },
                 other => AdapterError::Failed(other.to_string()),
             })?;
+        stage("form-index");
         let indexes = timings.time("form-index", || index_files(ctx.root, ctx.files));
         let mut ctx = Context::builtin().map_err(|e| AdapterError::Failed(e.to_string()))?;
         if let Some(repo) = &self.maven_repo {
@@ -83,6 +86,7 @@ impl Adapter for CljAdapter {
                 aldente_acquire::maven::jar_namespaces(repo, &unit.deps)
             });
         }
+        stage("resolve");
         let mut batch = timings.time("resolve", || resolve(unit, &run, &indexes, &ctx).batch);
         // The resolver's steps, as details under `resolve`.
         for (label, took) in std::mem::take(&mut batch.timings).entries() {

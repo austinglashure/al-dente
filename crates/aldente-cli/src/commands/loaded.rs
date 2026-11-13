@@ -146,8 +146,9 @@ fn load_timed(
     ))
     .with_maven_repo(maven);
     let checks = started.elapsed().saturating_sub(opened);
-    let mut outcome =
-        analyze_cached(&target.root, target.git, &[&adapter], &ctx).map_err(|e| match e {
+    let progress = crate::progress::StderrProgress::start();
+    let mut outcome = analyze_cached(&target.root, target.git, &[&adapter], &ctx, &progress)
+        .map_err(|e| match e {
             AdapterError::ToolMissing { tool, hint } => {
                 Failure::new(ErrorCode::ToolMissing, format!("{tool} is missing; {hint}"))
             }
@@ -162,6 +163,8 @@ fn load_timed(
     outcome.timings = timings;
     if outcome.cached {
         eprintln!("aldente: using cached snapshot {}", outcome.snapshot.key);
+    } else {
+        progress.finish();
     }
     if let Some(e) = &outcome.store_error {
         eprintln!("aldente: warning: the snapshot could not be saved: {e}");
