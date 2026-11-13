@@ -218,6 +218,44 @@ pub fn read_meta(path: &Path) -> Result<Option<(String, Option<String>)>, StoreE
     Ok(Some((repo, (!rev.is_empty()).then_some(rev))))
 }
 
+/// A stored analysis result (`analysis_result`), or `None` when the
+/// snapshot file or the row is missing.
+///
+/// Example: after `write_result(&path, "measures", "{…}", "[1]")`,
+/// `read_result(&path, "measures", "{…}")` is `Ok(Some("[1]"))`.
+pub fn read_result(path: &Path, name: &str, params: &str) -> Result<Option<String>, StoreError> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    Ok(conn
+        .query_row(
+            "SELECT json FROM analysis_result WHERE name = ?1 AND params = ?2",
+            params![name, params],
+            |r| r.get(0),
+        )
+        .optional()?)
+}
+
+/// Stores (or replaces) an analysis result in an existing snapshot file.
+///
+/// Example: see [`read_result`].
+pub fn write_result(path: &Path, name: &str, params: &str, json: &str) -> Result<(), StoreError> {
+    if !path.is_file() {
+        return Err(StoreError::Bad(format!(
+            "no snapshot at {}",
+            path.display()
+        )));
+    }
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
+    conn.busy_timeout(std::time::Duration::from_secs(5))?;
+    conn.execute(
+        "INSERT OR REPLACE INTO analysis_result (name, params, json) VALUES (?1, ?2, ?3)",
+        params![name, params, json],
+    )?;
+    Ok(())
+}
+
 /// Reads a snapshot. `Ok(None)` when the file is missing, has another schema
 /// version, or is not a snapshot at all.
 ///
@@ -558,6 +596,25 @@ mod tests {
             snap_kinds(&path),
             [NodeKind::External, NodeKind::Symbol].map(|k| token(&k).unwrap())
         );
+    }
+
+    #[test]
+    fn analysis_results_are_stored_and_replaced() {
+        let dir = scratch("results");
+        let path = path_for(&dir, "b3:02");
+        assert_eq!(read_result(&path, "m", "p").unwrap(), None);
+        assert!(
+            write_result(&path, "m", "p", "1").is_err(),
+            "no snapshot yet"
+        );
+        write(&path, &sample("b3:02", "/repo")).unwrap();
+        assert_eq!(read_result(&path, "m", "p").unwrap(), None);
+        write_result(&path, "m", "p", "1").unwrap();
+        write_result(&path, "m", "p", "2").unwrap();
+        write_result(&path, "m", "q", "3").unwrap();
+        assert_eq!(read_result(&path, "m", "p").unwrap().as_deref(), Some("2"));
+        assert_eq!(read_result(&path, "m", "q").unwrap().as_deref(), Some("3"));
+        assert!(load(&path).unwrap().is_some(), "still a snapshot");
     }
 
     fn snap_kinds(path: &Path) -> Vec<String> {

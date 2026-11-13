@@ -13,6 +13,9 @@ aldente-graph.workspace = true
 aldente-model.workspace = true
 # rules/trace-noise.toml.
 aldente-rules.workspace = true
+# Measure results are cached as JSON in the snapshot (WP4.1).
+serde.workspace = true
+serde_json.workspace = true
 # Source map v3 lookups for ClojureScript traces (WP3.4; named in the plan).
 sourcemap.workspace = true
 thiserror.workspace = true
