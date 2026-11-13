@@ -40,6 +40,7 @@ aldente-server = { path = "crates/aldente-server" }
 aldente-clj = { path = "crates/aldente-clj" }
 aldente-testkit = { path = "crates/aldente-testkit" }
 aldente-rules = { path = "crates/aldente-rules" }
+aldente-analysis = { path = "crates/aldente-analysis" }
 # dev-only
 jsonschema = { version = "0.61", default-features = false }
 proptest = "1"

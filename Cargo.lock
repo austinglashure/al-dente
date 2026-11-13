@@ -64,6 +64,12 @@ dependencies = [
 [[package]]
 name = "aldente-analysis"
 version = "0.1.0"
+dependencies = [
+ "aldente-graph",
+ "aldente-model",
+ "proptest",
+ "thiserror",
+]
 
 [[package]]
 name = "aldente-cli"
