@@ -1,0 +1,72 @@
+crater index built in 0.004s
+  forward  clj:ring-core//ring.middleware.cookies/wrap-cookies  fan-in 33  62 nodes  (+4 at possible)  0.000s
+  reverse  clj:ring-core//ring.middleware.cookies/wrap-cookies  fan-in 33  34 nodes  (+0 at possible)  0.000s
+  forward  clj:ring-core//ring.util.io/string-input-stream  fan-in 29  3 nodes  (+0 at possible)  0.000s
+  reverse  clj:ring-core//ring.util.io/string-input-stream  fan-in 29  37 nodes  (+0 at possible)  0.000s
+  forward  clj:ring-core//ring.middleware.session/wrap-session  fan-in 16  75 nodes  (+41 at possible)  truncated  0.000s
+  reverse  clj:ring-core//ring.middleware.session/wrap-session  fan-in 16  17 nodes  (+0 at possible)  0.000s
+hand-check sample (20):
+ 1. clj:ring-core//ring.middleware.test.resource/resource-loader-test  (distance 2, Likely) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.test.resource/resource-loader-test -[references likely value-ref]-> clj:ring-core//ring.middleware.test.resource/test-handler
+        ring-core/test/ring/middleware/test/resource.clj:33:36  no-loader   (wrap-resource test-handler "/ring/assets")
+      clj:ring-core//ring.middleware.test.resource/test-handler -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/test/resource.clj:11:10  :body (string-input-stream "handler")})
+ 2. clj:ring-core//ring.middleware.test.resource/wrap-resource-symlinks-test  (distance 2, Likely) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.test.resource/wrap-resource-symlinks-test -[references likely value-ref]-> clj:ring-core//ring.middleware.test.resource/test-handler
+        ring-core/test/ring/middleware/test/resource.clj:49:35  (let [handler  (wrap-resource test-handler "/ring/assets/bars")
+      clj:ring-core//ring.middleware.test.resource/test-handler -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/test/resource.clj:11:10  :body (string-input-stream "handler")})
+ 3. clj:ring-core//ring.middleware.multipart-params.test.temp-file/test-temp-file-expiry  (distance 1, Certain) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.multipart-params.test.temp-file/test-temp-file-expiry -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/multipart_params/test/temp_file.clj:33:26  :stream (string-input-stream "foo")})]
+ 4. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-accepts-expires-from-clj-time  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-accepts-expires-from-clj-time -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:207:18  resp    ((wrap-cookies handler) {})
+ 5. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-accepts-max-age-from-clj-time  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-accepts-max-age-from-clj-time -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:167:18  resp    ((wrap-cookies handler) {})
+ 6. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-basic-cookie  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-basic-cookie -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:10:15  resp ((wrap-cookies :cookies) req)]
+ 7. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-keep-set-cookies-intact  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-keep-set-cookies-intact -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:102:18  resp    ((wrap-cookies handler) {})]
+ 8. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-quoted-cookies  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-quoted-cookies -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:21:15  resp ((wrap-cookies :cookies) req)]
+ 9. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-set-keyword-cookie  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-set-keyword-cookie -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:45:18  resp    ((wrap-cookies handler) {})]
+10. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-set-urlencoded-cookie  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-set-urlencoded-cookie -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:82:18  resp    ((wrap-cookies handler) {})]
+11. clj:ring-core//ring.middleware.test.cookies/wrap-cookies-throws-exception-when-not-using-intervals-correctly-java  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.cookies/wrap-cookies
+      clj:ring-core//ring.middleware.test.cookies/wrap-cookies-throws-exception-when-not-using-intervals-correctly-java -[calls certain direct]-> clj:ring-core//ring.middleware.cookies/wrap-cookies
+        ring-core/test/ring/middleware/test/cookies.clj:266:34  (is (thrown? AssertionError ((wrap-cookies handler) {})))))
+12. clj:ring-core//ring.middleware.test.multipart-params/fallback-encoding-option-works  (distance 1, Certain) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.test.multipart-params/fallback-encoding-option-works -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/test/multipart_params.clj:187:24  :body (string-input-stream form-body "ISO-8859-15")}
+13. clj:ring-core//ring.middleware.test.multipart-params/test-multipart-threads  (distance 1, Certain) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.test.multipart-params/test-multipart-threads -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/test/multipart_params.clj:87:30  :body (string-input-stream form-body)}]
+14. clj:ring-core//ring.middleware.test.multipart-params/unsupported-charset-test  (distance 1, Certain) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.test.multipart-params/unsupported-charset-test -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/test/multipart_params.clj:258:26  :body (string-input-stream form-body)}
+15. clj:ring-core//ring.middleware.test.params/wrap-params-encoding  (distance 1, Certain) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.middleware.test.params/wrap-params-encoding -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/middleware/test/params.clj:47:21  :body (string-input-stream "hello=world" "UTF-16")}
+16. clj:ring-core//ring.middleware.test.session/cookie-attrs-override-is-respected  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.session/wrap-session
+      clj:ring-core//ring.middleware.test.session/cookie-attrs-override-is-respected -[calls certain direct]-> clj:ring-core//ring.middleware.session/wrap-session
+        ring-core/test/ring/middleware/test/session.clj:151:17  handler (wrap-session handler {:store store :cookie-attrs {:http-only false}})
+17. clj:ring-core//ring.middleware.test.session/session-does-not-clobber-response-cookies  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.session/wrap-session
+      clj:ring-core//ring.middleware.test.session/session-does-not-clobber-response-cookies -[calls certain direct]-> clj:ring-core//ring.middleware.session/wrap-session
+        ring-core/test/ring/middleware/test/session.clj:120:17  handler (wrap-session handler {:store store :cookie-attrs {:max-age 5}})
+18. clj:ring-core//ring.middleware.test.session/session-is-written  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.session/wrap-session
+      clj:ring-core//ring.middleware.test.session/session-is-written -[calls certain direct]-> clj:ring-core//ring.middleware.session/wrap-session
+        ring-core/test/ring/middleware/test/session.clj:53:17  handler (wrap-session handler {:store store})]
+19. clj:ring-core//ring.middleware.test.session/session-set-cookies  (distance 1, Certain) -> seed clj:ring-core//ring.middleware.session/wrap-session
+      clj:ring-core//ring.middleware.test.session/session-set-cookies -[calls certain direct]-> clj:ring-core//ring.middleware.session/wrap-session
+        ring-core/test/ring/middleware/test/session.clj:86:19  handler (wrap-session handler {:store store, :set-cookies? false})
+20. clj:ring-core//ring.util.test.request/test-body-string  (distance 1, Certain) -> seed clj:ring-core//ring.util.io/string-input-stream
+      clj:ring-core//ring.util.test.request/test-body-string -[calls certain direct]-> clj:ring-core//ring.util.io/string-input-stream
+        ring-core/test/ring/util/test/request.clj:72:32  (is (= (body-string {:body (string-input-stream "baz")}) "baz"))))

@@ -1,0 +1,92 @@
+crater index built in 0.010s
+  forward  clj:modules/reitit-ring//reitit.ring/router  fan-in 89  320 nodes  (+79 at possible)  truncated  0.004s
+  reverse  clj:modules/reitit-ring//reitit.ring/router  fan-in 89  137 nodes  (+3 at possible)  0.000s
+  forward  clj:modules/reitit-ring//reitit.ring/ring-handler  fan-in 84  48 nodes  (+40 at possible)  0.000s
+  reverse  clj:modules/reitit-ring//reitit.ring/ring-handler  fan-in 84  132 nodes  (+3 at possible)  0.000s
+  forward  clj:modules/reitit-spec//reitit.coercion.spec/coercion  fan-in 41  16 nodes  (+1 at possible)  0.000s
+  reverse  clj:modules/reitit-spec//reitit.coercion.spec/coercion  fan-in 41  70 nodes  (+0 at possible)  0.000s
+hand-check sample (20):
+ 1. clj:examples/frontend-links//frontend.core/NavLink  (distance 4, Likely) -> seed clj:modules/reitit-spec//reitit.coercion.spec/coercion
+      clj:examples/frontend-links//frontend.core/NavLink -[references likely value-ref]-> clj:examples/frontend-links//frontend.core/Link
+        examples/frontend-links/src/frontend/core.cljs:106:6  [Link (assoc props :active active) children]))
+      clj:examples/frontend-links//frontend.core/Link -[calls certain direct]-> clj:examples/frontend-links//frontend.core/resolve-href
+        examples/frontend-links/src/frontend/core.cljs:86:14  (let [href (resolve-href to path-params query-params)]
+      clj:examples/frontend-links//frontend.core/resolve-href -[references likely value-ref]-> clj:examples/frontend-links//frontend.core/router
+        examples/frontend-links/src/frontend/core.cljs:76:36  (let [match  (rf/match-by-path router to)
+      clj:examples/frontend-links//frontend.core/router -[references likely value-ref]-> clj:modules/reitit-spec//reitit.coercion.spec/coercion
+        examples/frontend-links/src/frontend/core.cljs:68:39  (rf/router routes {:data {:coercion rss/coercion}}))
+ 2. clj:examples/frontend-links//frontend.core/<top>@L143  (distance 3, Likely) -> seed clj:modules/reitit-spec//reitit.coercion.spec/coercion
+      clj:examples/frontend-links//frontend.core/<top>@L143 -[calls certain direct]-> clj:examples/frontend-links//frontend.core/init!
+        examples/frontend-links/src/frontend/core.cljs:143:1  (init!)
+      clj:examples/frontend-links//frontend.core/init! -[references likely value-ref]-> clj:examples/frontend-links//frontend.core/router
+        examples/frontend-links/src/frontend/core.cljs:137:5  router
+      clj:examples/frontend-links//frontend.core/router -[references likely value-ref]-> clj:modules/reitit-spec//reitit.coercion.spec/coercion
+        examples/frontend-links/src/frontend/core.cljs:68:39  (rf/router routes {:data {:coercion rss/coercion}}))
+ 3. clj:examples/ring-malli-lite-swagger//example.server/<top>@L122  (distance 3, Likely) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:examples/ring-malli-lite-swagger//example.server/<top>@L122 -[calls certain direct]-> clj:examples/ring-malli-lite-swagger//example.server/start
+        examples/ring-malli-lite-swagger/src/example/server.clj:123:3  (start))
+      clj:examples/ring-malli-lite-swagger//example.server/start -[references likely value-ref]-> clj:examples/ring-malli-lite-swagger//example.server/app
+        examples/ring-malli-lite-swagger/src/example/server.clj:119:22  (jetty/run-jetty #'app {:port 3000, :join? false})
+      clj:examples/ring-malli-lite-swagger//example.server/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        examples/ring-malli-lite-swagger/src/example/server.clj:23:5  (ring/router
+ 4. clj:.//reitit.json-perf/<top>@L117  (distance 2, Likely) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.json-perf/<top>@L117 -[references likely value-ref]-> clj:.//reitit.json-perf/reitit-app
+        perf-test/clj/reitit/json_perf.clj:132:22  (http/start-server reitit-app {:port 3002}))
+      clj:.//reitit.json-perf/reitit-app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        perf-test/clj/reitit/json_perf.clj:58:5  (ring/router
+ 5. clj:.//reitit.nodejs-perf-test/routing-test  (distance 2, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.nodejs-perf-test/routing-test -[calls certain direct]-> clj:.//reitit.nodejs-perf-test/app
+        perf-test/clj/reitit/nodejs_perf_test.clj:79:56  (assert (= {:status 200, :body "Got product id foo"} (app {:request-method :get, :uri "/product/foo"})))
+      clj:.//reitit.nodejs-perf-test/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        perf-test/clj/reitit/nodejs_perf_test.clj:28:5  (ring/router
+ 6. clj:examples/buddy-auth//example.server/<top>@L155  (distance 2, Likely) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:examples/buddy-auth//example.server/<top>@L155 -[references likely value-ref]-> clj:examples/buddy-auth//example.server/app
+        examples/buddy-auth/src/example/server.clj:165:7  app
+      clj:examples/buddy-auth//example.server/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        examples/buddy-auth/src/example/server.clj:139:5  (ring/router
+ 7. clj:examples/frontend-re-frame//frontend-re-frame.core/init  (distance 2, Likely) -> seed clj:modules/reitit-spec//reitit.coercion.spec/coercion
+      clj:examples/frontend-re-frame//frontend-re-frame.core/init -[references likely value-ref]-> clj:examples/frontend-re-frame//frontend-re-frame.core/router
+        examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:146:41  (rd/render [router-component {:router router}]
+      clj:examples/frontend-re-frame//frontend-re-frame.core/router -[references likely value-ref]-> clj:modules/reitit-spec//reitit.coercion.spec/coercion
+        examples/frontend-re-frame/src/cljs/frontend_re_frame/core.cljs:105:23  {:data {:coercion rss/coercion}}))
+ 8. clj:examples/ring-malli-lite-swagger//example.server/start  (distance 2, Likely) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:examples/ring-malli-lite-swagger//example.server/start -[references likely value-ref]-> clj:examples/ring-malli-lite-swagger//example.server/app
+        examples/ring-malli-lite-swagger/src/example/server.clj:119:22  (jetty/run-jetty #'app {:port 3000, :join? false})
+      clj:examples/ring-malli-lite-swagger//example.server/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        examples/ring-malli-lite-swagger/src/example/server.clj:23:5  (ring/router
+ 9. clj:.//reitit.coercion-perf-test/app  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.coercion-perf-test/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        perf-test/clj/reitit/coercion_perf_test.clj:153:9  (ring/router
+10. clj:.//reitit.coercion-test/data-spec-example-test  (distance 1, Likely) -> seed clj:modules/reitit-spec//reitit.coercion.spec/coercion
+      clj:.//reitit.coercion-test/data-spec-example-test -[references likely value-ref]-> clj:modules/reitit-spec//reitit.coercion.spec/coercion
+        test/cljc/reitit/coercion_test.cljc:177:56  :coercion reitit.coercion.spec/coercion
+11. clj:.//reitit.lupapiste-perf-test/bench-cqrs!  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.lupapiste-perf-test/bench-cqrs! -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        perf-test/clj/reitit/lupapiste_perf_test.clj:360:42  reitit-ring-f (ring/ring-handler (ring/router routes))
+12. clj:.//reitit.openapi-test/multiple-openapi-apis-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.openapi-test/multiple-openapi-apis-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/cljc/reitit/openapi_test.clj:342:14  (ring/router
+13. clj:.//reitit.openapi-test/with-options-endpoint-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.openapi-test/with-options-endpoint-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/cljc/reitit/openapi_test.clj:390:14  (ring/router
+14. clj:.//reitit.ring-coercion-test/response-coercion-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.ring-coercion-test/response-coercion-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/cljc/reitit/ring_coercion_test.cljc:764:21  (ring/router
+15. clj:.//reitit.ring-test/default-options-endpoint-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.ring-test/default-options-endpoint-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/cljc/reitit/ring_test.cljc:255:18  (ring/router
+16. clj:.//reitit.ring-test/query-method-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.ring-test/query-method-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/cljc/reitit/ring_test.cljc:318:14  (ring/router
+17. clj:.//reitit.ring.middleware.exception-test/spec-coercion-exception-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.ring.middleware.exception-test/spec-coercion-exception-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/clj/reitit/ring/middleware/exception_test.clj:201:14  (ring/router
+18. clj:.//reitit.swagger-test/all-parameter-types-test  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:.//reitit.swagger-test/all-parameter-types-test -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        test/cljc/reitit/swagger_test.clj:449:14  (ring/router
+19. clj:examples/buddy-auth//example.server/app  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:examples/buddy-auth//example.server/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        examples/buddy-auth/src/example/server.clj:139:5  (ring/router
+20. clj:examples/openapi//example.server/app  (distance 1, Certain) -> seed clj:modules/reitit-ring//reitit.ring/router
+      clj:examples/openapi//example.server/app -[calls certain direct]-> clj:modules/reitit-ring//reitit.ring/router
+        examples/openapi/src/example/server.clj:52:5  (ring/router

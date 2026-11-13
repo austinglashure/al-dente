@@ -1,0 +1,106 @@
+{
+  "analyze_seconds": 0.496230108,
+  "edges_by_kind_certainty_reason": {
+    "calls/certain/direct": 3149,
+    "calls/certain/dynamic": 2,
+    "calls/certain/interop": 486,
+    "calls/possible/param-flow": 10,
+    "contains/-/-": 893,
+    "dispatches/possible/multimethod-dispatch": 7,
+    "dispatches/possible/protocol-dispatch": 76,
+    "implements/-/-": 157,
+    "provides/certain/direct": 14,
+    "provides/likely/name-match": 10,
+    "provides/possible/name-match": 4,
+    "references/certain/interop": 158,
+    "references/likely/value-ref": 348,
+    "references/possible/macro-body": 80,
+    "requires/-/-": 179
+  },
+  "fetch_seconds": 0.820473988,
+  "orphans": {
+    "eligible": 305,
+    "largest": [
+      {
+        "id": "clj:ring-core//ring.middleware.session.memory/->MemoryStore",
+        "lines": 11,
+        "location": "ring-core/src/ring/middleware/session/memory.clj:6"
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/->CookieStore",
+        "lines": 8,
+        "location": "ring-core/src/ring/middleware/session/cookie.clj:96"
+      }
+    ],
+    "orphaned": 2,
+    "share": 0.006557377049180328
+  },
+  "parse_rate": 1.0,
+  "repo": "https://github.com/ring-clojure/ring",
+  "rev": "5f745bbc7daefa097d7e9cf6394b44dce51cf597",
+  "summary": {
+    "blindspots": {
+      "dynamic-eval": 2,
+      "interop": 352,
+      "macro-generated": 10,
+      "unresolved-symbol": 71
+    },
+    "diagnostics": [
+      {
+        "code": "analyzer-failed",
+        "message": "2 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)",
+        "path": null
+      },
+      {
+        "code": "analyzer-failed",
+        "message": "20 clj-kondo protocol-impls records could not be read and were skipped (first: invalid type: null, expected a string)",
+        "path": null
+      },
+      {
+        "code": "outside-roots",
+        "message": "not under any source root of unit:.; not analyzed",
+        "path": "update_versions.bb"
+      }
+    ],
+    "edge_certainty": {
+      "calls": {
+        "certain": 3637,
+        "possible": 10
+      },
+      "dispatches": {
+        "possible": 83
+      },
+      "provides": {
+        "certain": 14,
+        "likely": 10,
+        "possible": 4
+      },
+      "references": {
+        "certain": 158,
+        "likely": 348,
+        "possible": 80
+      }
+    },
+    "edges": {
+      "calls": 3647,
+      "contains": 893,
+      "dispatches": 83,
+      "implements": 157,
+      "provides": 28,
+      "references": 586,
+      "requires": 179
+    },
+    "files": 72,
+    "nodes": {
+      "external": 362,
+      "hole": 2,
+      "impl": 186,
+      "library": 14,
+      "namespace": 72,
+      "platform": 352,
+      "symbol": 635,
+      "unit": 9
+    },
+    "units": 9
+  }
+}

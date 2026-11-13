@@ -24,6 +24,7 @@ use aldente_model::{BlindSpotCategory, DiagnosticCode, EdgeKind, NodeId};
 use anyhow::{Context, bail};
 use serde::Deserialize;
 
+mod m3;
 mod stats;
 
 /// The required share of source files that parse (WP1.10).
@@ -112,10 +113,18 @@ fn parse_args(args: impl Iterator<Item = String>) -> (String, Vec<String>) {
     while let Some(a) = args.next() {
         match (a.as_str(), args.peek()) {
             ("--out", Some(_)) => out = args.next().unwrap_or_default(),
+            ("--m3", _) => {}
             _ => names.push(a),
         }
     }
     (out, names)
+}
+
+/// Whether `--m3` was given: add the M3 craters and hand-check sample.
+///
+/// Example: `cargo run -p acceptance -- --m3 --out docs/milestones/m3 ring`.
+fn m3_wanted() -> bool {
+    std::env::args().any(|a| a == "--m3")
 }
 
 /// Clones, analyzes and checks one repository; returns the number of failed checks.
@@ -221,6 +230,23 @@ fn run(repo: &Repo, out_dir: &Path) -> anyhow::Result<usize> {
         out_dir.join(format!("{}-acceptance.json", repo.name)),
         serde_json::to_string_pretty(&report)? + "\n",
     )?;
+    if m3_wanted() {
+        let (m3, text) = m3::run(&outcome.snapshot.graph, &root);
+        print!("{text}");
+        let slow = m3.craters.iter().filter(|c| c.seconds >= 2.0).count();
+        if slow > 0 {
+            println!("  FAIL {slow} craters took two seconds or more");
+            failed += slow;
+        }
+        std::fs::write(
+            out_dir.join(format!("{}-m3.json", repo.name)),
+            serde_json::to_string_pretty(&m3)? + "\n",
+        )?;
+        std::fs::write(
+            out_dir.join(format!("{}-m3-handcheck.txt", repo.name)),
+            text,
+        )?;
+    }
     Ok(failed)
 }
 
