@@ -3,6 +3,7 @@
 pub mod analyze;
 pub mod blindspots;
 pub mod cache;
+pub mod churn;
 pub mod crater;
 pub mod crater_diff;
 pub mod doctor;

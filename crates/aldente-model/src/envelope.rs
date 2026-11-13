@@ -91,6 +91,10 @@ pub enum WarningCode {
     /// `crater --diff`: no snapshot of the base revision is cached, so the
     /// callers of removed definitions are unknown.
     NoBaseSnapshot,
+    /// `churn`: the target has no git history; the result is empty.
+    NoHistory,
+    /// `churn`: only part of the history is present (a shallow clone).
+    ShallowHistory,
 }
 
 /// A non-fatal note attached to a result.

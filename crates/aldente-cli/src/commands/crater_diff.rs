@@ -152,7 +152,7 @@ pub fn diff_seeds(
 /// git with the hardening, or a failure when it is not on `PATH`.
 ///
 /// Example: `hardened_git()?` on a machine with git installed.
-fn hardened_git() -> Result<Git, Failure> {
+pub(crate) fn hardened_git() -> Result<Git, Failure> {
     let internal = |m: String| Failure::new(ErrorCode::Internal, m);
     let path_var = std::env::var_os("PATH");
     let program = tools::locate("git", path_var.as_deref())
