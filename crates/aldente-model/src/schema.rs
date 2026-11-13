@@ -6,6 +6,7 @@ use serde_json::Value;
 
 use crate::analyze::{AnalyzeSummary, ServeInfo, SnapshotOverview};
 use crate::cache::{CacheRemoval, CacheReport};
+use crate::crater::{Checklist, CraterResult};
 use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
 use crate::graph::GraphPayload;
@@ -18,6 +19,8 @@ pub const SCHEMA_NAMES: &[&str] = &[
     "blindspots",
     "cache",
     "cache-removal",
+    "checklist",
+    "crater",
     "doctor",
     "envelope",
     "find",
@@ -66,6 +69,8 @@ pub fn schema_by_name(name: &str) -> Option<Value> {
         "cache" => Some(schemars::schema_for!(CacheReport).to_value()),
         "cache-removal" => Some(schemars::schema_for!(CacheRemoval).to_value()),
         "doctor" => Some(schemars::schema_for!(DoctorReport).to_value()),
+        "crater" => Some(schemars::schema_for!(CraterResult).to_value()),
+        "checklist" => Some(schemars::schema_for!(Checklist).to_value()),
         "envelope" => Some(envelope_schema()),
         "units" => Some(schemars::schema_for!(UnitsReport).to_value()),
         _ => None,

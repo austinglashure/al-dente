@@ -1,0 +1,50 @@
+---
+source: crates/aldente-cli/tests/crater.rs
+expression: "env.text(&[\"crater\", \"checkout\"])"
+---
+forward crater of clj:.//shop.core/checkout   depth 6   min likely   17 nodes
+certain (13)
+  outside the repository
+    cljs.core
+      str  3 via clj:.//shop.model/format-money
+    clojure.core
+      double  3 via clj:.//shop.model/format-money
+      format  3 via clj:.//shop.model/format-money
+      let  1 via clj:.//shop.core/checkout
+      swap!  2 via clj:.//shop.inventory/reserve!
+    clojure.string
+      join  2 via clj:.//shop.model/order-summary
+  unit:.
+    shop.core
+      checkout  src/shop/core.clj:12:1  seed
+    shop.inventory
+      reserve!  src/shop/inventory.clj:6:1  1 via clj:.//shop.core/checkout
+    shop.model
+      format-money  src/shop/model.cljc:5:1  2 via clj:.//shop.model/order-summary
+      order-summary  src/shop/model.cljc:9:1  1 via clj:.//shop.core/checkout
+    shop.payment
+      charge  src/shop/payment.clj:5:3  1 via clj:.//shop.core/checkout
+    shop.pricing
+      price  src/shop/pricing.clj:5:1  1 via clj:.//shop.core/checkout
+    shop.util
+      with-timing  src/shop/util.clj:16:1  1 via clj:.//shop.core/checkout
+likely (4)
+  outside the repository
+    clojure.core
+      -  2 via clj:.//shop.inventory/reserve!
+      atom  3 via clj:.//shop.inventory/stock
+      update  2 via clj:.//shop.inventory/reserve!
+  unit:.
+    shop.inventory
+      stock  src/shop/inventory.clj:4:1  2 via clj:.//shop.inventory/reserve!
+boundary (9)
+  ext:clj//cljs.core/str
+  ext:clj//clojure.core/-
+  ext:clj//clojure.core/atom
+  ext:clj//clojure.core/double
+  ext:clj//clojure.core/format
+  ext:clj//clojure.core/let
+  ext:clj//clojure.core/swap!
+  ext:clj//clojure.core/update
+  ext:clj//clojure.string/join
+19 more at possible (--min-certainty possible)

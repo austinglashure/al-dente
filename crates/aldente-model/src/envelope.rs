@@ -88,6 +88,9 @@ pub enum WarningCode {
     NotCached,
     /// The graph is shown at a coarser level than asked, to fit the payload cap.
     Coarser,
+    /// `crater --diff`: no snapshot of the base revision is cached, so the
+    /// callers of removed definitions are unknown.
+    NoBaseSnapshot,
 }
 
 /// A non-fatal note attached to a result.

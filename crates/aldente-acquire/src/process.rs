@@ -73,6 +73,42 @@ pub fn run_command(mut command: Command, timeout: Duration) -> Result<Captured, 
     })
 }
 
+/// Runs a prepared command like [`run_command`], but writes `input` to its
+/// stdin (on a thread, so a child that answers while still reading cannot
+/// deadlock) and returns stdout as raw bytes.
+///
+/// Example: `run_command_with_input(git_cat_file_batch, b"<blob id>\n".to_vec(), 60s)`
+/// gives the blob's header line and contents.
+pub fn run_command_with_input(
+    mut command: Command,
+    input: Vec<u8>,
+    timeout: Duration,
+) -> Result<(ExitStatus, Vec<u8>, String), RunError> {
+    use std::io::Write;
+    let mut child = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RunError::Spawn)?;
+    let writer = child.stdin.take().map(|mut stdin| {
+        thread::spawn(move || {
+            // A child that exits early closes the pipe; its status says why.
+            let _ = stdin.write_all(&input);
+        })
+    });
+    let stdout = drain(child.stdout.take());
+    let stderr = drain(child.stderr.take());
+    let status = wait_with_timeout(&mut child, timeout)?;
+    if let Some(w) = writer {
+        let _ = w.join();
+    }
+    let bytes = stdout
+        .map(|h| h.join().unwrap_or_default())
+        .unwrap_or_default();
+    Ok((status, bytes, collect(stderr)))
+}
+
 /// Waits for `child` to exit, killing it once `timeout` has passed.
 ///
 /// Example: a child that exits at once gives `Ok(status)`; one that sleeps

@@ -4,7 +4,7 @@ Al Dente is a static analyzer that turns a git repository into an explorable gra
 
 ## Status
 
-Pre-alpha. Phase 0 (foundations) is in progress: the graph model and JSON envelope exist, and the `aldente` binary has `analyze`, `find`, `show`, `graph`, `blindspots`, `units`, `cache`, `doctor` and `schema`. Phase 1 (first proof) is in progress. See `PROGRESS.md` for what is done and `docs/plan/roadmap.md` for the plan.
+Pre-alpha. Phases 0–2 are done and Phase 3 is in progress. The `aldente` binary has `analyze`, `serve`, `find`, `show`, `graph`, `crater`, `blindspots`, `units`, `cache`, `doctor` and `schema`. See `PROGRESS.md` for what is done and `docs/plan/roadmap.md` for the plan.
 
 ## Run
 

@@ -1,0 +1,15 @@
+---
+source: crates/aldente-cli/tests/crater.rs
+expression: "env.text(&[\"crater\", \"shop.pricing/price\", \"--direction\", \"reverse\",\n\"--min-certainty\", \"possible\"])"
+---
+reverse crater of clj:.//shop.pricing/price   depth 6   min possible   5 nodes
+certain (5)
+  unit:.
+    shop.core
+      -main  src/shop/core.clj:21:1  2 via clj:.//shop.core/checkout
+      checkout  src/shop/core.clj:12:1  1 via clj:.//shop.pricing/price
+    shop.pricing
+      price  src/shop/pricing.clj:5:1  seed
+    shop.pricing-test
+      book-is-half-off  test/shop/pricing_test.clj:8:1  1 via clj:.//shop.pricing/price
+      food-is-taxed  test/shop/pricing_test.clj:5:1  1 via clj:.//shop.pricing/price

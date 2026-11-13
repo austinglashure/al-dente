@@ -26,6 +26,8 @@ enum Command {
     Blindspots(commands::blindspots::BlindspotsArgs),
     /// Manage remote clones and snapshots in the cache.
     Cache(commands::cache::CacheArgs),
+    /// The impact crater: everything seeds can reach, or that reaches them.
+    Crater(commands::crater::CraterArgs),
     /// Check that git, clj-kondo and the cache directory are usable.
     Doctor(commands::doctor::DoctorArgs),
     /// Search symbols, impls and namespaces.
@@ -56,6 +58,7 @@ fn main() -> std::process::ExitCode {
         Command::Serve(args) => commands::serve::run(args, cli.json),
         Command::Show(args) => commands::show::run(args, cli.json),
         Command::Cache(args) => commands::cache::run(args, cli.json),
+        Command::Crater(args) => commands::crater::run(args, cli.json),
         Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),
         Command::Units(args) => commands::units::run(args, cli.json),

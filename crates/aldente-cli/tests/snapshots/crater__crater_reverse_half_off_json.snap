@@ -1,0 +1,190 @@
+---
+source: crates/aldente-cli/tests/crater.rs
+expression: "serde_json::to_string_pretty(&reverse[\"data\"]).unwrap()"
+---
+{
+  "boundary": [],
+  "counts": {
+    "by_certainty": {
+      "certain": 1,
+      "likely": 3
+    },
+    "by_unit": {
+      "unit:.": 4
+    }
+  },
+  "depth": 6,
+  "diff": null,
+  "direction": "reverse",
+  "graph": {
+    "aggregated": null,
+    "edges": [
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.pricing-test/book-is-half-off",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 12,
+            "file": "test/shop/pricing_test.clj",
+            "line": 9
+          }
+        ],
+        "to": "clj:.//shop.pricing/price"
+      },
+      {
+        "certainty": "likely",
+        "from": "clj:.//shop.pricing-test/book-is-half-off",
+        "kind": "dispatches",
+        "reason": "multimethod-dispatch",
+        "sites": [
+          {
+            "col": 12,
+            "file": "test/shop/pricing_test.clj",
+            "line": 9
+          }
+        ],
+        "to": "clj:.//shop.pricing/price@:book"
+      },
+      {
+        "certainty": "likely",
+        "from": "clj:.//shop.pricing/price@:book",
+        "kind": "references",
+        "reason": "value-ref",
+        "sites": [
+          {
+            "col": 24,
+            "file": "src/shop/pricing.clj",
+            "line": 13
+          }
+        ],
+        "to": "clj:.//shop.pricing/half-off"
+      },
+      {
+        "from": "clj:.//shop.pricing/price@:book",
+        "kind": "implements",
+        "to": "clj:.//shop.pricing/price"
+      }
+    ],
+    "nodes": [
+      {
+        "flags": [
+          "test",
+          "entry-point"
+        ],
+        "id": "clj:.//shop.pricing-test/book-is-half-off",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 54,
+          "end_line": 9,
+          "file": "test/shop/pricing_test.clj",
+          "line": 8
+        },
+        "name": "book-is-half-off",
+        "namespace": "shop.pricing-test",
+        "signature": "[]",
+        "subkind": "test",
+        "unit": "unit:."
+      },
+      {
+        "id": "clj:.//shop.pricing/half-off",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 11,
+          "end_line": 10,
+          "file": "src/shop/pricing.clj",
+          "line": 9
+        },
+        "name": "half-off",
+        "namespace": "shop.pricing",
+        "signature": "[p]",
+        "subkind": "fn",
+        "unit": "unit:."
+      },
+      {
+        "doc": "Price of an order, by its :kind.",
+        "id": "clj:.//shop.pricing/price",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 9,
+          "end_line": 7,
+          "file": "src/shop/pricing.clj",
+          "line": 5
+        },
+        "name": "price",
+        "namespace": "shop.pricing",
+        "subkind": "multimethod",
+        "unit": "unit:."
+      },
+      {
+        "id": "clj:.//shop.pricing/price@:book",
+        "kind": "impl",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 49,
+          "end_line": 13,
+          "file": "src/shop/pricing.clj",
+          "line": 12
+        },
+        "name": "price@:book",
+        "namespace": "shop.pricing",
+        "unit": "unit:."
+      }
+    ],
+    "truncated": false
+  },
+  "hidden_below_min": 3,
+  "hubs": [],
+  "min_certainty": "likely",
+  "reach": [
+    {
+      "direction": "reverse",
+      "distance": 2,
+      "id": "clj:.//shop.pricing-test/book-is-half-off",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.pricing/price@:book"
+    },
+    {
+      "direction": "reverse",
+      "distance": 0,
+      "id": "clj:.//shop.pricing/half-off",
+      "path_certainty": "certain",
+      "via": null
+    },
+    {
+      "direction": "reverse",
+      "distance": 2,
+      "id": "clj:.//shop.pricing/price",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.pricing/price@:book"
+    },
+    {
+      "direction": "reverse",
+      "distance": 1,
+      "id": "clj:.//shop.pricing/price@:book",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.pricing/half-off"
+    }
+  ],
+  "seeds": [
+    "clj:.//shop.pricing/half-off"
+  ],
+  "stopped": [],
+  "truncated": false
+}

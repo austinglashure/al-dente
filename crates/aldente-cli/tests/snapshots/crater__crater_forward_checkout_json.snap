@@ -1,0 +1,606 @@
+---
+source: crates/aldente-cli/tests/crater.rs
+expression: "serde_json::to_string_pretty(&forward[\"data\"]).unwrap()"
+---
+{
+  "boundary": [
+    "ext:clj//cljs.core/str",
+    "ext:clj//clojure.core/-",
+    "ext:clj//clojure.core/atom",
+    "ext:clj//clojure.core/double",
+    "ext:clj//clojure.core/format",
+    "ext:clj//clojure.core/let",
+    "ext:clj//clojure.core/swap!",
+    "ext:clj//clojure.core/update",
+    "ext:clj//clojure.string/join"
+  ],
+  "counts": {
+    "by_certainty": {
+      "certain": 13,
+      "likely": 4
+    },
+    "by_unit": {
+      "unit:.": 8
+    }
+  },
+  "depth": 6,
+  "diff": null,
+  "direction": "forward",
+  "graph": {
+    "aggregated": null,
+    "edges": [
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.core/checkout",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 7,
+            "file": "src/shop/core.clj",
+            "line": 17
+          }
+        ],
+        "to": "clj:.//shop.inventory/reserve!"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.core/checkout",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 7,
+            "file": "src/shop/core.clj",
+            "line": 19
+          }
+        ],
+        "to": "clj:.//shop.model/order-summary"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.core/checkout",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 7,
+            "file": "src/shop/core.clj",
+            "line": 18
+          }
+        ],
+        "to": "clj:.//shop.payment/charge"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.core/checkout",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 17,
+            "file": "src/shop/core.clj",
+            "line": 16
+          }
+        ],
+        "to": "clj:.//shop.pricing/price"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.core/checkout",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 3,
+            "file": "src/shop/core.clj",
+            "line": 15
+          }
+        ],
+        "to": "clj:.//shop.util/with-timing"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.core/checkout",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 5,
+            "file": "src/shop/core.clj",
+            "line": 16
+          }
+        ],
+        "to": "ext:clj//clojure.core/let"
+      },
+      {
+        "certainty": "likely",
+        "from": "clj:.//shop.inventory/reserve!",
+        "kind": "references",
+        "reason": "value-ref",
+        "sites": [
+          {
+            "col": 10,
+            "file": "src/shop/inventory.clj",
+            "line": 7
+          }
+        ],
+        "to": "clj:.//shop.inventory/stock"
+      },
+      {
+        "certainty": "likely",
+        "from": "clj:.//shop.inventory/reserve!",
+        "kind": "references",
+        "reason": "value-ref",
+        "sites": [
+          {
+            "col": 27,
+            "file": "src/shop/inventory.clj",
+            "line": 7
+          }
+        ],
+        "to": "ext:clj//clojure.core/-"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.inventory/reserve!",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 3,
+            "file": "src/shop/inventory.clj",
+            "line": 7
+          }
+        ],
+        "to": "ext:clj//clojure.core/swap!"
+      },
+      {
+        "certainty": "likely",
+        "from": "clj:.//shop.inventory/reserve!",
+        "kind": "references",
+        "reason": "value-ref",
+        "sites": [
+          {
+            "col": 16,
+            "file": "src/shop/inventory.clj",
+            "line": 7
+          }
+        ],
+        "to": "ext:clj//clojure.core/update"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.inventory/stock",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 16,
+            "file": "src/shop/inventory.clj",
+            "line": 4
+          }
+        ],
+        "to": "ext:clj//clojure.core/atom"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.model/format-money",
+        "kind": "calls",
+        "lang": "cljs",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 12,
+            "file": "src/shop/model.cljc",
+            "line": 7
+          }
+        ],
+        "to": "ext:clj//cljs.core/str"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.model/format-money",
+        "kind": "calls",
+        "lang": "clj",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 26,
+            "file": "src/shop/model.cljc",
+            "line": 6
+          }
+        ],
+        "to": "ext:clj//clojure.core/double"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.model/format-money",
+        "kind": "calls",
+        "lang": "clj",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 11,
+            "file": "src/shop/model.cljc",
+            "line": 6
+          }
+        ],
+        "to": "ext:clj//clojure.core/format"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.model/order-summary",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 31,
+            "file": "src/shop/model.cljc",
+            "line": 10
+          }
+        ],
+        "to": "clj:.//shop.model/format-money"
+      },
+      {
+        "certainty": "certain",
+        "from": "clj:.//shop.model/order-summary",
+        "kind": "calls",
+        "reason": "direct",
+        "sites": [
+          {
+            "col": 3,
+            "file": "src/shop/model.cljc",
+            "line": 10
+          }
+        ],
+        "to": "ext:clj//clojure.string/join"
+      }
+    ],
+    "nodes": [
+      {
+        "doc": "Prices, reserves and charges one order. Returns a summary string.",
+        "id": "clj:.//shop.core/checkout",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 43,
+          "end_line": 19,
+          "file": "src/shop/core.clj",
+          "line": 12
+        },
+        "name": "checkout",
+        "namespace": "shop.core",
+        "signature": "[order]",
+        "subkind": "fn",
+        "unit": "unit:."
+      },
+      {
+        "id": "clj:.//shop.inventory/reserve!",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 34,
+          "end_line": 7,
+          "file": "src/shop/inventory.clj",
+          "line": 6
+        },
+        "name": "reserve!",
+        "namespace": "shop.inventory",
+        "signature": "[sku qty]",
+        "subkind": "fn",
+        "unit": "unit:."
+      },
+      {
+        "flags": [
+          "stateful"
+        ],
+        "id": "clj:.//shop.inventory/stock",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 32,
+          "end_line": 4,
+          "file": "src/shop/inventory.clj",
+          "line": 4
+        },
+        "name": "stock",
+        "namespace": "shop.inventory",
+        "subkind": "var",
+        "unit": "unit:."
+      },
+      {
+        "id": "clj:.//shop.model/format-money",
+        "kind": "symbol",
+        "langs": [
+          "clj",
+          "cljs"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 30,
+          "end_line": 7,
+          "file": "src/shop/model.cljc",
+          "line": 5
+        },
+        "name": "format-money",
+        "namespace": "shop.model",
+        "signature": "[amount]",
+        "subkind": "fn",
+        "unit": "unit:."
+      },
+      {
+        "id": "clj:.//shop.model/order-summary",
+        "kind": "symbol",
+        "langs": [
+          "clj",
+          "cljs"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 54,
+          "end_line": 10,
+          "file": "src/shop/model.cljc",
+          "line": 9
+        },
+        "name": "order-summary",
+        "namespace": "shop.model",
+        "signature": "[order total]",
+        "subkind": "fn",
+        "unit": "unit:."
+      },
+      {
+        "doc": "Charges amount. Returns a receipt map.",
+        "id": "clj:.//shop.payment/charge",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 3,
+          "end_col": 66,
+          "end_line": 5,
+          "file": "src/shop/payment.clj",
+          "line": 5
+        },
+        "name": "charge",
+        "namespace": "shop.payment",
+        "signature": "[this amount]",
+        "subkind": "protocol-method",
+        "unit": "unit:."
+      },
+      {
+        "doc": "Price of an order, by its :kind.",
+        "id": "clj:.//shop.pricing/price",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 9,
+          "end_line": 7,
+          "file": "src/shop/pricing.clj",
+          "line": 5
+        },
+        "name": "price",
+        "namespace": "shop.pricing",
+        "subkind": "multimethod",
+        "unit": "unit:."
+      },
+      {
+        "doc": "Runs body and logs how long it took.",
+        "id": "clj:.//shop.util/with-timing",
+        "kind": "symbol",
+        "langs": [
+          "clj"
+        ],
+        "loc": {
+          "col": 1,
+          "end_col": 15,
+          "end_line": 22,
+          "file": "src/shop/util.clj",
+          "line": 16
+        },
+        "name": "with-timing",
+        "namespace": "shop.util",
+        "signature": "[label & body]",
+        "subkind": "macro",
+        "unit": "unit:."
+      },
+      {
+        "id": "ext:clj//cljs.core/str",
+        "kind": "external",
+        "name": "str",
+        "namespace": "cljs.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/-",
+        "kind": "external",
+        "name": "-",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/atom",
+        "kind": "external",
+        "name": "atom",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/double",
+        "kind": "external",
+        "name": "double",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/format",
+        "kind": "external",
+        "name": "format",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/let",
+        "kind": "external",
+        "name": "let",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/swap!",
+        "kind": "external",
+        "name": "swap!",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.core/update",
+        "kind": "external",
+        "name": "update",
+        "namespace": "clojure.core"
+      },
+      {
+        "id": "ext:clj//clojure.string/join",
+        "kind": "external",
+        "name": "join",
+        "namespace": "clojure.string"
+      }
+    ],
+    "truncated": false
+  },
+  "hidden_below_min": 19,
+  "hubs": [],
+  "min_certainty": "likely",
+  "reach": [
+    {
+      "direction": "forward",
+      "distance": 0,
+      "id": "clj:.//shop.core/checkout",
+      "path_certainty": "certain",
+      "via": null
+    },
+    {
+      "direction": "forward",
+      "distance": 1,
+      "id": "clj:.//shop.inventory/reserve!",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.core/checkout"
+    },
+    {
+      "direction": "forward",
+      "distance": 2,
+      "id": "clj:.//shop.inventory/stock",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.inventory/reserve!"
+    },
+    {
+      "direction": "forward",
+      "distance": 2,
+      "id": "clj:.//shop.model/format-money",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.model/order-summary"
+    },
+    {
+      "direction": "forward",
+      "distance": 1,
+      "id": "clj:.//shop.model/order-summary",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.core/checkout"
+    },
+    {
+      "direction": "forward",
+      "distance": 1,
+      "id": "clj:.//shop.payment/charge",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.core/checkout"
+    },
+    {
+      "direction": "forward",
+      "distance": 1,
+      "id": "clj:.//shop.pricing/price",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.core/checkout"
+    },
+    {
+      "direction": "forward",
+      "distance": 1,
+      "id": "clj:.//shop.util/with-timing",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.core/checkout"
+    },
+    {
+      "direction": "forward",
+      "distance": 3,
+      "id": "ext:clj//cljs.core/str",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.model/format-money"
+    },
+    {
+      "direction": "forward",
+      "distance": 2,
+      "id": "ext:clj//clojure.core/-",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.inventory/reserve!"
+    },
+    {
+      "direction": "forward",
+      "distance": 3,
+      "id": "ext:clj//clojure.core/atom",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.inventory/stock"
+    },
+    {
+      "direction": "forward",
+      "distance": 3,
+      "id": "ext:clj//clojure.core/double",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.model/format-money"
+    },
+    {
+      "direction": "forward",
+      "distance": 3,
+      "id": "ext:clj//clojure.core/format",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.model/format-money"
+    },
+    {
+      "direction": "forward",
+      "distance": 1,
+      "id": "ext:clj//clojure.core/let",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.core/checkout"
+    },
+    {
+      "direction": "forward",
+      "distance": 2,
+      "id": "ext:clj//clojure.core/swap!",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.inventory/reserve!"
+    },
+    {
+      "direction": "forward",
+      "distance": 2,
+      "id": "ext:clj//clojure.core/update",
+      "path_certainty": "likely",
+      "via": "clj:.//shop.inventory/reserve!"
+    },
+    {
+      "direction": "forward",
+      "distance": 2,
+      "id": "ext:clj//clojure.string/join",
+      "path_certainty": "certain",
+      "via": "clj:.//shop.model/order-summary"
+    }
+  ],
+  "seeds": [
+    "clj:.//shop.core/checkout"
+  ],
+  "stopped": [],
+  "truncated": false
+}

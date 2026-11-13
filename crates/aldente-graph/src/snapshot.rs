@@ -197,6 +197,27 @@ fn write_file(path: &Path, snap: &Snapshot) -> Result<(), StoreError> {
     Ok(())
 }
 
+/// The `repo` and `rev` a snapshot was made from, read without loading
+/// the graph. `Ok(None)` for anything [`load`] would also refuse.
+///
+/// Example: `read_meta(&path)` gives `Some(("/home/u/proj", Some("1d2f…")))`.
+pub fn read_meta(path: &Path) -> Result<Option<(String, Option<String>)>, StoreError> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let Ok(conn) = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY) else {
+        return Ok(None);
+    };
+    match meta(&conn, "schema_version") {
+        Ok(Some(v)) if v == SCHEMA_VERSION => {}
+        _ => return Ok(None),
+    }
+    let (Some(repo), Some(rev)) = (meta(&conn, "repo")?, meta(&conn, "rev")?) else {
+        return Ok(None);
+    };
+    Ok(Some((repo, (!rev.is_empty()).then_some(rev))))
+}
+
 /// Reads a snapshot. `Ok(None)` when the file is missing, has another schema
 /// version, or is not a snapshot at all.
 ///
@@ -523,6 +544,11 @@ mod tests {
         write(&path, &snap).unwrap();
         assert_eq!(path.file_name().unwrap(), "00ff.db");
         assert_eq!(load(&path).unwrap(), Some(snap));
+        assert_eq!(
+            read_meta(&path).unwrap(),
+            Some(("/repo".to_owned(), Some("abc".to_owned())))
+        );
+        assert_eq!(read_meta(&dir.join("missing.db")).unwrap(), None);
         assert_eq!(
             std::fs::read_dir(&dir).unwrap().count(),
             1,

@@ -13,11 +13,14 @@ path = "src/main.rs"
 [dependencies]
 aldente-acquire.workspace = true
 aldente-adapter.workspace = true
+aldente-analysis.workspace = true
 aldente-clj.workspace = true
 aldente-graph.workspace = true
 aldente-server.workspace = true
 aldente-model.workspace = true
 anyhow.workspace = true
+# Checks that a cached base-revision snapshot matches that revision's files (crater --diff).
+blake3.workspace = true
 clap.workspace = true
 serde.workspace = true
 serde_json.workspace = true

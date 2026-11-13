@@ -2,8 +2,10 @@
 //! reach them, with the certainty of the best path to each node.
 //! See "Impact crater" in `docs/plan/08-crater-and-traces.md`.
 
+mod checklist;
 mod index;
 mod search;
+pub mod seeds;
 #[cfg(test)]
 mod tests;
 
@@ -15,6 +17,7 @@ use aldente_model::{Certainty, EdgeKind, GraphPayload, Node, NodeId, NodeKind};
 use thiserror::Error;
 
 use crate::glob::glob_match;
+pub use checklist::checklist;
 pub use index::{CraterIndex, Ix};
 use search::{Label, Rules, Side, is_boundary, kind_bit, search};
 
@@ -72,8 +75,6 @@ impl Default for CraterOptions {
 pub enum CraterError {
     #[error("not in the graph: {0}")]
     UnknownSeed(NodeId),
-    #[error("a crater needs at least one seed")]
-    NoSeeds,
 }
 
 /// Computes the crater of `seeds` over `graph` (whose index is `index`).
@@ -81,6 +82,8 @@ pub enum CraterError {
 /// Namespace seeds stand for the symbols they contain and library seeds for
 /// the externals and namespaces they provide; both are listed in the result
 /// as seeds at distance 0.
+///
+/// No seeds give an empty crater.
 ///
 /// Example: for `a -calls-> b -calls-> c`, the forward crater of `a` holds
 /// `a` (distance 0), `b` (1, via `a`) and `c` (2, via `b`), all `certain`.
@@ -90,9 +93,6 @@ pub fn crater(
     seeds: &[NodeId],
     opts: &CraterOptions,
 ) -> Result<CraterResult, CraterError> {
-    if seeds.is_empty() {
-        return Err(CraterError::NoSeeds);
-    }
     let mut seed_ix = Vec::new();
     for s in seeds {
         seed_ix.push(
@@ -200,6 +200,7 @@ pub fn crater(
         reach,
         hidden_below_min: hidden,
         truncated,
+        diff: None,
     })
 }
 
