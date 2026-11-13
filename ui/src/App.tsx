@@ -474,14 +474,36 @@ export function App() {
             <p>A unit is a directory with its own build file (deps.edn, project.clj, shadow-cljs.edn, bb.edn). Callers, callees and source appear once you select a function.</p>
           </div>
         )}
-        {source && (
-          <section>
-            <h2>Source</h2>
-            <pre data-testid="source">{source}</pre>
-          </section>
-        )}
+        {source && <SourcePanel key={selected ?? ''} source={source} />}
       </aside>
       )}
     </div>
+  );
+}
+
+/** The selected node's source with a button that copies it. Keyed by the
+ *  selection, so "Copied" resets when the selection changes.
+ *  Example: `<SourcePanel source="(defn f [] 1)" />`. */
+function SourcePanel({ source }: { source: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    void navigator.clipboard
+      ?.writeText(source)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => setCopied(false));
+  };
+  return (
+    <section>
+      <div className="details-head">
+        <h2>Source</h2>
+        <button type="button" data-testid="copy-source" onClick={copy} title="Copy the source to the clipboard">
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre data-testid="source">{source}</pre>
+    </section>
   );
 }

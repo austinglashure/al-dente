@@ -328,3 +328,24 @@ test.describe('remembered view', () => {
     }
   });
 });
+
+test.describe('source', () => {
+  test('the copy button puts the source on the clipboard', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const server = await startServer('clj-mini');
+    try {
+      guardNetwork(page);
+      await page.goto(server.url);
+      await page.locator('[data-open="clj:.//shop.core"]').click();
+      await listed(page, 'clj:.//shop.core/checkout').click();
+      await expect(page.getByTestId('source')).toContainText('(defn checkout');
+      await page.getByTestId('copy-source').click();
+      await expect(page.getByTestId('copy-source')).toHaveText('Copied');
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      expect(copied).toBe(await page.getByTestId('source').innerText());
+      expect(copied).toContain('(defn checkout');
+    } finally {
+      server.close();
+    }
+  });
+});
