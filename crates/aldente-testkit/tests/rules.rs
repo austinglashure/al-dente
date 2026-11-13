@@ -1246,7 +1246,12 @@ fn global_namespace_map_keeps_only_repository_code() {
         repo_only: true,
         ..Filter::default()
     };
-    let (p, coarser) = fit(&g, AggregationLevel::Namespace, &filter);
+    let (p, coarser) = fit(
+        &g,
+        &aldente_graph::cache::Cache::default(),
+        AggregationLevel::Namespace,
+        &filter,
+    );
     assert!(!coarser);
     assert!(
         p.nodes

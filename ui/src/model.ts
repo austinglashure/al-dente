@@ -158,3 +158,15 @@ export function labelFor(n: GNode): string {
 export function isAggregate(n: GNode): boolean {
   return n.kind === 'unit' || n.kind === 'namespace';
 }
+
+/** Whether a node ID can have source to show: symbols, impls and holes do;
+ *  units, namespaces, externals, libraries and platform nodes do not. Holes
+ *  have a location; a namespace ID has no `/` after its `//`.
+ *  Example: `hasSource('clj:.//shop.core/checkout')` is `true`;
+ *  `hasSource('clj:.//shop.core')` is `false`. */
+export function hasSource(id: string): boolean {
+  if (id.startsWith('hole:')) return true;
+  if (/^(unit|ext|java|js|lib|repo):/.test(id)) return false;
+  const at = id.indexOf('//');
+  return at >= 0 && id.slice(at + 2).includes('/');
+}

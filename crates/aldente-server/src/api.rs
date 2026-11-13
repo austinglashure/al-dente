@@ -160,10 +160,10 @@ pub async fn graph(State(s): St, RawQuery(q): RawQuery) -> Response {
         // Node cap: stay at this level, keep the busiest nodes.
         Some(n) => {
             let g = &s.snapshot.graph;
-            let all = query::filter(g, g.payload(level), &filter_from(&p));
+            let all = query::filter(g, s.cache.payload(g, level).into_owned(), &filter_from(&p));
             (query::top_by_calls(all, n), false)
         }
-        None => query::fit(&s.snapshot.graph, level, &filter_from(&p)),
+        None => query::fit(&s.snapshot.graph, &s.cache, level, &filter_from(&p)),
     };
     let mut env = Envelope::success("graph", Some(s.info.clone()), payload);
     if coarser {
@@ -199,8 +199,7 @@ pub async fn neighborhood(State(s): St, RawQuery(q): RawQuery) -> Response {
         Some("in") => Direction::In,
         _ => Direction::Both,
     };
-    let full = s.snapshot.graph.payload(AggregationLevel::Symbol);
-    let hood = query::neighborhood(&full, &id, depth, direction);
+    let hood = query::neighborhood_in(&s.snapshot.graph, &s.cache, &id, depth, direction);
     let hood = query::filter(&s.snapshot.graph, hood, &filter_from(&p));
     ok(&s, "graph", query::cap(hood))
 }
@@ -249,7 +248,7 @@ pub async fn node(State(s): St, RawQuery(q): RawQuery) -> Response {
             None,
         );
     };
-    let (mut callers, mut callees) = query::neighbors(&s.snapshot.graph, &id);
+    let (mut callers, mut callees) = query::neighbors(&s.snapshot.graph, &s.cache, &id);
     if let Some(min) = filter_from(&p).min_certainty {
         callers.retain(|n| n.certainty.is_none_or(|c| c >= min));
         callees.retain(|n| n.certainty.is_none_or(|c| c >= min));

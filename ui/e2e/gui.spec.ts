@@ -275,3 +275,34 @@ test.describe('global namespace map', () => {
     }
   });
 });
+
+test.describe('requests', () => {
+  test('the first view and a view switch each load once; aggregates ask for no source', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      const requests = guardNetwork(page);
+      const api = (path: string) => requests.filter((u) => new URL(u).pathname === `/api/v1/${path}`);
+      await page.goto(server.url);
+      await expect(listed(page, 'unit:services/orders')).toBeVisible();
+      await page.waitForTimeout(300);
+      expect(api('snapshot')).toHaveLength(1);
+      expect(api('blindspots')).toHaveLength(1);
+      expect(api('graph')).toHaveLength(1);
+
+      await page.getByTestId('view-namespaces').click();
+      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await page.getByTestId('top').selectOption('100');
+      await page.waitForTimeout(300);
+      // Initial units load, namespaces at 250, namespaces at 100; nothing else.
+      expect(api('graph')).toHaveLength(3);
+      expect(api('snapshot')).toHaveLength(1);
+
+      await listed(page, 'clj:services/billing//billing.core').click();
+      await expect(page.getByTestId('details')).toContainText('billing.core');
+      await page.waitForTimeout(300);
+      expect(api('source')).toHaveLength(0);
+    } finally {
+      server.close();
+    }
+  });
+});

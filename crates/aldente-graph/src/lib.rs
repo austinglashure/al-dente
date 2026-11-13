@@ -3,6 +3,7 @@
 
 pub mod adjacency;
 pub mod build;
+pub mod cache;
 pub mod pipeline;
 pub mod query;
 pub mod rollup;

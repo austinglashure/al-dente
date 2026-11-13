@@ -11,6 +11,7 @@ use aldente_model::{
 };
 
 use crate::build::Graph;
+use crate::cache::Cache;
 use crate::rollup::{MAX_EDGES, MAX_NODES, roll};
 
 /// Edge kinds that count as invocation for callers and callees.
@@ -139,15 +140,15 @@ pub fn search_filtered(
 /// Example: `neighbors(g, shop.pricing/half-off)` gives caller
 /// `shop.pricing/price@:book` (references, likely); `neighbors(g, shop.core)`
 /// gives callee `shop.pricing` (calls, count 1) and the `requires` edge.
-pub fn neighbors(graph: &Graph, id: &NodeId) -> (Vec<Neighbor>, Vec<Neighbor>) {
+pub fn neighbors(graph: &Graph, cache: &Cache, id: &NodeId) -> (Vec<Neighbor>, Vec<Neighbor>) {
     let level = match graph.nodes.get(id).map(|n| n.kind) {
         Some(NodeKind::Namespace) => Some(AggregationLevel::Namespace),
         Some(NodeKind::Unit) => Some(AggregationLevel::Unit),
         _ => None,
     };
     // Rolled-up edges and group nodes for aggregates; stored ones otherwise.
-    let rolled = level.map(|l| graph.payload(l));
-    let (edges, nodes): (Vec<&Edge>, Vec<&Node>) = match &rolled {
+    let rolled = level.map(|l| cache.payload(graph, l));
+    let (edges, nodes): (Vec<&Edge>, Vec<&Node>) = match rolled.as_deref() {
         Some(p) => (
             p.edges
                 .iter()
@@ -155,14 +156,23 @@ pub fn neighbors(graph: &Graph, id: &NodeId) -> (Vec<Neighbor>, Vec<Neighbor>) {
                 .collect(),
             p.nodes.iter().collect(),
         ),
-        None => (
-            graph
-                .edges
+        None => {
+            // Only this node's edges, from the index.
+            let adj = cache.adjacency(graph);
+            let edges: Vec<&Edge> = adj
+                .incoming(id)
                 .iter()
+                .chain(adj.outgoing(id))
+                .filter_map(|&i| graph.edges.get(i))
                 .filter(|e| INVOCATION.contains(&e.kind))
-                .collect(),
-            graph.nodes.values().collect(),
-        ),
+                .collect();
+            let nodes = edges
+                .iter()
+                .flat_map(|e| [&e.from, &e.to])
+                .filter_map(|n| graph.nodes.get(n))
+                .collect();
+            (edges, nodes)
+        }
     };
     let names: BTreeMap<&NodeId, &str> = nodes.iter().map(|n| (&n.id, n.name.as_str())).collect();
     let names = |n: &NodeId| names.get(n).map(|s| (*s).to_owned()).unwrap_or_default();
@@ -308,6 +318,68 @@ pub fn neighborhood(
     }
 }
 
+/// [`neighborhood`] on the stored (symbol-level) graph, walking the edge
+/// index from the focus instead of scanning every edge: the cost depends on
+/// the neighborhood, not on the graph.
+///
+/// Example: `neighborhood_in(g, cache, checkout, 1, Out)` equals
+/// `neighborhood(&g.payload(Symbol), checkout, 1, Out)`.
+pub fn neighborhood_in(
+    graph: &Graph,
+    cache: &Cache,
+    focus: &NodeId,
+    depth: usize,
+    direction: Direction,
+) -> GraphPayload {
+    let adj = cache.adjacency(graph);
+    let walkable = |i: &usize| graph.edges.get(*i).filter(|e| e.kind != EdgeKind::Contains);
+    let mut keep: BTreeSet<NodeId> = BTreeSet::from([focus.clone()]);
+    let mut queue = VecDeque::from([(focus.clone(), 0usize)]);
+    while let Some((id, d)) = queue.pop_front() {
+        if d == depth {
+            continue;
+        }
+        let out = matches!(direction, Direction::Out | Direction::Both);
+        let inc = matches!(direction, Direction::In | Direction::Both);
+        let next: Vec<&NodeId> = adj
+            .outgoing(&id)
+            .iter()
+            .filter(|_| out)
+            .filter_map(walkable)
+            .map(|e| &e.to)
+            .chain(
+                adj.incoming(&id)
+                    .iter()
+                    .filter(|_| inc)
+                    .filter_map(walkable)
+                    .map(|e| &e.from),
+            )
+            .collect();
+        for n in next {
+            if keep.insert(n.clone()) {
+                queue.push_back((n.clone(), d + 1));
+            }
+        }
+    }
+    let nodes = keep
+        .iter()
+        .filter_map(|id| graph.nodes.get(id))
+        .cloned()
+        .collect();
+    let edges = keep
+        .iter()
+        .flat_map(|id| adj.outgoing(id).iter().filter_map(walkable))
+        .filter(|e| keep.contains(&e.to))
+        .cloned()
+        .collect();
+    GraphPayload {
+        nodes,
+        edges,
+        truncated: false,
+        aggregated: None,
+    }
+}
+
 /// Narrows a graph for the API.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Filter {
@@ -366,7 +438,12 @@ pub fn filter(graph: &Graph, payload: GraphPayload, filter: &Filter) -> GraphPay
 ///
 /// Example: a 50,000-symbol repository asked at `Symbol` level gets its
 /// namespace graph and `true`.
-pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> (GraphPayload, bool) {
+pub fn fit(
+    graph: &Graph,
+    cache: &Cache,
+    level: AggregationLevel,
+    f: &Filter,
+) -> (GraphPayload, bool) {
     let order = [
         AggregationLevel::Symbol,
         AggregationLevel::Namespace,
@@ -375,7 +452,7 @@ pub fn fit(graph: &Graph, level: AggregationLevel, f: &Filter) -> (GraphPayload,
     let start = order.iter().position(|l| *l == level).unwrap_or(1);
     let mut last = GraphPayload::default();
     for l in &order[start..] {
-        let mut p = filter(graph, graph.payload(*l), f);
+        let mut p = filter(graph, cache.payload(graph, *l).into_owned(), f);
         if p.nodes.len() <= MAX_NODES && p.edges.len() <= MAX_EDGES {
             if *l != level {
                 p.aggregated = Some(Aggregation { level: *l });
@@ -696,7 +773,12 @@ mod tests {
     #[test]
     fn fit_reports_only_real_fallbacks() {
         let g = graph();
-        let (p, coarser) = fit(&g, AggregationLevel::Namespace, &Filter::default());
+        let (p, coarser) = fit(
+            &g,
+            &Cache::default(),
+            AggregationLevel::Namespace,
+            &Filter::default(),
+        );
         assert!(!coarser, "the requested level fits; no fallback");
         assert!(!p.truncated);
         let mut big = Graph::default();
@@ -706,7 +788,12 @@ mod tests {
             n.unit = Some(NodeId::from_str("unit:.").unwrap());
             big.nodes.insert(n.id.clone(), n);
         }
-        let (p, coarser) = fit(&big, AggregationLevel::Symbol, &Filter::default());
+        let (p, coarser) = fit(
+            &big,
+            &Cache::default(),
+            AggregationLevel::Symbol,
+            &Filter::default(),
+        );
         assert!(coarser, "too many symbols: shown at a coarser level");
         assert!(p.nodes.len() <= MAX_NODES);
     }
@@ -714,7 +801,12 @@ mod tests {
     #[test]
     fn fit_keeps_small_graphs_and_cap_trims_big_ones() {
         let g = graph();
-        let (p, coarser) = fit(&g, AggregationLevel::Symbol, &Filter::default());
+        let (p, coarser) = fit(
+            &g,
+            &Cache::default(),
+            AggregationLevel::Symbol,
+            &Filter::default(),
+        );
         assert!(!p.truncated);
         assert!(!coarser);
         assert_eq!(p.aggregated, None);
@@ -788,7 +880,7 @@ mod tests {
         let mut cljs = edge(total, charge, EdgeKind::Calls, Some(Certainty::Certain));
         cljs.lang = Some(aldente_model::Lang::Cljs);
         g.edges.push(cljs);
-        let (callers, _) = neighbors(&g, &NodeId::from_str(charge).unwrap());
+        let (callers, _) = neighbors(&g, &Cache::default(), &NodeId::from_str(charge).unwrap());
         assert_eq!(callers.len(), 1, "{callers:?}");
     }
 
@@ -837,7 +929,7 @@ mod tests {
     fn namespaces_get_rolled_up_neighbors_with_counts() {
         let g = two_namespaces();
         let orders = NodeId::from_str("clj:.//orders.core").unwrap();
-        let (callers, callees) = neighbors(&g, &orders);
+        let (callers, callees) = neighbors(&g, &Cache::default(), &orders);
         assert!(callers.is_empty());
         let kinds: Vec<(String, EdgeKind, Option<u64>)> = callees
             .iter()
@@ -852,7 +944,7 @@ mod tests {
             "{kinds:?}"
         );
         let billing = NodeId::from_str("clj:.//billing.core").unwrap();
-        let (callers, _) = neighbors(&g, &billing);
+        let (callers, _) = neighbors(&g, &Cache::default(), &billing);
         assert_eq!(callers.len(), 2);
         assert_eq!(callers[0].name, "orders.core");
     }
@@ -861,7 +953,7 @@ mod tests {
     fn neighbors_and_neighborhoods() {
         let g = graph();
         let charge = NodeId::from_str("clj:services/orders//orders.core/charge!").unwrap();
-        let (callers, callees) = neighbors(&g, &charge);
+        let (callers, callees) = neighbors(&g, &Cache::default(), &charge);
         assert_eq!(callers.len(), 1);
         assert_eq!(callers[0].name, "total");
         assert!(callees.is_empty());

@@ -7,7 +7,7 @@ import { Api, initToken } from './api';
 import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
 import { layout } from './layout';
-import { certaintyColor, edgeShown, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
+import { certaintyColor, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GNode, Payload, ShowResult, UnitInfo } from './types';
 
@@ -40,6 +40,14 @@ export function App() {
   const [view, setView] = useState<'units' | 'namespaces'>('units');
   const [top, setTop] = useState(250);
   const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
+  // Read at load time, so the root views (and the effect that loads the
+  // first one) do not change identity when these do.
+  const topRef = useRef(top);
+  const namespaceCountRef = useRef(namespaceCount);
+  useLayoutEffect(() => {
+    topRef.current = top;
+    namespaceCountRef.current = namespaceCount;
+  }, [top, namespaceCount]);
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   // A ref, so callbacks that read the levels keep their identity and do not
@@ -68,17 +76,18 @@ export function App() {
       namespaces: {
         label: 'All namespaces',
         load: () =>
-          api.allNamespaces(top).then(({ data }) => {
+          api.allNamespaces(topRef.current).then(({ data }) => {
             if (data.truncated) {
               const shown = data.nodes.filter((n) => n.kind === 'namespace').length;
-              const of = namespaceCount === null ? '' : ` of ${namespaceCount}`;
+              const total = namespaceCountRef.current;
+              const of = total === null ? '' : ` of ${total}`;
               setNotice(`Showing the ${shown} busiest${of} namespaces (most calls in and out).`);
             }
             return data;
           }),
       } as Crumb,
     };
-  }, [api, top, namespaceCount]);
+  }, [api]);
 
   /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
   const show = useCallback(
@@ -135,10 +144,12 @@ export function App() {
       setDetails(null);
       setSource(null);
       api.node(id).then(setDetails).catch(fail);
-      api
-        .source(id)
-        .then(setSource)
-        .catch(() => setSource(''));
+      if (hasSource(id)) {
+        api
+          .source(id)
+          .then(setSource)
+          .catch(() => setSource(''));
+      }
     },
     [api, fail],
   );

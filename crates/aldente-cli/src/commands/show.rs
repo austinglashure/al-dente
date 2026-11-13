@@ -49,7 +49,7 @@ pub fn run(args: &ShowArgs, json: bool) -> anyhow::Result<ExitCode> {
             json,
         );
     };
-    let (mut callers, mut callees) = neighbors(graph, &id);
+    let (mut callers, mut callees) = neighbors(graph, &aldente_graph::cache::Cache::default(), &id);
     let min = args.min_certainty.map(Into::into);
     callers.retain(|n| passes(n.certainty, min));
     callees.retain(|n| passes(n.certainty, min));

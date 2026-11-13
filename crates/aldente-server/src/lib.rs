@@ -41,6 +41,8 @@ pub struct AppState {
     pub port: u16,
     /// Print one timing line per request to stderr (`serve --timings`).
     pub timings: bool,
+    /// Rollups and the edge index of `snapshot.graph`, computed on first use.
+    pub cache: aldente_graph::cache::Cache,
 }
 
 impl AppState {
@@ -64,6 +66,7 @@ impl AppState {
             token,
             port,
             timings: false,
+            cache: aldente_graph::cache::Cache::default(),
         }
     }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropNodes, edgeKey, edgeShown, hidden, isTest, labelFor, mergePayload, newGraph } from './model';
+import { dropNodes, edgeKey, edgeShown, hasSource, hidden, isTest, labelFor, mergePayload, newGraph } from './model';
 import { apiPath, tokenFrom } from './api';
 import type { GNode, Payload } from './types';
 
@@ -80,5 +80,19 @@ describe('certainty levels', () => {
     expect(edgeShown({ from: 'a', to: 'b', kind: 'calls', certainty: 'possible' }, levels)).toBe(false);
     expect(edgeShown({ from: 'a', to: 'b', kind: 'calls', certainty: 'likely' }, levels)).toBe(true);
     expect(edgeShown({ from: 'a', to: 'b', kind: 'requires' }, levels)).toBe(true);
+  });
+});
+
+describe('hasSource', () => {
+  it('is false for units, namespaces and externals, true for symbols and impls', () => {
+    expect(hasSource('unit:services/orders')).toBe(false);
+    expect(hasSource('clj:services/orders//orders.core')).toBe(false);
+    expect(hasSource('clj:.//shop.core')).toBe(false);
+    expect(hasSource('ext:clj//clojure.core/map')).toBe(false);
+    expect(hasSource('java:java.util.UUID')).toBe(false);
+    expect(hasSource('clj:.//shop.core/checkout')).toBe(true);
+    expect(hasSource('clj:.//shop.pricing/price@:book')).toBe(true);
+    expect(hasSource('clj:.//shop.pricing//')).toBe(true);
+    expect(hasSource('hole:dynamic-eval@src/shop/plugins.clj:12:3')).toBe(true);
   });
 });
