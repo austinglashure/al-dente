@@ -508,7 +508,7 @@ export function App() {
       {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}
       <main className="center">
         {crater ? (
-          <CraterView key={JSON.stringify(crater)} api={api} request={crater} onClose={() => setCrater(null)} onSelect={select} />
+          <CraterView key={JSON.stringify(crater)} api={api} request={crater} onClose={() => setCrater(null)} onSelect={select} hideCoreInitially={hideCore} />
         ) : (
         <>
         <nav className="breadcrumb" data-testid="breadcrumb" aria-label="What is open">

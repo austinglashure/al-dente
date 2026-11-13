@@ -26,3 +26,29 @@ test.describe('hide Clojure core', () => {
     await expect(listed(page, 'ext:clj//clojure.core')).toBeVisible();
   });
 });
+
+test.describe('hide Clojure core in the crater view', () => {
+  let server: Server;
+  test.beforeAll(async () => {
+    server = await startServer('clj-mini');
+  });
+  test.afterAll(() => server.close());
+
+  test('hides core nodes and starts from the main view setting', async ({ page }) => {
+    await page.goto(server.url);
+    await page.locator('[data-open="clj:.//shop.core"]').click();
+    await listed(page, 'clj:.//shop.core/checkout').click();
+    await page.getByTestId('details').locator('[data-action="crater-forward"]').click();
+    const view = page.getByTestId('crater-view');
+    await expect(page.getByTestId('crater-summary')).toBeVisible();
+    await expect(view).toHaveAttribute('data-hidden', '0');
+    await page.getByTestId('crater-hide-core').check();
+    // checkout's forward crater reaches let, format, swap!, str, … in clojure.core and cljs.core.
+    expect(Number(await view.getAttribute('data-hidden'))).toBeGreaterThan(3);
+    await page.getByTestId('crater-close').click();
+
+    await page.getByTestId('hide-core').check();
+    await page.getByTestId('details').locator('[data-action="crater-forward"]').click();
+    await expect(page.getByTestId('crater-hide-core')).toBeChecked();
+  });
+});
