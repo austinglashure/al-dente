@@ -64,8 +64,13 @@ pub fn run(args: &ChurnArgs, json: bool) -> anyhow::Result<ExitCode> {
         Ok(l) => l,
         Err(f) => return fail(TAG, &f, json),
     };
+    let req = HistoryRequest {
+        since: args.since.clone(),
+        max_commits: args.max_commits,
+        symbol_commits: args.symbol_commits,
+    };
     let (hist, warnings) = match read_history(
-        args,
+        &req,
         &loaded.target.root,
         loaded.target.git,
         &loaded.target.origin,
@@ -98,13 +103,31 @@ pub fn run(args: &ChurnArgs, json: bool) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::Success)
 }
 
+/// What history to read.
+#[derive(Debug, Clone)]
+pub(crate) struct HistoryRequest {
+    pub since: Option<String>,
+    pub max_commits: usize,
+    pub symbol_commits: usize,
+}
+
+impl Default for HistoryRequest {
+    fn default() -> Self {
+        HistoryRequest {
+            since: None,
+            max_commits: 1000,
+            symbol_commits: 200,
+        }
+    }
+}
+
 /// Reads the commits, deepening a shallow remote clone first. No git
 /// history is an empty result with a warning, not an error.
 ///
 /// Example: a directory without `.git` gives `HistoryDepth::None` and a
 /// `no-history` warning.
-fn read_history(
-    args: &ChurnArgs,
+pub(crate) fn read_history(
+    args: &HistoryRequest,
     root: &Path,
     git_repo: bool,
     origin: &str,

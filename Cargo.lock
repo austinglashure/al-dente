@@ -89,6 +89,7 @@ dependencies = [
  "aldente-clj",
  "aldente-graph",
  "aldente-model",
+ "aldente-rules",
  "aldente-server",
  "anyhow",
  "blake3",

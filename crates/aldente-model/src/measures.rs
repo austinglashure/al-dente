@@ -294,3 +294,41 @@ pub struct DeadCodeReport {
     /// Sorted by ID.
     pub dead: Vec<DeadSymbol>,
 }
+
+/// `aldente metrics`: both measure sets on one projection.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct MetricsReport {
+    pub first: MeasureReport,
+    pub second: SecondReport,
+}
+
+/// `aldente cycles`: strongly connected components with cut suggestions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct CyclesReport {
+    pub projection: ProjectionSpec,
+    pub components: Vec<Component>,
+}
+
+/// `aldente communities`: Louvain communities and how they line up with
+/// namespaces and units.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct CommunitiesReport {
+    pub projection: ProjectionSpec,
+    pub seed: u64,
+    pub modularity: f64,
+    pub communities: Vec<Community>,
+    /// Each node's community, sorted by node.
+    pub members: Vec<Member>,
+    pub split_namespaces: Vec<SplitNamespace>,
+}
+
+/// A node and its community.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct Member {
+    pub id: NodeId,
+    pub community: u32,
+}

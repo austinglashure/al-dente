@@ -31,6 +31,12 @@ enum Command {
     Churn(commands::churn::ChurnArgs),
     /// Estimated test coverage per symbol, namespace and unit.
     Coverage(commands::coverage::CoverageArgs),
+    /// Strongly connected components (cycles) with edges that would break them.
+    Cycles(commands::measures::CyclesArgs),
+    /// Communities the code forms, and namespaces split across them.
+    Communities(commands::measures::CommunitiesArgs),
+    /// Symbols nothing reaches from entry points, tests or load-time code.
+    Deadcode(commands::measures::DeadcodeArgs),
     /// The impact crater: everything seeds can reach, or that reaches them.
     Crater(commands::crater::CraterArgs),
     /// Check that git, clj-kondo and the cache directory are usable.
@@ -39,8 +45,12 @@ enum Command {
     Find(commands::find::FindArgs),
     /// Print a graph or a neighborhood (text, JSON, DOT, Mermaid, GraphML).
     Graph(commands::graph::GraphArgs),
+    /// Ranked findings: god objects, must-be-bulletproof code, bottlenecks, cycles, risky untested code…
+    Hotspots(commands::hotspots::HotspotsArgs),
     /// Libraries in use and where the repository invokes them.
     Lib(commands::lib::LibArgs),
+    /// Graph measures as a table (fan, PageRank, betweenness, …).
+    Metrics(commands::measures::MetricsArgs),
     /// Start the local GUI and API (127.0.0.1 only).
     Serve(commands::serve::ServeArgs),
     /// Show a node with its callers and callees.
@@ -70,6 +80,11 @@ fn main() -> std::process::ExitCode {
         Command::Cache(args) => commands::cache::run(args, cli.json),
         Command::Churn(args) => commands::churn::run(args, cli.json),
         Command::Coverage(args) => commands::coverage::run(args, cli.json),
+        Command::Cycles(args) => commands::measures::cycles(args, cli.json),
+        Command::Communities(args) => commands::measures::communities(args, cli.json),
+        Command::Deadcode(args) => commands::measures::deadcode(args, cli.json),
+        Command::Hotspots(args) => commands::hotspots::run(args, cli.json),
+        Command::Metrics(args) => commands::measures::metrics(args, cli.json),
         Command::Crater(args) => commands::crater::run(args, cli.json),
         Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),

@@ -54,6 +54,25 @@ impl Loaded {
     }
 }
 
+impl Loaded {
+    /// Where computed analyses are kept: the snapshot file's
+    /// `analysis_result` table, or memory when the snapshot was not saved.
+    ///
+    /// Example: `measures(&graph, &spec, loaded.store().as_ref())`.
+    pub fn store(&self) -> Box<dyn aldente_analysis::measures::cache::ResultStore> {
+        use aldente_analysis::measures::cache::{MemoryStore, SnapshotStore};
+        let path = default_dir()
+            .and_then(|d| Layout::open(&d).ok())
+            .map(|l| aldente_graph::snapshot::path_for(&l.snapshots, &self.outcome.snapshot.key));
+        match path {
+            Some(p) if self.outcome.store_error.is_none() && p.is_file() => {
+                Box::new(SnapshotStore(p))
+            }
+            _ => Box::new(MemoryStore::default()),
+        }
+    }
+}
+
 /// The local Maven repository for jar listings: `ALDENTE_MAVEN_REPO` when
 /// set (empty turns jar listing off), else `~/.m2/repository`.
 ///
