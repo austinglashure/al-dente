@@ -153,6 +153,7 @@ name = "aldente-server"
 version = "0.1.0"
 dependencies = [
  "aldente-acquire",
+ "aldente-analysis",
  "aldente-graph",
  "aldente-model",
  "axum",

@@ -410,3 +410,28 @@ fn trace_pinned_crater() {
         Some(2)
     );
 }
+
+#[test]
+fn a_library_seeds_a_reverse_crater_of_its_users() {
+    let env = Env::fixture("clj-mini", "lib-seed");
+    let j = env.json(&["crater", "lib:npm:react", "--direction", "reverse"]);
+    let reached: Vec<String> = j["data"]["reach"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["id"].as_str().unwrap().to_owned())
+        .collect();
+    for user in [
+        "clj:.//shop.ui.views/cart-view",
+        "clj:.//shop.ui.views/submit-button",
+    ] {
+        assert!(
+            reached.contains(&user.to_owned()),
+            "{user} not in {reached:?}"
+        );
+    }
+    assert!(
+        !reached.iter().any(|r| r.contains("shop.pricing")),
+        "{reached:?}"
+    );
+}

@@ -1,0 +1,13 @@
+---
+source: crates/aldente-cli/tests/lib.rs
+expression: "env.text(&[\"lib\", \"ls\"])"
+---
+lib:maven:org.clojure/clojurescript  1 symbol  1 namespace  1 unit
+  provides ext:clj//cljs.core certain direct
+  declared 1.11.60 by unit:.
+lib:maven:reagent/reagent  3 symbols  2 namespaces  1 unit
+  provides ext:clj//reagent.core likely name-match
+  provides ext:clj//reagent.dom likely name-match
+  declared 1.2.0 by unit:.
+lib:npm:react  1 symbol  1 namespace  1 unit
+  provides ext:clj//react certain direct

@@ -8,6 +8,7 @@ pub mod crater_diff;
 pub mod doctor;
 pub mod find;
 pub mod graph;
+pub mod lib;
 pub mod loaded;
 pub mod query;
 pub mod schema;

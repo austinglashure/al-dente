@@ -13,6 +13,7 @@ pub mod envelope;
 pub mod graph;
 pub mod id;
 pub mod kinds;
+pub mod libraries;
 pub mod path;
 pub mod query;
 pub mod schema;

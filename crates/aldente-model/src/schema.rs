@@ -10,6 +10,7 @@ use crate::crater::{Checklist, CraterResult};
 use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
 use crate::graph::GraphPayload;
+use crate::libraries::{LibrariesReport, LibraryUsage};
 use crate::query::{BlindspotReport, FindResult, ShowResult};
 use crate::trace::TraceReport;
 use crate::units::UnitsReport;
@@ -26,6 +27,8 @@ pub const SCHEMA_NAMES: &[&str] = &[
     "envelope",
     "find",
     "graph",
+    "lib-usage",
+    "libs",
     "serve",
     "show",
     "snapshot",
@@ -76,6 +79,8 @@ pub fn schema_by_name(name: &str) -> Option<Value> {
         "envelope" => Some(envelope_schema()),
         "units" => Some(schemars::schema_for!(UnitsReport).to_value()),
         "trace" => Some(schemars::schema_for!(TraceReport).to_value()),
+        "libs" => Some(schemars::schema_for!(LibrariesReport).to_value()),
+        "lib-usage" => Some(schemars::schema_for!(LibraryUsage).to_value()),
         _ => None,
     }
 }

@@ -208,7 +208,8 @@ pub fn crater(
 
 /// Adds what namespace and library seeds stand for: a namespace's contained
 /// symbols (and their impls), a library's provided externals and namespaces
-/// (and what those contain). Sorted, without duplicates.
+/// (and what those contain, including the external symbols of a provided
+/// external namespace). Sorted, without duplicates.
 ///
 /// Example: a seed `clj:.//app.core` that contains `a` and `b` gives
 /// `[app.core, a, b]` (as indexes).
@@ -234,6 +235,11 @@ fn expand_seeds(index: &CraterIndex, seeds: Vec<Ix>) -> Vec<Ix> {
                     stack.push((a.other, true));
                 }
             }
+        }
+        // An external namespace a library provides stands for the external
+        // symbols in it, which is where calls land.
+        if derived {
+            stack.extend(index.externals_in(s).iter().map(|&x| (x, true)));
         }
     }
     out.into_iter().collect()

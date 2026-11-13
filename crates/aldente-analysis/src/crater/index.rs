@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use aldente_graph::Graph;
-use aldente_model::{Certainty, EdgeKind, NodeId, NodeKind, SymbolFlag, SymbolSubkind};
+use aldente_model::{Certainty, EdgeKind, Lang, NodeId, NodeKind, SymbolFlag, SymbolSubkind};
 
 /// A node's position in the index.
 pub type Ix = u32;
@@ -51,6 +51,8 @@ pub struct CraterIndex {
     in_start: Vec<u32>,
     inc: Vec<Arc>,
     hub_threshold: u32,
+    /// External symbols by `(lang, namespace)`, for library seeds.
+    externals: HashMap<(Lang, String), Vec<Ix>>,
 }
 
 impl CraterIndex {
@@ -96,6 +98,17 @@ impl CraterIndex {
             .map(|i| (out_start[i + 1] - out_start[i]) + (in_start[i + 1] - in_start[i]))
             .collect();
         let hub_threshold = default_hub_threshold(&degrees);
+        let mut externals: HashMap<(Lang, String), Vec<Ix>> = HashMap::new();
+        for (i, id) in ids.iter().enumerate() {
+            if let NodeId::External(x) = id
+                && x.name().is_some()
+            {
+                externals
+                    .entry((x.lang(), x.ns().to_owned()))
+                    .or_default()
+                    .push(i as Ix);
+            }
+        }
         CraterIndex {
             ids,
             ix,
@@ -106,6 +119,21 @@ impl CraterIndex {
             in_start,
             inc,
             hub_threshold,
+            externals,
+        }
+    }
+
+    /// The external symbols in the external namespace `i` (empty for any
+    /// other node).
+    ///
+    /// Example: for `ext:clj//react`, the index of `ext:clj//react/createElement`.
+    pub fn externals_in(&self, i: Ix) -> &[Ix] {
+        match self.id(i) {
+            NodeId::External(x) if x.name().is_none() => self
+                .externals
+                .get(&(x.lang(), x.ns().to_owned()))
+                .map_or(&[], Vec::as_slice),
+            _ => &[],
         }
     }
 

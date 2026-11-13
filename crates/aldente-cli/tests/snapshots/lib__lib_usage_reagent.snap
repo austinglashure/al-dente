@@ -1,0 +1,16 @@
+---
+source: crates/aldente-cli/tests/lib.rs
+expression: "env.text(&[\"lib\", \"usage\", \"reagent\"])"
+---
+lib:maven:reagent/reagent   by namespace
+provides ext:clj//reagent.core likely name-match
+provides ext:clj//reagent.dom likely name-match
+clj:.//lib.views
+  src/lib/views.cljs:3:14  requires  clj:.//lib.views -> ext:clj//reagent.core
+  src/lib/views.cljs:4:14  requires  clj:.//lib.views -> ext:clj//reagent.dom
+  src/lib/views.cljs:7:18  calls certain  clj:.//lib.views/counter -> ext:clj//reagent.core/atom
+  src/lib/views.cljs:13:3  calls certain  clj:.//lib.views/mount! -> ext:clj//reagent.dom/render
+  src/lib/views.cljs:16:3  calls certain  clj:.//lib.views/wrapped -> ext:clj//reagent.core/as-element
+requires only, never calls (1)
+  clj:.//lib.state
+    src/lib/state.cljs:3:14  requires  clj:.//lib.state -> ext:clj//reagent.core

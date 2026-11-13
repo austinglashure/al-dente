@@ -4,5 +4,6 @@
 
 pub mod crater;
 pub mod glob;
+pub mod libraries;
 pub mod textdiff;
 pub mod trace;

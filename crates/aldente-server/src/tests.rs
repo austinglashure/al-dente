@@ -112,6 +112,50 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
         count: None,
         by_certainty: None,
     });
+    if name == "libs" {
+        // `g` calls react through an npm require (WP3.6).
+        let lib = NodeId::from_str("lib:npm:react").unwrap();
+        let ext = NodeId::from_str("ext:clj//react").unwrap();
+        let call = NodeId::from_str("ext:clj//react/createElement").unwrap();
+        for id in [&lib, &ext, &call] {
+            graph.nodes.insert(
+                id.clone(),
+                Node {
+                    id: id.clone(),
+                    kind: id.kind(),
+                    name: id.to_string(),
+                    subkind: None,
+                    namespace: None,
+                    unit: None,
+                    langs: BTreeSet::new(),
+                    flags: BTreeSet::new(),
+                    loc: None,
+                    doc: None,
+                    signature: None,
+                },
+            );
+        }
+        for (from, to, kind) in [
+            (lib.clone(), ext.clone(), EdgeKind::Provides),
+            (
+                NodeId::from_str("clj:.//a/g").unwrap(),
+                call.clone(),
+                EdgeKind::Calls,
+            ),
+        ] {
+            graph.edges.push(Edge {
+                from,
+                to,
+                kind,
+                certainty: Some(Certainty::Certain),
+                reason: Some(Reason::Direct),
+                lang: None,
+                sites: vec![],
+                count: None,
+                by_certainty: None,
+            });
+        }
+    }
     let hash = blake3::hash(src.as_bytes()).to_hex().to_string();
     let snap = Snapshot {
         key: "b3:00".into(),
@@ -319,6 +363,7 @@ fn responses_match_the_cli_schemas() {
         ("/api/v1/node?id=g", "show", "aldente/show/v1"),
         ("/api/v1/search?q=f", "find", "aldente/find/v1"),
         ("/api/v1/blindspots", "blindspots", "aldente/blindspots/v1"),
+        ("/api/v1/libs", "libs", "aldente/libs/v1"),
     ] {
         let (status, _, body) = s.ok_get(path);
         assert_eq!(status, 200, "{path}: {body}");
@@ -337,6 +382,8 @@ fn responses_match_the_cli_schemas() {
             "{path}: {env:#}"
         );
     }
+    assert_eq!(s.ok_get("/api/v1/lib?id=nothing-like-this").0, 404);
+    assert_eq!(s.ok_get("/api/v1/lib").0, 400);
     let (status, _, body) = s.ok_get("/api/v1/node?id=nothing-like-this");
     assert_eq!(status, 404);
     assert!(body.contains("unknown-symbol"));
@@ -434,4 +481,26 @@ fn tokens_are_long_and_differ() {
     let a = new_token();
     assert_eq!(a.len(), 32);
     assert_ne!(a, new_token());
+}
+
+#[test]
+fn library_endpoints() {
+    let s = start("libs");
+    let (status, _, body) = s.ok_get("/api/v1/libs");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["libraries"][0]["id"], "lib:npm:react");
+    assert_eq!(env["data"]["libraries"][0]["symbols"], 1);
+    let (status, _, body) = s.ok_get("/api/v1/lib?id=react&by=symbol");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["schema"], "aldente/lib-usage/v1");
+    assert_eq!(env["data"]["groups"][0]["id"], "clj:.//a/g");
+    let data = aldente_model::schema::schema_by_name("lib-usage").unwrap();
+    assert!(
+        jsonschema::validator_for(&data)
+            .unwrap()
+            .is_valid(&env["data"])
+    );
+    assert_eq!(s.ok_get("/api/v1/lib?id=react&by=nope").0, 400);
 }

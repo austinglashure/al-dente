@@ -98,6 +98,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/source", get(api::source))
         .route("/api/v1/search", get(api::search))
         .route("/api/v1/blindspots", get(api::blindspots))
+        .route("/api/v1/libs", get(api::libs))
+        .route("/api/v1/lib", get(api::lib))
         .route("/api/v1/tree", get(api::tree))
         .route("/api/v1/tree/graph", get(api::tree_graph));
     #[cfg(test)]

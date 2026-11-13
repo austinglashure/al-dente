@@ -1,0 +1,10 @@
+---
+source: crates/aldente-cli/tests/lib.rs
+expression: "env.text(&[\"lib\", \"usage\", \"react\", \"--by\", \"symbol\"])"
+---
+lib:npm:react   by symbol
+provides ext:clj//react certain direct
+clj:.//lib.views
+  src/lib/views.cljs:5:14  requires  clj:.//lib.views -> ext:clj//react
+clj:.//lib.views/wrapped
+  src/lib/views.cljs:16:23  calls certain  clj:.//lib.views/wrapped -> ext:clj//react/createElement
