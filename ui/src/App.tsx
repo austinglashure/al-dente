@@ -8,12 +8,16 @@ import { libraryHighlight } from './crater';
 import { CraterView, type CraterRequest } from './CraterView';
 import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
+import { CycleList, HotspotList } from './Hotspots';
+import { MeasuresTable } from './MeasuresTable';
+import { OverlayControls, useReports, useStyler } from './Overlays';
+import type { Metric, OverlayKind } from './overlay';
 import { CanvasBar } from './CanvasBar';
 import { LeftPanel } from './LeftPanel';
 import { LibraryPanel } from './Libraries';
 import { SourcePanel } from './SourcePanel';
 import { TraceDialog } from './TraceDialog';
-import { layout } from './layout';
+import { layout, layoutRuns } from './layout';
 import { edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
@@ -53,6 +57,10 @@ export function App() {
   const [traceOpen, setTraceOpen] = useState(false);
   const [libs, setLibs] = useState<LibrarySummary[]>([]);
   const [libUsage, setLibUsage] = useState<LibraryUsage | null>(null);
+  const [overlay, setOverlay] = useState<OverlayKind>('risk');
+  const [sizeBy, setSizeBy] = useState<Metric | null>(null);
+  const [colorBy, setColorBy] = useState<Metric | null>(null);
+  const [measureSel, setMeasureSel] = useState<Set<string>>(() => new Set());
   const collapsedRef = useRef(collapsed);
   // Read at load time, so the root views (and the effect that loads the
   // first one) do not change identity when these do.
@@ -77,6 +85,7 @@ export function App() {
   );
   const relayout = useCallback(() => layout(graph, redraw, edgeVisible), [graph, redraw, edgeVisible]);
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
+  const reports = useReports(api, overlay, sizeBy !== null || colorBy !== null, fail);
 
   /** The two root views: units (the default) and every namespace at once. */
   const roots = useMemo(() => {
@@ -314,10 +323,15 @@ export function App() {
     [api, fail, redraw],
   );
   const libHighlight = useMemo(
-    () => (libUsage ? { nodes: libraryHighlight(libUsage, graph.nodes()), edges: new Set<string>() } : null),
+    () =>
+      measureSel.size > 0
+        ? { nodes: new Set(graph.nodes().filter((id) => measureSel.has(id))), edges: new Set<string>() }
+        : libUsage
+          ? { nodes: libraryHighlight(libUsage, graph.nodes()), edges: new Set<string>() }
+          : null,
     // `version` changes whenever the canvas does.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [libUsage, graph, version],
+    [libUsage, measureSel, graph, version],
   );
 
   const onDoubleClick = useCallback(
@@ -350,6 +364,12 @@ export function App() {
     .mapNodes((_id, a) => a.node)
     .filter((n) => !hidden(n, hide))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
+  const styleOf = useStyler(reports, overlay, sizeBy, colorBy, visible.map((n) => n.id));
+  const styledUntested = visible.filter((n) => {
+    const tag = styleOf(n.id)?.tag;
+    return tag === 'untested' || tag === 'risky-untested';
+  }).length;
+  const showCycle = (c: { nodes: string[]; size: number }) => show({ label: `cycle of ${c.size}`, load: () => api.subgraph(c.nodes) }, crumbs);
 
   return (
     <div
@@ -385,6 +405,15 @@ export function App() {
           onSelect={select}
           onFollow={follow}
           onOpen={open}
+          overlays={
+            <OverlayControls overlay={overlay} onOverlay={setOverlay} sizeBy={sizeBy} onSizeBy={setSizeBy} colorBy={colorBy} onColorBy={setColorBy} />
+          }
+          views={
+            <>
+              <HotspotList report={reports.hotspots} onFollow={follow} />
+              <CycleList api={api} onShow={showCycle} onError={fail} />
+            </>
+          }
         />
       )}
       {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}
@@ -421,6 +450,8 @@ export function App() {
           onDoubleClick={onDoubleClick}
           onDeselect={deselect}
           highlight={libHighlight}
+          styleOf={styleOf}
+          data={{ overlay, 'styled-untested': styledUntested, 'layout-runs': layoutRuns() }}
         />
         </>
         )}
@@ -449,6 +480,10 @@ export function App() {
           </div>
         )}
         {source && <SourcePanel key={selected ?? ''} source={source} />}
+        <details className="measures-panel" data-testid="measures-panel">
+          <summary>Measures</summary>
+          <MeasuresTable api={api} selected={measureSel} onSelected={setMeasureSel} onFollow={follow} onError={fail} />
+        </details>
       </aside>
       )}
       {traceOpen && (

@@ -91,3 +91,29 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .trace ul li { font-size: 0.8rem; }
 .libraries li.selected button { font-weight: bold; }
 .strong-path { color: #08519c; font-weight: bold; }
+
+/* Overlays, hotspots, cycles, measures (WP4.6). */
+.overlays label { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 0.85rem; }
+.overlays select { flex: 1; min-width: 0; }
+.overlay-legend { line-height: 1.6; }
+.swatch-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin: 0 2px 0 6px; }
+.swatch-dot.hollow { background: #f0f0f0; border: 1px solid #999; }
+.hotspots, .cycles, .measures-panel { margin: 8px 0; }
+.hotspots summary, .cycles summary, .measures-panel summary { cursor: pointer; font-weight: 600; }
+.hotspots ol { padding-left: 18px; margin: 4px 0; }
+.hotspots li { font-size: 0.85rem; margin: 4px 0; }
+.cycles li { font-size: 0.85rem; margin: 3px 0; }
+.badge-dead-code { background: #eee; color: #555; }
+.badge-risky-untested, .badge-must-be-bulletproof { background: #fee0d2; color: #a50f15; }
+.badge-god-object, .badge-bottleneck { background: #fdd0a2; color: #8c2d04; }
+.badge-cycle, .badge-hidden-coupling, .badge-misplaced-code { background: #dadaeb; color: #54278f; }
+.measures-head { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.85rem; }
+.measures-cols, .measures-row { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(5, minmax(0, 1fr)); gap: 4px; font-size: 0.78rem; }
+.measures-cols button { font-size: 0.75rem; padding: 0; border: none; background: none; cursor: pointer; text-align: right; color: #2171b5; }
+.measures-cols button[aria-pressed="true"] { font-weight: bold; text-decoration: underline; }
+.measures-cols .name, .measures-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.measures-body { overflow-y: auto; border: 1px solid #eee; }
+.measures-row { position: absolute; left: 0; right: 0; align-items: center; cursor: pointer; padding: 0 4px; }
+.measures-row span { text-align: right; overflow: hidden; }
+.measures-row:hover { background: #f5f5f5; }
+.measures-row.selected { background: #deebf7; }

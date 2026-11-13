@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type Graph from 'graphology';
 import Sigma from 'sigma';
 import type { EdgeAttrs, NodeAttrs } from './model';
+import type { NodeStyle } from './overlay';
 
 /** Nodes and edges to emphasize; everything else is drawn faded. */
 export interface Highlight {
@@ -33,7 +34,11 @@ interface Props<N extends NodeAttrs, E extends EdgeAttrs> {
   onHover?: (id: string | null) => void;
   /** When set, only these are drawn at full strength. */
   highlight?: Highlight | null;
+  /** Overlay styling per node (colour, size, label marker); never moves nodes. */
+  styleOf?: ((id: string) => NodeStyle | null) | null;
   testId?: string;
+  /** Extra `data-*` attributes on the canvas element (for tests). */
+  data?: Record<string, string | number>;
 }
 
 const FADED_NODE = '#e6e6e6';
@@ -54,13 +59,15 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
   onDeselect,
   onHover,
   highlight = null,
+  styleOf = null,
   testId = 'canvas',
+  data = {},
 }: Props<N, E>) {
   const container = useRef<HTMLDivElement>(null);
   const sigma = useRef<Sigma<N, E> | null>(null);
-  const handlers = useRef({ onSelect, onDoubleClick, onDeselect, onHover, isHidden, isEdgeHidden, selected, highlight });
+  const handlers = useRef({ onSelect, onDoubleClick, onDeselect, onHover, isHidden, isEdgeHidden, selected, highlight, styleOf });
   useLayoutEffect(() => {
-    handlers.current = { onSelect, onDoubleClick, onDeselect, onHover, isHidden, isEdgeHidden, selected, highlight };
+    handlers.current = { onSelect, onDoubleClick, onDeselect, onHover, isHidden, isEdgeHidden, selected, highlight, styleOf };
   });
 
   useEffect(() => {
@@ -73,8 +80,12 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
       nodeReducer: (id, attrs) => {
         const h = handlers.current;
         const faded = h.highlight !== null && !h.highlight.nodes.has(id);
+        const st = h.styleOf?.(id) ?? null;
         return {
           ...attrs,
+          ...(st?.color ? { color: st.color } : {}),
+          ...(st?.size ? { size: st.size } : {}),
+          ...(st?.mark ? { label: `${st.mark}${attrs.label}` } : {}),
           hidden: h.isHidden(id),
           highlighted: id === h.selected || ((h.highlight?.strongNodes ?? h.highlight?.nodes)?.has(id) ?? false),
           ...(faded ? { color: FADED_NODE, label: '' } : {}),
@@ -116,7 +127,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
 
   useEffect(() => {
     sigma.current?.refresh();
-  }, [version, selected, highlight]);
+  }, [version, selected, highlight, styleOf]);
 
   return (
     <div
@@ -126,6 +137,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
       data-visible-edges={visibleEdges}
       data-highlighted={highlight ? highlight.nodes.size : 0}
       data-strong-edges={highlight?.strongEdges?.size ?? 0}
+      {...Object.fromEntries(Object.entries(data).map(([k, v]) => [`data-${k}`, v]))}
     />
   );
 }

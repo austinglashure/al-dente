@@ -258,3 +258,99 @@ export interface LibraryUsage {
   groups: { id: string; rows: UsageRow[] }[];
   require_only: { id: string; rows: UsageRow[] }[];
 }
+
+export interface NodeMeasures {
+  id: string;
+  fan_in: number;
+  fan_out: number;
+  fan_in_weighted: number;
+  fan_out_weighted: number;
+  pagerank: number;
+  pagerank_reverse: number;
+  hub: number;
+  authority: number;
+  core: number;
+  component: number | null;
+}
+
+export interface NodeMeasures2 {
+  id: string;
+  betweenness: number;
+  closeness: number;
+  eigenvector: number;
+  community: number;
+  dominates: number;
+  articulation: boolean;
+  god_score: number;
+}
+
+export interface CutEdge {
+  from: string;
+  to: string;
+  weight: number;
+  count: number;
+}
+
+export interface Component {
+  size: number;
+  nodes: string[];
+  cut: CutEdge[];
+  cut_minimal: boolean;
+}
+
+export interface MetricsReport {
+  first: { nodes: NodeMeasures[]; components: Component[] };
+  second: { nodes: NodeMeasures2[]; sampling: { approximate: boolean; pivots: number } };
+}
+
+export interface CyclesReport {
+  projection: { kind: string; level: string };
+  components: Component[];
+}
+
+export type CoverageStatus = 'direct' | 'indirect' | 'weak' | 'untested';
+
+export interface SymbolCoverage {
+  id: string;
+  status: CoverageStatus;
+  distance: number | null;
+  tests: string[];
+  test_count: number;
+  measured: number | null;
+}
+
+export interface CoverageReport {
+  tests: number;
+  symbols: SymbolCoverage[];
+}
+
+export interface Finding {
+  kind: string;
+  subject: string;
+  nodes: string[];
+  score: number;
+  evidence: Record<string, number>;
+  reason: string;
+}
+
+export interface RiskRow {
+  id: string;
+  risk: number;
+  importance: number;
+  exposure: number;
+  status: CoverageStatus;
+  measured: number | null;
+  churn: number | null;
+}
+
+export interface HotspotsReport {
+  findings: Finding[];
+  risk: RiskRow[];
+}
+
+export interface ChurnReport {
+  history: 'full' | 'shallow' | 'none';
+  commits: number;
+  files: { path: string; commits: number }[];
+  symbols: { id: string; commits: number }[];
+}

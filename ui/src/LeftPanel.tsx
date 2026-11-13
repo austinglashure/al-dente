@@ -3,7 +3,7 @@
 // directory tree in the namespace view). Every repository string is
 // rendered as React text.
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Api } from './api';
 import { LibraryList } from './Libraries';
 import { certaintyColor, isAggregate, labelFor, type HideOptions, type Levels } from './model';
@@ -47,6 +47,10 @@ interface Props {
   onSelect: (id: string) => void;
   onFollow: (id: string) => void;
   onOpen: (n: GNode) => void;
+  /** Overlay controls, under the certainty legend. */
+  overlays?: ReactNode;
+  /** Hotspots and cycles, above the libraries. */
+  views?: ReactNode;
 }
 
 /** The left panel.
@@ -70,6 +74,7 @@ export function LeftPanel(p: Props) {
           </label>
         ))}
       </fieldset>
+      {p.overlays}
       {p.notice && (
         <p className="notice" data-testid="notice">
           {p.notice}
@@ -80,6 +85,7 @@ export function LeftPanel(p: Props) {
           {p.error}
         </p>
       )}
+      {p.views}
       <LibraryList libs={p.libs} selected={p.selectedLib} onSelect={p.onPickLib} />
       <BlindSpots spots={p.spots} onFollow={p.onFollow} />
       {p.tree ? (

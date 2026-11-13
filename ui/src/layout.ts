@@ -4,11 +4,19 @@ import type { CanvasGraph } from './model';
 import type { LayoutRequest, LayoutResponse } from './layout.worker';
 
 let worker: Worker | null = null;
+let runs = 0;
+
+/** How many layouts have started in this page (overlays must not add any).
+ *  Example: `layoutRuns()` is 1 after the first canvas loads. */
+export function layoutRuns(): number {
+  return runs;
+}
 
 /** Lays out `g` in a worker using only the edges `edgeFilter` keeps (hidden
  *  certainty levels do not pull nodes together); calls `done` afterwards.
  *  Example: `layout(graph, () => sigma.refresh(), (k) => shown(k))`. */
 export function layout(g: CanvasGraph, done: () => void, edgeFilter: (key: string) => boolean = () => true): void {
+  runs += 1;
   worker?.terminate();
   worker = new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' });
   const req: LayoutRequest = {

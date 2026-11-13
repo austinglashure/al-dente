@@ -5,6 +5,11 @@
 import type {
   BlindspotReport,
   Checklist,
+  ChurnReport,
+  CoverageReport,
+  CyclesReport,
+  HotspotsReport,
+  MetricsReport,
   CraterResult,
   Envelope,
   FindResult,
@@ -122,6 +127,13 @@ export class Api {
     this.post<CraterResult>('crater/trace', { direction: q.direction, depth: q.depth, min_certainty: q.minCertainty }, text);
   libs = () => this.json<LibrariesReport>('libs');
   lib = (id: string, by: 'namespace' | 'symbol' = 'namespace') => this.json<LibraryUsage>('lib', { id, by });
+  metrics = (level: 'symbol' | 'namespace' | 'unit') => this.json<MetricsReport>('metrics', { level });
+  coverage = () => this.json<CoverageReport>('coverage');
+  hotspots = () => this.json<HotspotsReport>('hotspots');
+  cycles = (level: 'symbol' | 'namespace' | 'unit') => this.json<CyclesReport>('cycles', { level });
+  churn = () => this.json<ChurnReport>('churn');
+  /** The named nodes and the edges between them. */
+  subgraph = (ids: string[]) => this.json<Payload>('subgraph', { id: ids });
 }
 
 /** What a crater request asks for. `depth` 0 means unlimited. */
