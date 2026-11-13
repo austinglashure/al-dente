@@ -9,5 +9,6 @@ pub mod query;
 pub mod rollup;
 pub mod snapshot;
 pub mod summary;
+pub mod tree;
 
 pub use build::{Graph, build};

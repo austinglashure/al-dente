@@ -101,6 +101,9 @@ pub enum NodeId {
     Repo,
     /// `unit:<dir>`, e.g. `unit:services/billing`; the root unit is `unit:.`.
     Unit(RepoPath),
+    /// `dir:<path>`, a directory of the repository (the GUI's directory
+    /// tree), e.g. `dir:st-modules/assure`. Never stored in a snapshot.
+    Dir(RepoPath),
     Namespace(NamespaceId),
     Symbol(SymbolId),
     Impl(ImplId),
@@ -395,6 +398,7 @@ impl NodeId {
         match self {
             NodeId::Repo => NodeKind::Repo,
             NodeId::Unit(_) => NodeKind::Unit,
+            NodeId::Dir(_) => NodeKind::Directory,
             NodeId::Namespace(_) => NodeKind::Namespace,
             NodeId::Symbol(_) => NodeKind::Symbol,
             NodeId::Impl(_) => NodeKind::Impl,
@@ -538,6 +542,9 @@ impl NodeId {
             }
             NodeId::Unit(dir) => {
                 p.push("unit:").push(dir.as_str());
+            }
+            NodeId::Dir(path) => {
+                p.push("dir:").push(path.as_str());
             }
             NodeId::Namespace(ns) => push_namespace(&mut p, ns),
             NodeId::Symbol(sym) => push_symbol(&mut p, sym),
@@ -733,6 +740,7 @@ impl FromStr for NodeId {
             "repo" if rest == "." => Ok(NodeId::Repo),
             "repo" => Err(malformed("repo", s, "the only repo ID is `repo:.`")),
             "unit" => Ok(NodeId::Unit(RepoPath::parse(rest)?)),
+            "dir" => Ok(NodeId::Dir(RepoPath::parse(rest)?)),
             "ext" => parse_external(s, rest),
             "lib" if rest == "unknown" => Ok(NodeId::Library(LibraryId::unknown())),
             "lib" => {
@@ -805,6 +813,9 @@ mod tests {
             "unit:a",
             "unit:a-b",
             "unit:a/b",
+            "dir:a",
+            "dir:a-b",
+            "dir:a/b",
             "clj:a//x",
             "clj:a-b//x",
             "clj:a/b//x",
@@ -870,6 +881,10 @@ mod tests {
             (
                 NodeId::Unit(path("services/billing")),
                 "unit:services/billing",
+            ),
+            (
+                NodeId::Dir(RepoPath::parse("st-modules/assure").unwrap()),
+                "dir:st-modules/assure",
             ),
             (
                 NodeId::Namespace(ns(Lang::Clj, "services/billing", "billing.core")),

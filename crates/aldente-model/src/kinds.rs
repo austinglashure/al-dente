@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 pub enum NodeKind {
     Repo,
     Unit,
+    /// A directory in the GUI's directory tree (never stored).
+    Directory,
     Namespace,
     Symbol,
     Impl,
@@ -31,6 +33,7 @@ impl NodeKind {
     pub const ALL: &'static [NodeKind] = &[
         NodeKind::Repo,
         NodeKind::Unit,
+        NodeKind::Directory,
         NodeKind::Namespace,
         NodeKind::Symbol,
         NodeKind::Impl,
