@@ -72,7 +72,14 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
             unit: Some(NodeId::from_str("unit:.").unwrap()),
             langs: BTreeSet::new(),
             flags: BTreeSet::new(),
-            loc: None,
+            // As the analyzer gives it: the `ns` form's location.
+            loc: Some(Location {
+                file: file.clone(),
+                line: 1,
+                col: 1,
+                end_line: 1,
+                end_col: 7,
+            }),
             doc: None,
             signature: None,
         },
@@ -335,6 +342,36 @@ fn responses_match_the_cli_schemas() {
     assert!(body.contains("unknown-symbol"));
     let (status, _, _) = s.ok_get("/api/v1/nope");
     assert_eq!(status, 404);
+}
+
+#[test]
+fn tree_and_tree_graph() {
+    let s = start("tree");
+    let (_, _, body) = s.ok_get("/api/v1/tree");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["schema"], "aldente/tree/v1", "{env:#}");
+    let root = &env["data"];
+    assert_eq!(root["label"], ".");
+    assert_eq!(root["dirs"][0]["id"], "dir:src");
+    assert_eq!(root["dirs"][0]["files"][0]["name"], "a.clj");
+    assert_eq!(root["dirs"][0]["files"][0]["status"], "analyzed");
+
+    let (_, _, body) = s.ok_get("/api/v1/tree/graph?collapsed=dir:src");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let ids: Vec<&str> = env["data"]["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids, ["dir:src"], "{env:#}");
+
+    let (_, _, body) = s.ok_get("/api/v1/tree/graph?top=1");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert!(env["data"]["nodes"].as_array().unwrap().len() <= 1);
+
+    let (status, _, _) = s.ok_get("/api/v1/tree/graph?collapsed=clj:.//a");
+    assert_eq!(status, 400, "only dir: IDs can be collapsed");
 }
 
 #[test]

@@ -43,9 +43,22 @@ pub struct AppState {
     pub timings: bool,
     /// Rollups and the edge index of `snapshot.graph`, computed on first use.
     pub cache: aldente_graph::cache::Cache,
+    /// The directory tree of the snapshot, built on first use.
+    pub tree: std::sync::OnceLock<aldente_model::tree::TreeDir>,
 }
 
 impl AppState {
+    /// The snapshot's directory tree (built once).
+    ///
+    /// Example: for clj-mini, one row `src/shop` holding the source files.
+    pub fn tree(&self) -> &aldente_model::tree::TreeDir {
+        self.tree.get_or_init(|| {
+            let files: Vec<aldente_model::RepoPath> =
+                self.snapshot.files.iter().map(|(p, _)| p.clone()).collect();
+            aldente_graph::tree::tree(&self.snapshot.graph, &files)
+        })
+    }
+
     /// Builds the state for a loaded snapshot.
     ///
     /// Example: `AppState::new(snap, root, info, &[], token, 8021)`.
@@ -67,6 +80,7 @@ impl AppState {
             port,
             timings: false,
             cache: aldente_graph::cache::Cache::default(),
+            tree: std::sync::OnceLock::new(),
         }
     }
 }
@@ -83,7 +97,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/node", get(api::node))
         .route("/api/v1/source", get(api::source))
         .route("/api/v1/search", get(api::search))
-        .route("/api/v1/blindspots", get(api::blindspots));
+        .route("/api/v1/blindspots", get(api::blindspots))
+        .route("/api/v1/tree", get(api::tree))
+        .route("/api/v1/tree/graph", get(api::tree_graph));
     #[cfg(test)]
     let api = api.route("/api/v1/__panic", get(tests::panics));
     api.fallback(asset)

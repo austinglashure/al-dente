@@ -365,3 +365,44 @@ pub async fn blindspots(State(s): St) -> Response {
     };
     ok(&s, "blindspots", report)
 }
+
+/// `GET /tree`: the repository's directory tree, including source files the
+/// analyzer skipped.
+///
+/// Example: for clj-mini, `data.dirs[0].label` is `src/shop`.
+pub async fn tree(State(s): St) -> Response {
+    ok(&s, "tree", s.tree())
+}
+
+/// `GET /tree/graph?collapsed=dir:…&top=`: the repository's code at the
+/// tree's resolution, each collapsed directory one node; with `top=N` only
+/// the N nodes with the most calls in and out.
+///
+/// Example: `?collapsed=dir:services` gives `dir:services` and the other
+/// namespaces.
+pub async fn tree_graph(State(s): St, RawQuery(q): RawQuery) -> Response {
+    let p = Params::parse(q.as_deref());
+    let mut collapsed = std::collections::BTreeSet::new();
+    for raw in p.all("collapsed") {
+        match raw.parse::<NodeId>() {
+            Ok(NodeId::Dir(path)) => {
+                collapsed.insert(path);
+            }
+            _ => {
+                return err(
+                    StatusCode::BAD_REQUEST,
+                    "graph",
+                    ErrorCode::Usage,
+                    "collapsed takes dir: IDs",
+                    None,
+                );
+            }
+        }
+    }
+    let payload = aldente_graph::tree::tree_graph(&s.snapshot.graph, s.tree(), &collapsed);
+    let payload = match p.get("top").and_then(|t| t.parse().ok()) {
+        Some(n) => query::top_by_calls(payload, n),
+        None => query::cap(payload),
+    };
+    ok(&s, "graph", payload)
+}
