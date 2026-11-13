@@ -152,6 +152,7 @@ expression: "serde_json::to_string_pretty(&reverse[\"data\"]).unwrap()"
   "hidden_below_min": 3,
   "hubs": [],
   "min_certainty": "likely",
+  "pinned": null,
   "reach": [
     {
       "direction": "reverse",

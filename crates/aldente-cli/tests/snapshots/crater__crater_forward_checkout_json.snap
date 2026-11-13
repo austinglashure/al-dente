@@ -477,6 +477,7 @@ expression: "serde_json::to_string_pretty(&forward[\"data\"]).unwrap()"
   "hidden_below_min": 19,
   "hubs": [],
   "min_certainty": "likely",
+  "pinned": null,
   "reach": [
     {
       "direction": "forward",

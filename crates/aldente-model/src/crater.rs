@@ -7,8 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::certainty::Certainty;
-use crate::graph::GraphPayload;
-use crate::graph::Location;
+use crate::graph::{Edge, GraphPayload, Location};
 use crate::id::NodeId;
 use crate::kinds::NodeKind;
 
@@ -78,6 +77,44 @@ pub struct CraterResult {
     pub truncated: bool,
     /// With `--diff`: how the seeds were found.
     pub diff: Option<DiffSeeds>,
+    /// With `--trace`: the path the trace ran and what did not fit the graph.
+    pub pinned: Option<PinnedTrace>,
+}
+
+/// What a stack trace says about a crater.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct PinnedTrace {
+    /// The mapped, non-noise frames as nodes, outermost first (repeats of
+    /// one node in a row folded).
+    pub path: Vec<NodeId>,
+    /// One edge per consecutive pair, reason `trace-observed`, certainty
+    /// `certain`. Never stored in the snapshot.
+    pub overlay: Vec<Edge>,
+    /// Other callers of path nodes, one hop out (shown faint).
+    pub faint: Vec<NodeId>,
+    /// Non-noise frames that map to no node.
+    pub unmapped: Vec<UnmappedFrame>,
+    /// Consecutive path nodes with no connecting edge in the graph: calls the
+    /// static analysis missed.
+    pub missing: Vec<MissingEdge>,
+}
+
+/// A frame of the trace that maps to no node.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct UnmappedFrame {
+    /// The frame's index in the full stack, innermost first.
+    pub index: u32,
+    pub raw: String,
+}
+
+/// A call the trace shows and the graph lacks.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct MissingEdge {
+    pub from: NodeId,
+    pub to: NodeId,
 }
 
 /// Seeds taken from the changes between a revision and the working tree.

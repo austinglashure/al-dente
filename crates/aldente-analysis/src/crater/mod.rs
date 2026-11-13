@@ -4,6 +4,7 @@
 
 mod checklist;
 mod index;
+pub mod pinned;
 mod search;
 pub mod seeds;
 #[cfg(test)]
@@ -201,6 +202,7 @@ pub fn crater(
         hidden_below_min: hidden,
         truncated,
         diff: None,
+        pinned: None,
     })
 }
 

@@ -3,9 +3,13 @@
 
 use std::collections::BTreeMap;
 
+use aldente_analysis::crater::pinned::pinned_crater;
 use aldente_analysis::crater::{CraterIndex, CraterOptions, checklist, crater};
+use aldente_analysis::trace::normalize_with;
 use aldente_graph::Graph;
-use aldente_model::crater::{Checklist, ChecklistRow, CraterResult, DiffSeeds, Direction};
+use aldente_model::crater::{
+    Checklist, ChecklistRow, CraterResult, DiffSeeds, Direction, PinnedTrace,
+};
 use aldente_model::{
     Certainty, EdgeKind, Envelope, ErrorCode, ExitCode, NodeId, Warning, WarningCode,
 };
@@ -15,6 +19,7 @@ use crate::commands::crater_diff::diff_seeds;
 use crate::commands::loaded::load;
 use crate::commands::query::{MinCertainty, node_id};
 use crate::commands::target::{Failure, TargetArgs};
+use crate::commands::trace::{read_input, read_maps};
 use crate::formats;
 use crate::output::{fail, print_json, print_lines, printable, token};
 
@@ -50,7 +55,7 @@ pub enum Kind {
 pub struct CraterArgs {
     /// Seeds: full IDs or unambiguous suffixes (symbols, impls, namespaces,
     /// libraries). Not needed with `--diff`.
-    #[arg(required_unless_present = "diff")]
+    #[arg(required_unless_present_any = ["diff", "trace"])]
     symbols: Vec<String>,
     /// The repository: a local directory or a git URL (default: the current directory).
     #[arg(long = "target", value_name = "TARGET", default_value = ".")]
@@ -99,6 +104,12 @@ pub struct CraterArgs {
     /// (`<rev>` or `<rev>..HEAD`; the working tree is the new side).
     #[arg(long, value_name = "REV")]
     diff: Option<String>,
+    /// Pin the crater to the path in a stack trace (a file, or `-` for stdin).
+    #[arg(long, value_name = "FILE", conflicts_with_all = ["symbols", "diff"])]
+    trace: Option<String>,
+    /// Source maps for a ClojureScript trace (repeatable; see `trace normalize`).
+    #[arg(long = "source-map", value_name = "PATH", requires = "trace")]
+    source_maps: Vec<std::path::PathBuf>,
     #[arg(long, value_enum, default_value = "text")]
     format: Format,
 }
@@ -150,7 +161,22 @@ pub fn run(args: &CraterArgs, json: bool) -> anyhow::Result<ExitCode> {
     }
     let opts = options(args);
     let index = CraterIndex::new(graph);
-    let mut result = match crater(graph, &index, &seeds, &opts) {
+    let computed = match &args.trace {
+        Some(input) => {
+            let report = read_input(input)
+                .and_then(|text| read_maps(&args.source_maps).map(|maps| (text, maps)))
+                .and_then(|(text, maps)| {
+                    normalize_with(&text, graph, &maps)
+                        .map_err(|e| Failure::new(ErrorCode::Usage, e.to_string()))
+                });
+            match report {
+                Ok(report) => pinned_crater(graph, &index, &report, &opts),
+                Err(f) => return fail(tag, &f, as_json),
+            }
+        }
+        None => crater(graph, &index, &seeds, &opts),
+    };
+    let mut result = match computed {
         Ok(r) => r,
         Err(e) => {
             return fail(
@@ -210,11 +236,12 @@ pub fn run(args: &CraterArgs, json: bool) -> anyhow::Result<ExitCode> {
 /// Example: `--direction reverse --no-tests` gives a reverse crater without tests.
 fn options(args: &CraterArgs) -> CraterOptions {
     let defaults = CraterOptions::default();
-    let direction = match (args.direction, &args.diff) {
+    let seeded_from_change = args.diff.is_some() || args.trace.is_some();
+    let direction = match (args.direction, seeded_from_change) {
         (Some(Dir::Forward), _) => Direction::Forward,
-        (Some(Dir::Reverse), _) | (None, Some(_)) => Direction::Reverse,
+        (Some(Dir::Reverse), _) | (None, true) => Direction::Reverse,
         (Some(Dir::Both), _) => Direction::Both,
-        (None, None) => Direction::Forward,
+        (None, false) => Direction::Forward,
     };
     let kinds = if args.kinds.is_empty() {
         defaults.kinds.clone()
@@ -330,8 +357,16 @@ fn render(graph: &Graph, r: &CraterResult) -> Vec<String> {
             .and_then(|n| n.loc.as_ref())
             .map(|l| format!("  {}:{}:{}", l.file, l.line, l.col))
             .unwrap_or_default();
+        let faint = r
+            .pinned
+            .as_ref()
+            .is_some_and(|p| p.faint.contains(&reach.id));
         let how = match &reach.via {
             None => "seed".to_owned(),
+            Some(v) if faint => format!(
+                "{} via {v}  (other caller, not in the trace)",
+                reach.distance
+            ),
             Some(v) => format!("{} via {v}", reach.distance),
         };
         groups
@@ -375,7 +410,50 @@ fn render(graph: &Graph, r: &CraterResult) -> Vec<String> {
         r.truncated,
         r.diff.as_ref(),
     ));
+    if let Some(p) = &r.pinned {
+        lines.extend(pinned_lines(p));
+    }
     lines.iter().map(|l| printable(l)).collect()
+}
+
+/// The trace's path with its overlay edges, then calls the graph lacks,
+/// then frames that map to nothing.
+///
+/// Example lines: `trace path (outermost first)`, `  clj:.//shop.core/checkout`,
+/// `    dispatches (trace-observed)`, `missing edges (1): calls the static analysis missed`.
+fn pinned_lines(p: &PinnedTrace) -> Vec<String> {
+    let mut lines = vec!["trace path (outermost first)".to_owned()];
+    for (i, id) in p.path.iter().enumerate() {
+        lines.push(format!("  {id}"));
+        if let Some(e) = p.overlay.get(i) {
+            let gap = if p.missing.iter().any(|m| m.from == e.from && m.to == e.to) {
+                "  NOT IN THE GRAPH"
+            } else {
+                ""
+            };
+            lines.push(format!("    {} (trace-observed){gap}", token(&e.kind)));
+        }
+    }
+    if !p.missing.is_empty() {
+        lines.push(format!(
+            "missing edges ({}): calls the static analysis missed",
+            p.missing.len()
+        ));
+        lines.extend(
+            p.missing
+                .iter()
+                .map(|m| format!("  {} -> {}", m.from, m.to)),
+        );
+    }
+    if !p.unmapped.is_empty() {
+        lines.push(format!("unmapped frames ({})", p.unmapped.len()));
+        lines.extend(
+            p.unmapped
+                .iter()
+                .map(|u| format!("  #{}  {}", u.index, u.raw)),
+        );
+    }
+    lines
 }
 
 /// The lines after the body: what a weaker minimum would add, truncation,

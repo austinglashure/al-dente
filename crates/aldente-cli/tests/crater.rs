@@ -383,3 +383,30 @@ fn diff_runs_nothing_from_the_repository_config() {
         "a command from the repository's config ran"
     );
 }
+
+#[test]
+fn trace_pinned_crater() {
+    let env = Env::fixture("clj-mini", "pinned");
+    let trace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/traces/jvm/clj-mini/checkout-book-nil-price.txt")
+        .display()
+        .to_string();
+    insta::assert_snapshot!(
+        "crater_trace_checkout_book",
+        env.text(&["crater", "--trace", &trace, "--min-certainty", "possible"])
+    );
+    let j = env.json(&["crater", "--trace", &trace]);
+    assert!(valid("crater", &j["data"]), "{j:#}");
+    assert_eq!(j["data"]["direction"], "reverse");
+    assert_eq!(ids(&j["data"]["pinned"]["path"]).len(), 4);
+    assert_eq!(
+        j["data"]["pinned"]["overlay"][0]["reason"],
+        "trace-observed"
+    );
+    assert_eq!(
+        env.run(&["crater", "checkout", "--trace", &trace])
+            .status
+            .code(),
+        Some(2)
+    );
+}
