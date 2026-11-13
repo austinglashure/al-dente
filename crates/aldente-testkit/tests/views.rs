@@ -65,3 +65,34 @@ fn indexed_neighborhood_equals_the_payload_walk() {
         }
     }
 }
+
+#[test]
+fn indexed_expand_equals_the_scanning_expand() {
+    use aldente_graph::query::{expand, expand_in};
+    use aldente_model::NodeKind;
+    for fixture in ["clj-mini", "mono-mini"] {
+        let g = analyze_fixture(&fixture_dir(fixture)).graph;
+        let cache = Cache::default();
+        let aggregates: Vec<&NodeId> = g
+            .nodes
+            .values()
+            .filter(|n| matches!(n.kind, NodeKind::Namespace | NodeKind::Unit))
+            .map(|n| &n.id)
+            .collect();
+        for id in &aggregates {
+            // Visible: the other aggregates (what the canvas typically shows).
+            let visible: Vec<NodeId> = aggregates
+                .iter()
+                .filter(|a| *a != id)
+                .map(|a| (*a).clone())
+                .collect();
+            for limit in [0, 2] {
+                assert_eq!(
+                    expand_in(&g, &cache, id, &visible, limit),
+                    expand(&g, id, &visible, limit),
+                    "{fixture} {id} limit {limit}"
+                );
+            }
+        }
+    }
+}

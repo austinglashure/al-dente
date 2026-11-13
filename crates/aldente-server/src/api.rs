@@ -224,7 +224,7 @@ pub async fn expand(State(s): St, RawQuery(q): RawQuery) -> Response {
         "graph",
         query::filter(
             &s.snapshot.graph,
-            query::expand(&s.snapshot.graph, &id, &visible, EXPAND_LIMIT),
+            query::expand_in(&s.snapshot.graph, &s.cache, &id, &visible, EXPAND_LIMIT),
             &filter_from(&p),
         ),
     )

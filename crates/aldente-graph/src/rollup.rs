@@ -12,7 +12,7 @@
 //! and the most frequent reason among their members (ties: the first in
 //! `Reason` order), so they still satisfy the edge invariants.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use aldente_model::{
     Aggregation, AggregationLevel, Certainty, Edge, EdgeKind, ExternalId, GraphPayload, Lang,
@@ -56,11 +56,23 @@ impl Graph {
         level: AggregationLevel,
         group: impl Fn(&Graph, &NodeId) -> Option<NodeId>,
     ) -> GraphPayload {
-        let mut nodes: BTreeMap<NodeId, Node> = BTreeMap::new();
-        let mut members: BTreeMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = BTreeMap::new();
+        // Hash maps while grouping; nodes and edges are sorted once at the
+        // end, in the order ordered maps would have given.
+        let mut nodes: HashMap<NodeId, Node> = HashMap::new();
+        let mut members: HashMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = HashMap::new();
         let mut kept: Vec<Edge> = Vec::new();
+        // Each node's group, computed once (edges share endpoints).
+        let mut groups: HashMap<&NodeId, Option<NodeId>> = HashMap::new();
         for edge in &self.edges {
-            let (Some(from), Some(to)) = (group(self, &edge.from), group(self, &edge.to)) else {
+            let from = groups
+                .entry(&edge.from)
+                .or_insert_with(|| group(self, &edge.from))
+                .clone();
+            let to = groups
+                .entry(&edge.to)
+                .or_insert_with(|| group(self, &edge.to))
+                .clone();
+            let (Some(from), Some(to)) = (from, to) else {
                 continue;
             };
             if edge.kind == EdgeKind::Requires && level == AggregationLevel::Namespace {
@@ -95,8 +107,10 @@ impl Graph {
                 .map(|((from, to, kind), es)| roll(from, to, kind, &es)),
         );
         edges.sort_by(|a, b| (&a.from, &a.to, a.kind).cmp(&(&b.from, &b.to, b.kind)));
+        let mut nodes: Vec<Node> = nodes.into_values().collect();
+        nodes.sort_unstable_by(|a, b| a.id.cmp(&b.id));
         GraphPayload {
-            nodes: nodes.into_values().collect(),
+            nodes,
             edges,
             truncated: false,
             aggregated: Some(Aggregation { level }),

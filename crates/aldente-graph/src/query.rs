@@ -552,6 +552,106 @@ pub fn cap(mut p: GraphPayload) -> GraphPayload {
     p
 }
 
+/// [`expand`] using the edge index: only the children's own edges are
+/// read, so the cost depends on the namespace, not on the graph. Equal to
+/// [`expand`] (pinned by a test), which stays as the simple reference.
+///
+/// Example: `expand_in(g, cache, shop.pricing, &[shop.core], 0)`.
+pub fn expand_in(
+    graph: &Graph,
+    cache: &Cache,
+    id: &NodeId,
+    visible: &[NodeId],
+    limit: usize,
+) -> GraphPayload {
+    let adj = cache.adjacency(graph);
+    let edge = |i: &usize| graph.edges.get(*i);
+    let mut children: Vec<NodeId> = adj
+        .outgoing(id)
+        .iter()
+        .filter_map(edge)
+        .filter(|e| e.kind == EdgeKind::Contains)
+        .map(|e| e.to.clone())
+        .collect();
+    // Invocation edges touching the node, each counted once (a self-loop is
+    // both outgoing and incoming).
+    let degree = |n: &NodeId| {
+        let out = adj.outgoing(n).iter().filter_map(edge);
+        let inc = adj
+            .incoming(n)
+            .iter()
+            .filter_map(edge)
+            .filter(|e| &e.from != n);
+        out.chain(inc)
+            .filter(|e| INVOCATION.contains(&e.kind))
+            .count()
+    };
+    let degrees: BTreeMap<NodeId, usize> =
+        children.iter().map(|c| (c.clone(), degree(c))).collect();
+    let deg = |n: &NodeId| degrees.get(n).copied().unwrap_or(0);
+    children.sort_by(|a, b| deg(b).cmp(&deg(a)).then_with(|| a.cmp(b)));
+    let truncated = limit > 0 && children.len() > limit;
+    if truncated {
+        children.truncate(limit);
+    }
+    let kids: BTreeSet<&NodeId> = children.iter().collect();
+    let shown: BTreeSet<&NodeId> = visible.iter().collect();
+    let place = |n: &NodeId| -> Option<NodeId> {
+        if kids.contains(n)
+            || shown.contains(n)
+            || matches!(n, NodeId::Platform(_) | NodeId::Hole(_))
+        {
+            return Some(n.clone());
+        }
+        [graph.namespace_of(n), graph.unit_of(n)]
+            .into_iter()
+            .flatten()
+            .find(|g| shown.contains(g))
+    };
+    // The children's edges, in stored order (as `expand` reads them).
+    let mut touching: Vec<usize> = children
+        .iter()
+        .flat_map(|c| adj.outgoing(c).iter().chain(adj.incoming(c)).copied())
+        .collect();
+    touching.sort_unstable();
+    touching.dedup();
+    let mut groups: BTreeMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = BTreeMap::new();
+    for e in touching
+        .iter()
+        .filter_map(edge)
+        .filter(|e| INVOCATION.contains(&e.kind) || e.kind == EdgeKind::Requires)
+    {
+        let (Some(from), Some(to)) = (place(&e.from), place(&e.to)) else {
+            continue;
+        };
+        if from != to {
+            groups.entry((from, to, e.kind)).or_default().push(e);
+        }
+    }
+    let edges: Vec<Edge> = groups
+        .into_iter()
+        .map(|((from, to, kind), members)| match members.as_slice() {
+            [one] if one.from == from && one.to == to => (*one).clone(),
+            _ => roll(from, to, kind, &members),
+        })
+        .collect();
+    let leaves: BTreeSet<NodeId> = edges
+        .iter()
+        .flat_map(|e: &Edge| [e.from.clone(), e.to.clone()])
+        .filter(|n| matches!(n, NodeId::Platform(_) | NodeId::Hole(_)))
+        .collect();
+    GraphPayload {
+        nodes: children
+            .iter()
+            .chain(leaves.iter())
+            .map(|c| graph.group_node(c))
+            .collect(),
+        edges,
+        truncated,
+        aggregated: None,
+    }
+}
+
 /// Children of an aggregate (unit → namespaces, namespace → its symbols and
 /// impls, multimethod or protocol method → impls), best-connected first, at
 /// most `limit`, plus invocation and `requires` edges from or to them. An
