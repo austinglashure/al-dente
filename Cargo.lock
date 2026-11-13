@@ -7,6 +7,7 @@ name = "acceptance"
 version = "0.1.0"
 dependencies = [
  "aldente-acquire",
+ "aldente-analysis",
  "aldente-clj",
  "aldente-graph",
  "aldente-model",
