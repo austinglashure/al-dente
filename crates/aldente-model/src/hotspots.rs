@@ -69,6 +69,9 @@ pub struct HotspotsReport {
     pub churn: bool,
     /// Highest score first, then by kind and subject.
     pub findings: Vec<Finding>,
+    /// Findings left out because all their nodes are in code the rules'
+    /// `[exclude]` patterns match (examples, benchmarks, dev code).
+    pub excluded: u32,
     /// Highest risk first, then by ID.
     pub risk: Vec<RiskRow>,
 }

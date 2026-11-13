@@ -1,5 +1,6 @@
-//! Static test coverage: from each test, search forward over invocation
-//! edges (not into other tests) and give every non-test symbol a status;
+//! Static test coverage: from each test (R14), search forward over
+//! invocation edges (not into other tests, but through test-support code
+//! such as helpers in test namespaces) and give every non-test symbol a status;
 //! roll it up per namespace and unit; merge an imported measured report.
 //! See "Coverage" in `docs/plan/09-network-and-coverage.md`.
 
@@ -15,7 +16,7 @@ use aldente_model::coverage::{
 };
 use aldente_model::{Certainty, EdgeKind, Node, NodeId, NodeKind};
 
-use crate::measures::projection::is_test;
+use crate::measures::projection::{is_test, is_test_itself};
 pub use import::{LineHits, ParseError, parse_report};
 
 /// Default depth limit for `indirect`.
@@ -41,6 +42,22 @@ fn subject(graph: &Graph, n: &Node) -> bool {
         && !n.name.starts_with("<top>@")
 }
 
+/// Whether coverage reach starts at a node: tests (R14), and test-namespace
+/// code that runs when the tests load or run (top-level forms, `def`
+/// values, method bodies). Helper functions in a test namespace are not
+/// starts; they run only when called, and reach passes through them.
+///
+/// Example: a `deftest`, `(def store (cookie-store))` and a top-level
+/// `(defservice …)` in a test namespace are starts; a `defn` helper there
+/// is not.
+fn reach_starts_at(graph: &Graph, n: &Node) -> bool {
+    use aldente_model::SymbolSubkind;
+    let helper_fn = n.kind == NodeKind::Symbol
+        && matches!(n.subkind, Some(SymbolSubkind::Fn | SymbolSubkind::Macro));
+    matches!(n.kind, NodeKind::Symbol | NodeKind::Impl)
+        && (is_test_itself(n) || (is_test(graph, n) && !helper_fn))
+}
+
 /// Forward adjacency over the followed kinds: `(target, certainty)`.
 ///
 /// Example: `a -calls(likely)-> b` gives `a: [(b, likely)]`.
@@ -63,9 +80,14 @@ pub fn estimate(graph: &Graph, depth: u32) -> (Vec<SymbolCoverage>, u32) {
     let tests: Vec<&NodeId> = graph
         .nodes
         .values()
-        .filter(|n| matches!(n.kind, NodeKind::Symbol | NodeKind::Impl) && is_test(graph, n))
+        .filter(|n| reach_starts_at(graph, n))
         .map(|n| &n.id)
         .collect();
+    let test_count = graph
+        .nodes
+        .values()
+        .filter(|n| matches!(n.kind, NodeKind::Symbol | NodeKind::Impl) && is_test_itself(n))
+        .count() as u32;
     let test_set: BTreeSet<&NodeId> = tests.iter().copied().collect();
     // Within the depth limit at likely or better: per test, BFS by hops.
     let mut near: HashMap<&NodeId, (u32, BTreeSet<&NodeId>)> = HashMap::new();
@@ -139,7 +161,7 @@ pub fn estimate(graph: &Graph, depth: u32) -> (Vec<SymbolCoverage>, u32) {
             }
         })
         .collect();
-    (rows, tests.len() as u32)
+    (rows, test_count)
 }
 
 /// The strongest path certainty from any of `tests` to `target` within

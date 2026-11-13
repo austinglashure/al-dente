@@ -21,6 +21,15 @@ aldente cycles --json <clone>          > <repo>-cycles-namespace.json
 
 Austin: the hotspots look good. Test recognition "feels wonky" but passed a light inspection. Not acted on in Phase 4; the rule changes below and a closer look at test recognition (which tests count as reaching a node, and when reach is only through uncertain calls) are follow-ups.
 
+## Cleanup after the review (2026-11-13)
+
+`<repo>-hotspots-top20-after-cleanup.txt` is the same command after these changes. The tables below are what was reviewed.
+
+- **Test recognition.** Every function in a test namespace used to count as a test, so ring had 426 "tests" for 220 `deftest`s (reitit 489 for 148), and helpers were listed as covering tests. Now coverage starts from tests and from test-namespace code that runs when tests load or run (top-level forms such as `(defservice …)`, `def` values, `reify` and record methods). Helper functions are support that reach passes through. Effect: test counts match the `deftest`s; four symbols per repository go from `direct` to `indirect` (reached through a helper); nothing else changes status. Fixture `fixtures/clj-rules/test-helpers/`.
+- **`[exclude]` in `rules/hotspots.toml`** (observation 1): findings whose nodes are all in units, or source roots inside a unit, named `examples`, `example`, `*bench*`, `*perf*` or `dev` are left out and counted (`excluded` in the JSON, a note in text and the GUI). Namespace directories never match, so `reitit.dev.pretty` stays. ring: 30 left out; reitit: 39.
+- **`skip-entry-points`** under `[risky-untested]` (observation 2), on by default.
+- **Not done:** merging findings per node (observation 3) changes the JSON contract; it waits for Austin.
+
 ## Things I noticed before the review
 
 These are candidates for "misses" and rule changes, not yet acted on:

@@ -45,11 +45,14 @@ pub fn hotspots(inp: &Inputs<'_>, rules: &HotspotRules, rules_source: &str) -> H
     findings.extend(cycles(inp, rules));
     findings.extend(hidden_coupling(inp, rules));
     let dead: std::collections::HashSet<&NodeId> = inp.dead.dead.iter().map(|d| &d.id).collect();
-    findings.extend(risky_untested(&risk, &dead, rules));
+    findings.extend(risky_untested(inp.graph, &risk, &dead, rules));
     findings.extend(misplaced(inp, rules));
     if rules.dead_code.enabled {
         findings.extend(dead_code(inp));
     }
+    let before = findings.len();
+    findings.retain(|f| !excluded(inp.graph, f, &rules.exclude.segments));
+    let excluded = (before - findings.len()) as u32;
     findings.sort_by(|a, b| {
         b.score
             .total_cmp(&a.score)
@@ -60,8 +63,81 @@ pub fn hotspots(inp: &Inputs<'_>, rules: &HotspotRules, rules_source: &str) -> H
         rules: rules_source.to_owned(),
         churn: inp.churn.is_some(),
         findings,
+        excluded,
         risk,
     }
+}
+
+/// Whether every node of a finding is in excluded code (a finding with no
+/// nodes, such as hidden coupling between files, is kept).
+///
+/// Example: a bottleneck on `example.server/app` in unit `examples/server`
+/// is excluded by the pattern `examples`.
+fn excluded(graph: &Graph, finding: &Finding, patterns: &[String]) -> bool {
+    !finding.nodes.is_empty()
+        && finding.nodes.iter().all(|id| {
+            let unit = match graph.unit_of(id) {
+                Some(NodeId::Unit(dir)) => dir.as_str().to_owned(),
+                _ => ".".to_owned(),
+            };
+            let file = graph
+                .nodes
+                .get(id)
+                .and_then(|n| n.loc.as_ref())
+                .map(|l| l.file.as_str());
+            code_excluded(&unit, file, patterns)
+        })
+}
+
+/// Whether code in unit directory `unit` (and file `file`, repo-relative)
+/// is excluded: a segment of the unit directory, or the first directory
+/// inside the unit (its source root, such as `dev` or `examples`), matches a
+/// pattern as a whole. Namespace directories below the source root never
+/// match, so `src/reitit/dev/pretty.clj` is not dev code.
+///
+/// Example: `code_excluded(".", Some("dev/user.clj"), &["dev".into()])` is
+/// `true`; `code_excluded(".", Some("src/app/dev/x.clj"), &["dev".into()])`
+/// is `false`.
+pub fn code_excluded(unit: &str, file: Option<&str>, patterns: &[String]) -> bool {
+    let hit = |seg: &str| patterns.iter().any(|p| wildcard(p, seg));
+    let in_unit = |f: &str| {
+        if unit == "." {
+            Some(f.to_owned())
+        } else {
+            f.strip_prefix(&format!("{unit}/")).map(str::to_owned)
+        }
+    };
+    let root_dir = file
+        .and_then(in_unit)
+        .and_then(|rel| rel.split_once('/').map(|(first, _)| first.to_owned()));
+    unit.split('/').any(hit) || root_dir.is_some_and(|d| hit(&d))
+}
+
+/// Matches `text` against `pattern`, where `*` matches any run of
+/// characters (including none) and everything else matches itself.
+///
+/// Example: `wildcard("*perf*", "ring-perf")` is `true`; `wildcard("dev",
+/// "devtools")` is `false`.
+fn wildcard(pattern: &str, text: &str) -> bool {
+    let parts: Vec<&str> = pattern.split('*').collect();
+    let (first, rest) = match parts.split_first() {
+        Some(x) => x,
+        None => return text.is_empty(),
+    };
+    let Some(mut tail) = text.strip_prefix(first) else {
+        return false;
+    };
+    let Some((last, middle)) = rest.split_last() else {
+        // No `*`: the whole text must be the literal.
+        return tail.is_empty();
+    };
+    for part in middle {
+        match tail.find(part) {
+            Some(i) => tail = &tail[i + part.len()..],
+            None => return false,
+        }
+    }
+    tail.len() >= last.len() && tail.ends_with(last)
 }
 
 /// `namespace/name` of a node, or its ID.
@@ -410,10 +486,12 @@ fn hidden_coupling(inp: &Inputs<'_>, rules: &HotspotRules) -> Vec<Finding> {
 }
 
 /// Risky and untested: high risk with an untested or weak estimate. Dead
-/// code is left out (it is its own finding).
+/// code is left out (it is its own finding), and entry points when the
+/// rules say so.
 ///
 /// Example: a much-called function no test reaches.
 fn risky_untested(
+    graph: &Graph,
     risk: &[RiskRow],
     dead: &std::collections::HashSet<&NodeId>,
     rules: &HotspotRules,
@@ -429,7 +507,14 @@ fn risky_untested(
             let status = serde_json::to_value(row.status)
                 .ok()
                 .and_then(|v| v.as_str().map(str::to_owned));
-            **hit && !dead.contains(&row.id) && status.is_some_and(|s| r.statuses.contains(&s))
+            let entry = graph
+                .nodes
+                .get(&row.id)
+                .is_some_and(|n| n.flags.contains(&aldente_model::SymbolFlag::EntryPoint));
+            **hit
+                && !dead.contains(&row.id)
+                && !(r.skip_entry_points && entry)
+                && status.is_some_and(|s| r.statuses.contains(&s))
         })
         .map(|(i, (_, row))| {
             let status = serde_json::to_value(row.status)

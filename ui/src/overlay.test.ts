@@ -11,6 +11,7 @@ const coverage: CoverageReport = {
   ],
 };
 const hotspots: HotspotsReport = {
+  excluded: 0,
   findings: [{ kind: 'risky-untested', subject: 'clj:.//a/g', nodes: ['clj:.//a/g'], score: 0.9, evidence: {}, reason: 'x.' }],
   risk: [
     { id: 'clj:.//a/f', risk: 0.1, importance: 1, exposure: 0.1, status: 'direct', measured: null, churn: null },

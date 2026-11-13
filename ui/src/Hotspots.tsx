@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Api } from './api';
+import { excludedNote } from './hotspotsText';
 import type { Component, HotspotsReport } from './types';
 
 /** A short label for a node ID (the part after `//`).
@@ -40,6 +41,7 @@ export function HotspotList({ report, onFollow }: { report: HotspotsReport | nul
           })}
         </ol>
       )}
+      {report && excludedNote(report.excluded) && <p className="muted small-print">{excludedNote(report.excluded)}</p>}
     </details>
   );
 }

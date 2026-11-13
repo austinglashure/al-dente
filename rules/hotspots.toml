@@ -5,6 +5,13 @@
 # instead, so thresholds change without recompiling. Never read from an
 # analyzed repository.
 
+[exclude]
+# Findings about code whose unit directory or file path has a segment
+# matching one of these are left out of the findings and counted instead
+# (example, benchmark and dev-only code; M4 review). `*` matches any run of
+# characters; a pattern matches a whole segment.
+segments = ["examples", "example", "*bench*", "*perf*", "dev"]
+
 [god-object]
 # God-object score (mean percentile of fan-out, hub, size, core, namespaces called).
 percentile = 99.0
@@ -33,6 +40,8 @@ min-confidence = 0.5
 risk-percentile = 95.0
 # Only symbols whose estimated status is one of these.
 statuses = ["untested", "weak"]
+# Entry points (`-main`, manifest entries) are rarely unit-tested on purpose.
+skip-entry-points = true
 
 [misplaced-code]
 # A symbol whose community has at least this many members and this share of

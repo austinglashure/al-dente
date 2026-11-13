@@ -7,6 +7,14 @@ use crate::RulesError;
 
 const BUILTIN: &str = include_str!("../../../rules/hotspots.toml");
 
+/// `[exclude]`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+pub struct Exclude {
+    /// Path-segment patterns; `*` matches any run of characters.
+    pub segments: Vec<String>,
+}
+
 /// `[god-object]`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
@@ -51,6 +59,7 @@ pub struct HiddenCoupling {
 pub struct RiskyUntested {
     pub risk_percentile: f64,
     pub statuses: Vec<String>,
+    pub skip_entry_points: bool,
 }
 
 /// `[misplaced-code]`.
@@ -85,6 +94,7 @@ pub struct Risk {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct HotspotRules {
+    pub exclude: Exclude,
     pub god_object: GodObject,
     pub must_be_bulletproof: Bulletproof,
     pub bottleneck: Bottleneck,

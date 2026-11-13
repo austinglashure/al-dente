@@ -1,0 +1,83 @@
+166 findings (39 more in example, benchmark or dev code left out; see [exclude] in the rules)
+
+  1. must-be-bulletproof  clj:modules/reitit-dev//reitit.dev.pretty/color  (1.00)
+     reitit.dev.pretty/color: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 1, fan_in 18, pagerank 0.010, pagerank_percentile 99.895
+
+  2. bottleneck  clj:modules/reitit-core//reitit.core/router  (1.00)
+     reitit.core/router: many call paths run through it and removing it disconnects part of the graph; a change here ripples widely, so keep its interface stable.
+     evidence: articulation 1, betweenness 0.008
+
+  3. risky-untested  clj:modules/reitit-frontend//reitit.frontend.easy/href  (1.00)
+     reitit.frontend.easy/href is heavily used (importance 0.46) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.465, risk 0.465
+
+  4. must-be-bulletproof  clj:modules/reitit-core//reitit.exception/fail!  (1.00)
+     reitit.exception/fail!: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 21, pagerank 0.008, pagerank_percentile 99.791
+
+  5. must-be-bulletproof  clj:modules/reitit-core//reitit.impl/fast-assoc  (1.00)
+     reitit.impl/fast-assoc: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 7, pagerank 0.007, pagerank_percentile 99.686
+
+  6. must-be-bulletproof  clj:modules/reitit-frontend//reitit.frontend.easy/href  (1.00)
+     reitit.frontend.easy/href: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 11, pagerank 0.006, pagerank_percentile 99.581
+
+  7. risky-untested  clj:modules/reitit-frontend//reitit.frontend/router  (1.00)
+     reitit.frontend/router is heavily used (importance 0.22) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.216, risk 0.216
+
+  8. must-be-bulletproof  clj:modules/reitit-frontend//reitit.frontend.easy/history  (0.99)
+     reitit.frontend.easy/history: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 6, pagerank 0.004, pagerank_percentile 99.476
+
+  9. risky-untested  clj:modules/reitit-dev//reitit.dev.pretty/colors  (0.99)
+     reitit.dev.pretty/colors is heavily used (importance 0.25) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.248, risk 0.174
+
+ 10. must-be-bulletproof  clj:modules/reitit-core//reitit.coercion/coerce-request  (0.99)
+     reitit.coercion/coerce-request: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 5, pagerank 0.004, pagerank_percentile 99.372
+
+ 11. bottleneck  clj:modules/reitit-core//reitit.trie/compile  (0.99)
+     reitit.trie/compile: many call paths run through it and removing it disconnects part of the graph; a change here ripples widely, so keep its interface stable.
+     evidence: articulation 1, betweenness 0.002
+
+ 12. must-be-bulletproof  clj:modules/reitit-core//reitit.coercion/encode-error  (0.99)
+     reitit.coercion/encode-error: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 2, fan_in 4, pagerank 0.004, pagerank_percentile 99.267
+
+ 13. risky-untested  clj:modules/reitit-dev//reitit.dev.pretty/-start  (0.99)
+     reitit.dev.pretty/-start is heavily used (importance 0.23) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.228, risk 0.160
+
+ 14. must-be-bulletproof  clj:modules/reitit-dev//reitit.dev.pretty/colors  (0.99)
+     reitit.dev.pretty/colors: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 4, pagerank 0.004, pagerank_percentile 99.162
+
+ 15. must-be-bulletproof  clj:modules/reitit-dev//reitit.dev.pretty/-start  (0.99)
+     reitit.dev.pretty/-start: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 2, pagerank 0.004, pagerank_percentile 99.058
+
+ 16. risky-untested  clj:modules/reitit-core//reitit.coercion/map->CoercionError  (0.99)
+     reitit.coercion/map->CoercionError is heavily used (importance 0.15) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.152, risk 0.152
+
+ 17. must-be-bulletproof  clj:modules/reitit-core//reitit.impl/maybe-url-decode  (0.99)
+     reitit.impl/maybe-url-decode: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 3, pagerank 0.004, pagerank_percentile 98.953
+
+ 18. must-be-bulletproof  clj:modules/reitit-core//reitit.trie/split-path  (0.99)
+     reitit.trie/split-path: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 3, fan_in 5, pagerank 0.004, pagerank_percentile 98.848
+
+ 19. risky-untested  clj:modules/reitit-dev//reitit.dev.pretty/-end  (0.99)
+     reitit.dev.pretty/-end is heavily used (importance 0.19) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.193, risk 0.135
+
+ 20. must-be-bulletproof  clj:modules/reitit-dev//reitit.dev.pretty/-end  (0.99)
+     reitit.dev.pretty/-end: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 1, pagerank 0.003, pagerank_percentile 98.743
+
+146 more (--top 166)

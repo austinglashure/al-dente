@@ -87,3 +87,75 @@ fn thresholds_come_from_the_rules_text() {
     assert!(count(&base, FindingKind::DeadCode) > 0);
     assert_eq!(count(&report("clj-mini", &off), FindingKind::DeadCode), 0);
 }
+
+#[test]
+fn patterns_match_the_unit_dir_and_the_source_root_only() {
+    let pats: Vec<String> = ["examples", "*bench*", "dev"]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    // Any segment of the unit's directory.
+    assert!(code_excluded("examples/server", None, &pats));
+    assert!(code_excluded(
+        "ring-bench",
+        Some("ring-bench/src/b.clj"),
+        &pats
+    ));
+    // The first directory inside the unit (its source root).
+    assert!(code_excluded(
+        "modules/x",
+        Some("modules/x/dev/user.clj"),
+        &pats
+    ));
+    assert!(code_excluded(".", Some("dev/user.clj"), &pats));
+    // Not namespace directories below the source root.
+    assert!(!code_excluded(
+        "modules/reitit-dev",
+        Some("modules/reitit-dev/src/reitit/dev/pretty.clj"),
+        &pats
+    ));
+    assert!(!code_excluded(
+        ".",
+        Some("src/app/examples_test.clj"),
+        &pats
+    ));
+    assert!(!code_excluded(".", None, &pats));
+}
+
+#[test]
+fn excluded_code_leaves_findings_and_is_counted() {
+    let builtin = include_str!("../../../../rules/hotspots.toml");
+    let base = report("mono-mini", &HotspotRules::parse(builtin).unwrap());
+    assert_eq!(base.excluded, 0);
+    let billing = |r: &HotspotsReport| {
+        r.findings
+            .iter()
+            .filter(|f| f.subject.contains("services/billing//"))
+            .count()
+    };
+    assert!(billing(&base) > 0);
+    let rules =
+        HotspotRules::parse(&builtin.replace("segments = [", "segments = [\"billing\", ")).unwrap();
+    let r = report("mono-mini", &rules);
+    assert_eq!(billing(&r), 0);
+    assert_eq!(r.excluded as usize, billing(&base));
+    // Risk rows are a table of every symbol, not findings: kept.
+    assert_eq!(r.risk.len(), base.risk.len());
+}
+
+#[test]
+fn entry_points_are_not_risky_untested_by_default() {
+    let builtin = include_str!("../../../../rules/hotspots.toml");
+    let everyone = builtin.replace("risk-percentile = 95.0", "risk-percentile = 0.0");
+    let main_flagged = |text: &str| {
+        report("mono-mini", &HotspotRules::parse(text).unwrap())
+            .findings
+            .iter()
+            .any(|f| f.kind == FindingKind::RiskyUntested && f.subject.ends_with("/-main"))
+    };
+    assert!(!main_flagged(&everyone));
+    assert!(main_flagged(&everyone.replace(
+        "skip-entry-points = true",
+        "skip-entry-points = false"
+    )));
+}

@@ -345,6 +345,8 @@ export interface RiskRow {
 
 export interface HotspotsReport {
   findings: Finding[];
+  /** Findings left out by the rules' `[exclude]` patterns. */
+  excluded: number;
   risk: RiskRow[];
 }
 

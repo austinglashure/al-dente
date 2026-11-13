@@ -165,3 +165,38 @@ fn crater_checklists_show_coverage() {
         "tests have no status"
     );
 }
+
+/// Helper functions in test namespaces are support that reach passes
+/// through; tests, load-time code and method bodies there are where reach
+/// starts: `fixtures/clj-rules/test-helpers/EXPECTED.md`.
+#[test]
+fn test_helpers_are_support_not_tests() {
+    let g =
+        aldente_testkit::analyze_fixture(&aldente_testkit::fixture_dir("clj-rules/test-helpers"))
+            .graph;
+    let r = coverage(&g, DEFAULT_DEPTH, None);
+    assert_eq!(r.tests, 2, "only the deftests are tests");
+    let s = statuses(&r);
+    assert_eq!(s.get("app.core/run"), Some(&Direct));
+    assert_eq!(s.get("app.core/build"), Some(&Indirect));
+    assert_eq!(s.get("app.core/orphan"), Some(&Untested));
+    assert_eq!(s.get("app.core/load-config"), Some(&Direct), "def value");
+    assert_eq!(s.get("app.core/register!"), Some(&Direct), "top-level form");
+    assert_eq!(
+        s.get("app.core/send!"),
+        Some(&Direct),
+        "reify method in a test"
+    );
+    assert!(
+        !s.keys().any(|k| k.starts_with("app.core-test/")),
+        "test support gets no status: {s:?}"
+    );
+    let build = r
+        .symbols
+        .iter()
+        .find(|x| x.id.to_string().ends_with("app.core/build"))
+        .unwrap();
+    assert_eq!(build.distance, Some(2));
+    let names: Vec<String> = build.tests.iter().map(ToString::to_string).collect();
+    assert_eq!(names, ["clj:.//app.core-test/run-works"]);
+}

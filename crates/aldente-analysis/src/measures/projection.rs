@@ -186,17 +186,26 @@ fn csr(n: usize, arcs: impl Iterator<Item = (Ix, Ix, f64, u32)>) -> (Vec<usize>,
     (start, flat)
 }
 
+/// Whether a node is itself a test (R14): a `deftest`-like var or a
+/// top-level test form, not merely code in a test namespace.
+///
+/// Example: `app.core-test/run-works` (a `deftest`) is; the helper
+/// `app.core-test/make` in the same namespace is not.
+pub fn is_test_itself(node: &Node) -> bool {
+    node.flags.contains(&SymbolFlag::Test) || node.subkind == Some(SymbolSubkind::Test)
+}
+
 /// Whether a node is test code: flagged or of subkind `test`, or in a test
 /// namespace.
 ///
 /// Example: a `deftest` var is test code; `shop.core/checkout` is not.
 pub fn is_test(graph: &Graph, node: &Node) -> bool {
-    let own = node.flags.contains(&SymbolFlag::Test) || node.subkind == Some(SymbolSubkind::Test);
-    own || graph
-        .namespace_of(&node.id)
-        .filter(|ns| ns != &node.id)
-        .and_then(|ns| graph.nodes.get(&ns))
-        .is_some_and(|ns| ns.flags.contains(&SymbolFlag::Test))
+    is_test_itself(node)
+        || graph
+            .namespace_of(&node.id)
+            .filter(|ns| ns != &node.id)
+            .and_then(|ns| graph.nodes.get(&ns))
+            .is_some_and(|ns| ns.flags.contains(&SymbolFlag::Test))
 }
 
 /// Whether an ID names code outside the repository (libraries, Java, JS).

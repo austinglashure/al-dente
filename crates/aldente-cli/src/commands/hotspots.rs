@@ -114,8 +114,16 @@ fn load_rules(path: Option<&std::path::Path>) -> Result<(HotspotRules, &'static 
 /// Example: `1. must-be-bulletproof  shop.core/checkout  (0.70)` then the reason.
 fn render(r: &HotspotsReport, top: usize) -> Vec<String> {
     let mut out = vec![format!(
-        "{} findings{}{}",
+        "{} findings{}{}{}",
         r.findings.len(),
+        if r.excluded > 0 {
+            format!(
+                " ({} more in example, benchmark or dev code left out; see [exclude] in the rules)",
+                r.excluded
+            )
+        } else {
+            String::new()
+        },
         if r.churn { ", with churn" } else { "" },
         if r.rules == "file" {
             ", thresholds from --rules"
