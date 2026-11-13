@@ -1,0 +1,19 @@
+Clojure 1.12.0
+nil
+Execution error (ArithmeticException) at corpus.core/divide (core.clj:5).
+Divide by zero
+ArithmeticException Divide by zero
+	clojure.lang.Numbers.divide (Numbers.java:190)
+	corpus.core/divide (core.clj:5)
+	corpus.core/divide (core.clj:4)
+	corpus.core/wrap-once (core.clj:9)
+	corpus.core/wrap-once (core.clj:7)
+	corpus.core/wrap-twice (core.clj:15)
+	corpus.core/wrap-twice (core.clj:13)
+	user/eval236 (NO_SOURCE_FILE:1)
+	user/eval236 (NO_SOURCE_FILE:1)
+	clojure.lang.Compiler.eval (Compiler.java:7700)
+	clojure.lang.Compiler.eval (Compiler.java:7655)
+	clojure.core/eval (core.clj:3232)
+nil
+

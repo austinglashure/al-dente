@@ -1,0 +1,56 @@
+# Stack-frame noise (docs/plan/08-crater-and-traces.md, "Noise").
+#
+# A frame is noise when its namespace (Clojure frames) or class (Java and
+# JavaScript frames) equals one of `exact` or starts with one of `prefixes`.
+# Noise frames stay in the output with `noise: true` and are hidden by
+# default. Frames from the analyzed repository are never noise, whatever
+# this file says.
+
+exact = [
+  "clojure.core",
+  "clojure.main",
+  "clojure.test",
+  "clojure.stacktrace",
+  "clojure.repl",
+  "clojure.core.protocols",
+  "clojure.core.server",
+  "cljs.core",
+  "cljs.test",
+]
+
+prefixes = [
+  # The JVM and the JDK.
+  "java.",
+  "javax.",
+  "jdk.",
+  "sun.",
+  "com.sun.",
+  # The Clojure runtime and compiler.
+  "clojure.lang.",
+  "clojure.core$",
+  # REPL and editor tooling.
+  "nrepl.",
+  "clojure.tools.nrepl.",
+  "cider.",
+  "refactor-nrepl.",
+  # Test runners.
+  "kaocha.",
+  "cognitect.test-runner",
+  "eftest.",
+  "lazytest.",
+  # Thread pools, servers and async machinery.
+  "org.eclipse.jetty.",
+  "io.undertow.",
+  "io.netty.",
+  "org.httpkit.",
+  "ring.adapter.",
+  "aleph.",
+  "manifold.",
+  "clojure.core.async.impl.",
+  # ClojureScript and JavaScript runtimes and bundlers.
+  "goog.",
+  "shadow.cljs.devtools.",
+  "node:internal",
+  "internal/",
+  "webpack",
+]

@@ -1,0 +1,37 @@
+---
+source: crates/aldente-analysis/src/trace/tests.rs
+expression: out
+---
+checkout-bad-qty.txt
+  at shop.inventory$reserve_BANG_.invokeStatic(inventory.clj:7)  ->  clj:.//shop.inventory/reserve!
+  at shop.inventory$reserve_BANG_.invoke(inventory.clj:6)  ->  clj:.//shop.inventory/reserve!
+  at shop.core$checkout.invokeStatic(core.clj:17)  ->  clj:.//shop.core/checkout
+  at shop.core$checkout.invoke(core.clj:12)  ->  clj:.//shop.core/checkout
+checkout-book-nil-price.txt
+  at shop.pricing$half_off.invokeStatic(pricing.clj:10)  ->  clj:.//shop.pricing/half-off
+  at shop.pricing$half_off.invoke(pricing.clj:9)  ->  clj:.//shop.pricing/half-off
+  at shop.util$apply_discount.invokeStatic(util.clj:11)  ->  clj:.//shop.util/apply-discount
+  at shop.util$apply_discount.invoke(util.clj:8)  ->  clj:.//shop.util/apply-discount
+  at shop.pricing$eval334$fn__335.invoke(pricing.clj:13)  ->  clj:.//shop.pricing/price@:book
+  at shop.core$checkout.invokeStatic(core.clj:16)  ->  clj:.//shop.core/checkout
+  at shop.core$checkout.invoke(core.clj:12)  ->  clj:.//shop.core/checkout
+checkout-no-charge-impl.txt
+  at shop.payment$eval197$fn__198$G__188__205.invoke(payment.clj:4)  ->  clj:.//shop.payment/charge
+  at shop.core$checkout.invokeStatic(core.clj:18)  ->  clj:.//shop.core/checkout
+  at shop.core$checkout.invoke(core.clj:12)  ->  clj:.//shop.core/checkout
+format-money-string.txt
+  at shop.model$format_money.invokeStatic(model.cljc:6)  ->  clj:.//shop.model/format-money
+  at shop.model$format_money.invoke(model.cljc:5)  ->  clj:.//shop.model/format-money
+run-script-eval.edn
+  shop.pricing$half_off.invokeStatic(pricing.clj:10)  ->  clj:.//shop.pricing/half-off
+  shop.pricing$half_off.invoke(pricing.clj:9)  ->  clj:.//shop.pricing/half-off
+  shop.plugins$run_script.invokeStatic(plugins.clj:12)  ->  clj:.//shop.plugins/run-script
+  shop.plugins$run_script.invoke(plugins.clj:11)  ->  clj:.//shop.plugins/run-script
+run-script-eval.txt
+  at shop.pricing$half_off.invokeStatic(pricing.clj:10)  ->  clj:.//shop.pricing/half-off
+  at shop.pricing$half_off.invoke(pricing.clj:9)  ->  clj:.//shop.pricing/half-off
+  at shop.plugins$run_script.invokeStatic(plugins.clj:12)  ->  clj:.//shop.plugins/run-script
+  at shop.plugins$run_script.invoke(plugins.clj:11)  ->  clj:.//shop.plugins/run-script
+shout-nil.txt
+  at shop.interop$shout.invokeStatic(interop.clj:12)  ->  clj:.//shop.interop/shout
+  at shop.interop$shout.invoke(interop.clj:11)  ->  clj:.//shop.interop/shout

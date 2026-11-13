@@ -40,6 +40,8 @@ enum Command {
     Show(commands::show::ShowArgs),
     /// Print JSON Schemas for the envelope and data shapes.
     Schema(commands::schema::SchemaArgs),
+    /// Normalize stack traces and map their frames to nodes.
+    Trace(commands::trace::TraceArgs),
     /// List build units, their source roots, and skipped files.
     Units(commands::units::UnitsArgs),
 }
@@ -61,6 +63,7 @@ fn main() -> std::process::ExitCode {
         Command::Crater(args) => commands::crater::run(args, cli.json),
         Command::Doctor(args) => commands::doctor::run(args, cli.json),
         Command::Schema(args) => commands::schema::run(args, cli.json),
+        Command::Trace(args) => commands::trace::run(args, cli.json),
         Command::Units(args) => commands::units::run(args, cli.json),
     };
     match result {

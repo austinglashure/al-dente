@@ -14,4 +14,5 @@ pub mod schema;
 pub mod serve;
 pub mod show;
 pub mod target;
+pub mod trace;
 pub mod units;

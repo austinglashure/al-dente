@@ -1,0 +1,32 @@
+#error {
+ :cause "order rejected"
+ :data {:id 7, :reason :fraud}
+ :via
+ [{:type clojure.lang.ExceptionInfo
+   :message "checkout failed"
+   :data {:step :charge}
+   :at [corpus.core$wrap_ex_info invokeStatic "core.clj" 26]}
+  {:type clojure.lang.ExceptionInfo
+   :message "order rejected"
+   :data {:id 7, :reason :fraud}
+   :at [corpus.core$reject invokeStatic "core.clj" 20]}]
+ :trace
+ [[corpus.core$reject invokeStatic "core.clj" 20]
+  [corpus.core$reject invoke "core.clj" 19]
+  [corpus.core$wrap_ex_info invokeStatic "core.clj" 24]
+  [corpus.core$wrap_ex_info invoke "core.clj" 22]
+  [user$trace_of invokeStatic "gen.clj" 5]
+  [user$trace_of invoke "gen.clj" 4]
+  [user$eval282 invokeStatic "gen.clj" 28]
+  [user$eval282 invoke "gen.clj" 28]
+  [clojure.lang.Compiler eval "Compiler.java" 7700]
+  [clojure.lang.Compiler load "Compiler.java" 8165]
+  [clojure.lang.Compiler loadFile "Compiler.java" 8103]
+  [clojure.main$load_script invokeStatic "main.clj" 476]
+  [clojure.main$script_opt invokeStatic "main.clj" 536]
+  [clojure.main$script_opt invoke "main.clj" 531]
+  [clojure.main$main invokeStatic "main.clj" 665]
+  [clojure.main$main doInvoke "main.clj" 617]
+  [clojure.lang.RestFn applyTo "RestFn.java" 140]
+  [clojure.lang.Var applyTo "Var.java" 707]
+  [clojure.main main "main.java" 40]]}

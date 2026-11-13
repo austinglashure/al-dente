@@ -5,3 +5,4 @@
 pub mod crater;
 pub mod glob;
 pub mod textdiff;
+pub mod trace;

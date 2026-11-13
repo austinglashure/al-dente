@@ -1,0 +1,50 @@
+---
+source: crates/aldente-analysis/src/trace/tests.rs
+expression: out
+---
+01-plain.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 19 noise 12 omitted 0 | corpus.core/divide core.clj:5
+02-nested-causes.txt (JvmText, 1 traces)
+  java.lang.IllegalStateException | checkout failed | frames 17 noise 11 omitted 0 | corpus.core/wrap-twice core.clj:15
+    java.lang.RuntimeException | pricing failed | frames 2 noise 0 omitted 17 | corpus.core/wrap-once core.clj:9
+      java.lang.ArithmeticException | Divide by zero | frames 3 noise 1 omitted 19 | corpus.core/divide core.clj:5
+03-ex-info.txt (JvmText, 1 traces)
+  clojure.lang.ExceptionInfo | checkout failed {:step :charge} | frames 17 noise 11 omitted 0 | corpus.core/wrap-ex-info core.clj:26
+    clojure.lang.ExceptionInfo | order rejected {:id 7, :reason :fraud} | frames 3 noise 0 omitted 16 | corpus.core/reject core.clj:20
+04-lazy-seq.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 30 noise 21 omitted 0 | corpus.core/divide core.clj:5
+05-future.txt (JvmText, 1 traces)
+  java.util.concurrent.ExecutionException | java.lang.ArithmeticException: Divide by zero | frames 23 noise 17 omitted 0 | corpus.core/in-future core.clj:31
+    java.lang.ArithmeticException | Divide by zero | frames 10 noise 7 omitted 0 | corpus.core/divide core.clj:5
+06-anonymous.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 22 noise 12 omitted 0 | corpus.core/divide core.clj:5
+07-anonymous-literal.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 22 noise 12 omitted 0 | corpus.core/divide core.clj:5
+08-protocol-record.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 20 noise 12 omitted 0 | corpus.core/divide core.clj:5
+09-protocol-extend.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 21 noise 12 omitted 0 | corpus.core/divide core.clj:5
+10-multimethod.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 21 noise 13 omitted 0 | corpus.core/divide core.clj:5
+11-munged-names.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 25 noise 12 omitted 0 | corpus.core/divide core.clj:5
+12-repl.txt (JvmText, 2 traces)
+  ArithmeticException | Divide by zero | frames 1 noise 0 omitted 0 | corpus.core/divide core.clj:5
+  ArithmeticException | Divide by zero | frames 12 noise 4 omitted 0 | corpus.core/divide core.clj:5
+13-test-runner.txt (JvmText, 1 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 44 noise 36 omitted 0 | corpus.core/divide core.clj:5
+14-throwable-map.edn (Edn, 1 traces)
+  clojure.lang.ExceptionInfo | checkout failed | frames 1 noise 0 omitted 0 | corpus.core/wrap-ex-info core.clj:26
+    clojure.lang.ExceptionInfo | order rejected | frames 19 noise 11 omitted 0 | corpus.core/reject core.clj:20
+15-printed-error.edn (Edn, 1 traces)
+  clojure.lang.ExceptionInfo | checkout failed | frames 1 noise 0 omitted 0 | corpus.core/wrap-ex-info core.clj:26
+    clojure.lang.ExceptionInfo | order rejected | frames 19 noise 11 omitted 0 | corpus.core/reject core.clj:20
+16-main-report.edn (Edn, 1 traces)
+  clojure.lang.ExceptionInfo | checkout failed | frames 1 noise 0 omitted 0 | corpus.core/wrap-ex-info core.clj:26
+    clojure.lang.ExceptionInfo | order rejected | frames 19 noise 13 omitted 0 | corpus.core/reject core.clj:20
+17-truncated.txt (JvmText, 1 traces)
+  java.lang.IllegalStateException | checkout failed | frames 17 noise 11 omitted 0 | corpus.core/wrap-twice core.clj:15
+    java.lang.RuntimeException | pricing failed | frames 2 noise 0 omitted 0 | corpus.core/wrap-once core.clj:9
+18-log-interleaved.txt (JvmText, 2 traces)
+  java.lang.ArithmeticException | Divide by zero | frames 19 noise 12 omitted 0 | corpus.core/divide core.clj:5
+  java.lang.IllegalStateException | second failure in the same log | frames 5 noise 0 omitted 0 | corpus.core/wrap-twice core.clj:15

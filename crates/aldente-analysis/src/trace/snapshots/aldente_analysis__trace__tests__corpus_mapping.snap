@@ -1,0 +1,58 @@
+---
+source: crates/aldente-analysis/src/trace/tests.rs
+expression: out
+---
+06-anonymous.txt
+  at corpus.core$divide.invokeStatic(core.clj:5)  ->  clj:.//corpus.core/divide
+  at corpus.core$divide.invoke(core.clj:4)  ->  clj:.//corpus.core/divide
+  at corpus.core$outer$inner__159.invoke(core.clj:35)  ->  clj:.//corpus.core/outer
+  at corpus.core$outer.invokeStatic(core.clj:36)  ->  clj:.//corpus.core/outer
+  at corpus.core$outer.invoke(core.clj:34)  ->  clj:.//corpus.core/outer
+07-anonymous-literal.txt
+  at corpus.core$divide.invokeStatic(core.clj:5)  ->  clj:.//corpus.core/divide
+  at corpus.core$divide.invoke(core.clj:4)  ->  clj:.//corpus.core/divide
+  at corpus.core$anonymous$fn__163$fn__164.invoke(core.clj:39)  ->  clj:.//corpus.core/anonymous
+  at corpus.core$anonymous$fn__163.invoke(core.clj:39)  ->  clj:.//corpus.core/anonymous
+  at corpus.core$anonymous.invokeStatic(core.clj:39)  ->  clj:.//corpus.core/anonymous
+  at corpus.core$anonymous.invoke(core.clj:38)  ->  clj:.//corpus.core/anonymous
+08-protocol-record.txt
+  at corpus.core$divide.invokeStatic(core.clj:5)  ->  clj:.//corpus.core/divide
+  at corpus.core$divide.invoke(core.clj:4)  ->  clj:.//corpus.core/divide
+  at corpus.core.Card.charge(core.clj:47)  ->  clj:.//corpus.core/charge@Card
+09-protocol-extend.txt
+  at corpus.core$divide.invokeStatic(core.clj:5)  ->  clj:.//corpus.core/divide
+  at corpus.core$divide.invoke(core.clj:4)  ->  clj:.//corpus.core/divide
+  at corpus.core$eval217$fn__218.invoke(core.clj:52)  ->  clj:.//corpus.core/charge@String
+  at corpus.core$eval177$fn__178$G__168__185.invoke(core.clj:41)  ->  clj:.//corpus.core/charge
+10-multimethod.txt
+  at corpus.core$divide.invokeStatic(core.clj:5)  ->  clj:.//corpus.core/divide
+  at corpus.core$divide.invoke(core.clj:4)  ->  clj:.//corpus.core/divide
+  at corpus.core$eval225$fn__226.invoke(core.clj:57)  ->  clj:.//corpus.core/price@:book
+11-munged-names.txt
+  at corpus.core$divide.invokeStatic(core.clj:5)  ->  clj:.//corpus.core/divide
+  at corpus.core$divide.invoke(core.clj:4)  ->  clj:.//corpus.core/divide
+  at corpus.core$valid_QMARK___GT_ok_BANG_.invokeStatic(core.clj:63)  ->  clj:.//corpus.core/valid?->ok!
+  at corpus.core$valid_QMARK___GT_ok_BANG_.invoke(core.clj:62)  ->  clj:.//corpus.core/valid?->ok!
+  at corpus.core$_STAR_star_STAR__LT__EQ__GT__PLUS_.invokeStatic(core.clj:66)  ->  clj:.//corpus.core/*star*<=>+
+  at corpus.core$_STAR_star_STAR__LT__EQ__GT__PLUS_.invoke(core.clj:65)  ->  clj:.//corpus.core/*star*<=>+
+  at corpus.core$_PERCENT_pct_AMPERSAND__SINGLEQUOTE_quote.invokeStatic(core.clj:69)  ->  clj:.//corpus.core/%25pct&'quote
+  at corpus.core$_PERCENT_pct_AMPERSAND__SINGLEQUOTE_quote.invoke(core.clj:68)  ->  clj:.//corpus.core/%25pct&'quote
+12-repl.txt
+  corpus.core/divide (core.clj:5)  ->  clj:.//corpus.core/divide
+  corpus.core/divide (core.clj:4)  ->  clj:.//corpus.core/divide
+  corpus.core/wrap-once (core.clj:9)  ->  clj:.//corpus.core/wrap-once
+  corpus.core/wrap-once (core.clj:7)  ->  clj:.//corpus.core/wrap-once
+  corpus.core/wrap-twice (core.clj:15)  ->  clj:.//corpus.core/wrap-twice
+  corpus.core/wrap-twice (core.clj:13)  ->  clj:.//corpus.core/wrap-twice
+  corpus.core/divide (core.clj:5)  ->  clj:.//corpus.core/divide
+13-test-runner.txt
+  corpus.core$divide.invokeStatic (core.clj:5)  ->  clj:.//corpus.core/divide
+  corpus.core$divide.invoke (core.clj:4)  ->  clj:.//corpus.core/divide
+  corpus.core_test$fn__246.invokeStatic (core_test.clj:6)  ->  clj:.//corpus.core-test/divide-works
+  corpus.core_test/fn (core_test.clj:5)  ->  clj:.//corpus.core-test/divide-works
+14-throwable-map.edn
+  corpus.core$wrap_ex_info.invokeStatic(core.clj:26)  ->  clj:.//corpus.core/wrap-ex-info
+  corpus.core$reject.invokeStatic(core.clj:20)  ->  clj:.//corpus.core/reject
+  corpus.core$reject.invoke(core.clj:19)  ->  clj:.//corpus.core/reject
+  corpus.core$wrap_ex_info.invokeStatic(core.clj:24)  ->  clj:.//corpus.core/wrap-ex-info
+  corpus.core$wrap_ex_info.invoke(core.clj:22)  ->  clj:.//corpus.core/wrap-ex-info

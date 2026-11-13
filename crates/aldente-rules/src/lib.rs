@@ -5,6 +5,7 @@
 
 pub mod clj;
 pub mod keyword_dispatch;
+pub mod trace;
 
 /// A catalog that does not parse. Built-in catalogs are checked by tests, so
 /// this only fires for a broken build.

@@ -17,6 +17,7 @@ pub mod path;
 pub mod query;
 pub mod schema;
 pub mod timing;
+pub mod trace;
 pub mod tree;
 pub mod units;
 

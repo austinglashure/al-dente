@@ -65,8 +65,12 @@ dependencies = [
 name = "aldente-analysis"
 version = "0.1.0"
 dependencies = [
+ "aldente-acquire",
  "aldente-graph",
  "aldente-model",
+ "aldente-rules",
+ "aldente-testkit",
+ "insta",
  "proptest",
  "thiserror",
 ]

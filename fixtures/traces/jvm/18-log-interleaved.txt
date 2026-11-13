@@ -1,0 +1,31 @@
+2026-11-13 10:42:01.113 INFO  [main] app.server - listening on 8080
+2026-11-13 10:42:07.540 ERROR [pool-3-thread-1] app.orders - checkout failed for order 991
+java.lang.ArithmeticException: Divide by zero
+	at clojure.lang.Numbers.divide(Numbers.java:190)
+	at corpus.core$divide.invokeStatic(core.clj:5)
+	at corpus.core$divide.invoke(core.clj:4)
+2026-11-13 10:42:07.541 DEBUG [main] app.metrics - flushed 12 gauges
+	at user$eval257$fn__258.invoke(gen.clj:15)
+	at user$trace_of.invokeStatic(gen.clj:5)
+	at user$trace_of.invoke(gen.clj:4)
+	at user$eval257.invokeStatic(gen.clj:26)
+	at user$eval257.invoke(gen.clj:15)
+2026-11-13 10:42:07.542 WARN  [pool-3-thread-2] app.cache - miss rate 41%
+	at clojure.lang.Compiler.eval(Compiler.java:7700)
+	at clojure.lang.Compiler.load(Compiler.java:8165)
+	at clojure.lang.Compiler.loadFile(Compiler.java:8103)
+	at clojure.main$load_script.invokeStatic(main.clj:476)
+	at clojure.main$script_opt.invokeStatic(main.clj:536)
+	at clojure.main$script_opt.invoke(main.clj:531)
+	at clojure.main$main.invokeStatic(main.clj:665)
+	at clojure.main$main.doInvoke(main.clj:617)
+	at clojure.lang.RestFn.applyTo(RestFn.java:140)
+	at clojure.lang.Var.applyTo(Var.java:707)
+	at clojure.main.main(main.java:40)
+2026-11-13 10:42:08.001 INFO  [main] app.server - request done in 461 ms
+java.lang.IllegalStateException: second failure in the same log
+	at corpus.core$wrap_twice.invokeStatic(core.clj:15)
+	at corpus.core$wrap_twice.invoke(core.clj:13)
+	at user$trace_of.invokeStatic(gen.clj:5)
+	at user$trace_of.invoke(gen.clj:4)
+	at user$eval257.invokeStatic(gen.clj:26)

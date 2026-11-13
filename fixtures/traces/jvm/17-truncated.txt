@@ -1,0 +1,22 @@
+java.lang.IllegalStateException: checkout failed
+	at corpus.core$wrap_twice.invokeStatic(core.clj:15)
+	at corpus.core$wrap_twice.invoke(core.clj:13)
+	at user$trace_of.invokeStatic(gen.clj:5)
+	at user$trace_of.invoke(gen.clj:4)
+	at user$eval257.invokeStatic(gen.clj:26)
+	at user$eval257.invoke(gen.clj:15)
+	at clojure.lang.Compiler.eval(Compiler.java:7700)
+	at clojure.lang.Compiler.load(Compiler.java:8165)
+	at clojure.lang.Compiler.loadFile(Compiler.java:8103)
+	at clojure.main$load_script.invokeStatic(main.clj:476)
+	at clojure.main$script_opt.invokeStatic(main.clj:536)
+	at clojure.main$script_opt.invoke(main.clj:531)
+	at clojure.main$main.invokeStatic(main.clj:665)
+	at clojure.main$main.doInvoke(main.clj:617)
+	at clojure.lang.RestFn.applyTo(RestFn.java:140)
+	at clojure.lang.Var.applyTo(Var.java:707)
+	at clojure.main.main(main.java:40)
+Caused by: java.lang.RuntimeException: pricing failed
+	at corpus.core$wrap_once.invokeStatic(core.clj:9)
+	at corpus.core$wrap_once.invoke(core.clj:7)
+	at corpus.core$wrap_onc

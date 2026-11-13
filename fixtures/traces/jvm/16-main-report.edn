@@ -1,0 +1,45 @@
+{:clojure.main/message
+ "Execution error (ExceptionInfo) at corpus.core/reject (core.clj:20).\norder rejected\n",
+ :clojure.main/triage
+ {:clojure.error/class clojure.lang.ExceptionInfo,
+  :clojure.error/line 20,
+  :clojure.error/cause "order rejected",
+  :clojure.error/symbol corpus.core/reject,
+  :clojure.error/source "core.clj",
+  :clojure.error/phase :execution},
+ :clojure.main/trace
+ {:via
+  [{:type clojure.lang.ExceptionInfo,
+    :message "checkout failed",
+    :data {:step :charge},
+    :at [corpus.core$wrap_ex_info invokeStatic "core.clj" 26]}
+   {:type clojure.lang.ExceptionInfo,
+    :message "order rejected",
+    :data {:id 7, :reason :fraud},
+    :at [corpus.core$reject invokeStatic "core.clj" 20]}],
+  :trace
+  [[corpus.core$reject invokeStatic "core.clj" 20]
+   [corpus.core$reject invoke "core.clj" 19]
+   [corpus.core$wrap_ex_info invokeStatic "core.clj" 24]
+   [corpus.core$wrap_ex_info invoke "core.clj" 22]
+   [user$eval236 invokeStatic "NO_SOURCE_FILE" 1]
+   [user$eval236 invoke "NO_SOURCE_FILE" 1]
+   [clojure.lang.Compiler eval "Compiler.java" 7700]
+   [clojure.lang.Compiler eval "Compiler.java" 7655]
+   [clojure.core$eval invokeStatic "core.clj" 3232]
+   [clojure.main$eval_opt invokeStatic "main.clj" 489]
+   [clojure.main$eval_opt invoke "main.clj" 483]
+   [clojure.main$initialize invokeStatic "main.clj" 509]
+   [clojure.main$null_opt invokeStatic "main.clj" 543]
+   [clojure.main$null_opt invoke "main.clj" 540]
+   [clojure.main$main invokeStatic "main.clj" 665]
+   [clojure.main$main doInvoke "main.clj" 617]
+   [clojure.lang.RestFn applyTo "RestFn.java" 140]
+   [clojure.lang.Var applyTo "Var.java" 707]
+   [clojure.main main "main.java" 40]],
+  :cause "order rejected",
+  :data {:id 7, :reason :fraud}}}
+
+Execution error (ExceptionInfo) at corpus.core/reject (core.clj:20).
+order rejected
+

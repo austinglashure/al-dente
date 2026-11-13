@@ -11,6 +11,7 @@ use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
 use crate::graph::GraphPayload;
 use crate::query::{BlindspotReport, FindResult, ShowResult};
+use crate::trace::TraceReport;
 use crate::units::UnitsReport;
 
 /// Names `schema_by_name` understands, sorted.
@@ -28,6 +29,7 @@ pub const SCHEMA_NAMES: &[&str] = &[
     "serve",
     "show",
     "snapshot",
+    "trace",
     "units",
 ];
 
@@ -73,6 +75,7 @@ pub fn schema_by_name(name: &str) -> Option<Value> {
         "checklist" => Some(schemars::schema_for!(Checklist).to_value()),
         "envelope" => Some(envelope_schema()),
         "units" => Some(schemars::schema_for!(UnitsReport).to_value()),
+        "trace" => Some(schemars::schema_for!(TraceReport).to_value()),
         _ => None,
     }
 }
