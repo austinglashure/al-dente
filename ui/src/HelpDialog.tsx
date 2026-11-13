@@ -1,7 +1,12 @@
 // Help: the measures guide (measuresGuide.ts) in a dialog, with a contents
 // list and a small diagram of the example call graph for the main measures.
+// Thresholds and weights are fetched from the server, which serves the
+// rules it actually uses.
 
-import { EXAMPLE, GUIDE, type Diagram, type GuideEntry } from './measuresGuide';
+import { useEffect, useState } from 'react';
+import type { Api } from './api';
+import { EXAMPLE, guide, type Diagram, type GuideEntry } from './measuresGuide';
+import type { Defaults } from './types';
 
 const GROUP_COLORS = ['#c6dbef', '#fdd0a2'];
 const HIGHLIGHT = '#fb6a4a';
@@ -92,8 +97,21 @@ function Entry({ e }: { e: GuideEntry }) {
 }
 
 /** The help dialog.
- *  Example: `<HelpDialog onClose={() => setHelpOpen(false)} />`. */
-export function HelpDialog({ onClose }: { onClose: () => void }) {
+ *  Example: `<HelpDialog api={api} onClose={() => setHelpOpen(false)} />`. */
+export function HelpDialog({ api, onClose }: { api: Api; onClose: () => void }) {
+  const [defaults, setDefaults] = useState<Defaults | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    api
+      .defaults()
+      .then((d) => live && setDefaults(d))
+      .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      live = false;
+    };
+  }, [api]);
+  const sections = defaults ? guide(defaults) : [];
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <div className="modal guide" role="dialog" aria-modal="true" aria-label="Help: measures guide" data-testid="help-dialog" onClick={(e) => e.stopPropagation()}>
@@ -104,14 +122,20 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="muted small-print">What each measure, finding and coverage status means when the graph is a codebase. The diagrams use one small example call graph; red marks the nodes the measure picks out.</p>
+        {error && (
+          <p className="error" role="alert">
+            Could not load the rules in use: {error}
+          </p>
+        )}
+        {!defaults && !error && <p className="muted">Loading…</p>}
         <nav className="guide-contents" aria-label="Contents">
-          {GUIDE.map((s) => (
+          {sections.map((s) => (
             <a key={s.id} href={`#guide-section-${s.id}`}>
               {s.title.split(':')[0]}
             </a>
           ))}
         </nav>
-        {GUIDE.map((s) => (
+        {sections.map((s) => (
           <section key={s.id} id={`guide-section-${s.id}`}>
             <h3>{s.title}</h3>
             {s.intro && <p>{s.intro}</p>}

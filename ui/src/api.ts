@@ -8,6 +8,7 @@ import type {
   ChurnReport,
   CoverageReport,
   CyclesReport,
+  Defaults,
   HotspotsReport,
   MetricsReport,
   CraterResult,
@@ -130,6 +131,8 @@ export class Api {
   metrics = (level: 'symbol' | 'namespace' | 'unit') => this.json<MetricsReport>('metrics', { level });
   coverage = () => this.json<CoverageReport>('coverage');
   hotspots = () => this.json<HotspotsReport>('hotspots');
+  /** The hotspot rules and analyzer defaults in use (for Help). */
+  defaults = () => this.json<Defaults>('defaults');
   cycles = (level: 'symbol' | 'namespace' | 'unit') => this.json<CyclesReport>('cycles', { level });
   churn = () => this.json<ChurnReport>('churn');
   /** The named nodes and the edges between them. */

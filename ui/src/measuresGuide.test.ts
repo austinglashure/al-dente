@@ -1,10 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { EXAMPLE, GUIDE, entry } from './measuresGuide';
+import { EXAMPLE, guide, entry as entryIn } from './measuresGuide';
+import type { Defaults } from './types';
 import { METRICS } from './overlay';
 
 // The finding kinds of `aldente hotspots` (crates/aldente-model/src/hotspots.rs).
 const FINDING_KINDS = ['god-object', 'must-be-bulletproof', 'bottleneck', 'cycle', 'hidden-coupling', 'risky-untested', 'misplaced-code', 'dead-code'];
 const COVERAGE = ['direct', 'indirect', 'weak', 'untested'];
+
+// The shape `GET /api/v1/defaults` returns (values as in rules/hotspots.toml).
+const DEFAULTS: Defaults = {
+  certainty_weights: { certain: 1, likely: 0.6, possible: 0.25 },
+  coverage_depth: 4,
+  hotspots: {
+    exclude: { segments: ['examples', 'example', '*bench*', '*perf*', 'dev'] },
+    'god-object': { percentile: 99 },
+    'must-be-bulletproof': { 'pagerank-percentile': 98, 'dominator-share': 0.1 },
+    bottleneck: { 'betweenness-percentile': 99, articulation: true },
+    cycle: { 'symbol-min-size': 4 },
+    'hidden-coupling': { 'min-support': 3, 'min-confidence': 0.5 },
+    'risky-untested': { 'risk-percentile': 95, statuses: ['untested', 'weak'], 'skip-entry-points': true },
+    'misplaced-code': { 'min-community': 4, 'min-share': 0.6 },
+    'dead-code': { enabled: true },
+    risk: { pagerank: 0.5, 'fan-in': 0.3, dominator: 0.2, untested: 1, weak: 0.7, indirect: 0.3, direct: 0.1 },
+  },
+};
+const GUIDE = guide(DEFAULTS);
+const entry = (id: string) => entryIn(GUIDE, id);
+/** All the guide's text for one entry. */
+const text = (sections: ReturnType<typeof guide>, id: string) => {
+  const e = entryIn(sections, id);
+  return [e?.what, e?.meaning, e?.caveat].join(' ');
+};
 
 const callees = (id: string) => EXAMPLE.edges.filter(([a]) => a === id).map(([, b]) => b);
 const callers = (id: string) => EXAMPLE.edges.filter(([, b]) => b === id).map(([a]) => a);
@@ -94,5 +120,34 @@ describe('measures guide', () => {
   it('the PageRank diagram highlights only sinks, and reverse PageRank only nodes nothing calls but the entry', () => {
     for (const id of entry('pagerank')?.diagram?.highlight ?? []) expect(callees(id), id).toEqual([]);
     for (const id of entry('pagerank_reverse')?.diagram?.highlight ?? []) expect(callers(id).every((c) => c === EXAMPLE.entry || c === 'main'), id).toBe(true);
+  });
+
+  it('quotes the defaults it is given, not numbers of its own', () => {
+    expect(text(GUIDE, 'risk')).toContain('PageRank (50%)');
+    expect(text(GUIDE, 'risk')).toContain('untested 1');
+    expect(text(GUIDE, 'indirect')).toContain('4 hops');
+    expect(text(GUIDE, 'risky-untested')).toContain('top 5%');
+    expect(text(GUIDE, 'cycle-finding')).toContain('4 or more');
+    const changed: Defaults = {
+      ...DEFAULTS,
+      coverage_depth: 6,
+      certainty_weights: { certain: 1, likely: 0.5, possible: 0.1 },
+      hotspots: {
+        ...DEFAULTS.hotspots,
+        risk: { ...DEFAULTS.hotspots.risk, pagerank: 0.6, 'fan-in': 0.2 },
+        'risky-untested': { ...DEFAULTS.hotspots['risky-untested'], 'risk-percentile': 90, 'skip-entry-points': false },
+        cycle: { 'symbol-min-size': 3 },
+        exclude: { segments: ['demo'] },
+      },
+    };
+    const g = guide(changed);
+    expect(text(g, 'risk')).toContain('PageRank (60%)');
+    expect(text(g, 'risk')).toContain('weighted fan-in (20%)');
+    expect(text(g, 'indirect')).toContain('6 hops');
+    expect(text(g, 'risky-untested')).toContain('top 10%');
+    expect(text(g, 'risky-untested')).not.toContain('Entry points');
+    expect(text(g, 'cycle-finding')).toContain('3 or more');
+    expect(g.find((s) => s.id === 'basics')?.intro).toContain('likely 0.5, possible 0.1');
+    expect(g.find((s) => s.id === 'findings')?.intro).toContain('demo');
   });
 });

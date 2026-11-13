@@ -343,6 +343,25 @@ export interface RiskRow {
   churn: number | null;
 }
 
+/** `GET /api/v1/defaults`: the hotspot rules in use (keys as in
+ *  rules/hotspots.toml) and analyzer defaults, quoted by the Help guide. */
+export interface Defaults {
+  certainty_weights: { certain: number; likely: number; possible: number };
+  coverage_depth: number;
+  hotspots: {
+    exclude: { segments: string[] };
+    'god-object': { percentile: number };
+    'must-be-bulletproof': { 'pagerank-percentile': number; 'dominator-share': number };
+    bottleneck: { 'betweenness-percentile': number; articulation: boolean };
+    cycle: { 'symbol-min-size': number };
+    'hidden-coupling': { 'min-support': number; 'min-confidence': number };
+    'risky-untested': { 'risk-percentile': number; statuses: string[]; 'skip-entry-points': boolean };
+    'misplaced-code': { 'min-community': number; 'min-share': number };
+    'dead-code': { enabled: boolean };
+    risk: { pagerank: number; 'fan-in': number; dominator: number; untested: number; weak: number; indirect: number; direct: number };
+  };
+}
+
 export interface HotspotsReport {
   findings: Finding[];
   /** Findings left out by the rules' `[exclude]` patterns. */

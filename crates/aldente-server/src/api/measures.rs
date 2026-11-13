@@ -78,8 +78,7 @@ pub async fn hotspots(State(s): St) -> Response {
 /// Example: see [`hotspots`].
 fn hotspots_report(s: &AppState) -> &aldente_model::hotspots::HotspotsReport {
     s.hotspots.get_or_init(|| {
-        let rules = aldente_rules::hotspots::HotspotRules::builtin()
-            .unwrap_or_else(|e| unreachable_rules(&e.to_string()));
+        let rules = builtin_rules();
         aldente_analysis::hotspots::from_graph(
             &s.snapshot.graph,
             &rules,
@@ -89,6 +88,41 @@ fn hotspots_report(s: &AppState) -> &aldente_model::hotspots::HotspotsReport {
         )
         .0
     })
+}
+
+/// The hotspot rules the server uses: the built-in `rules/hotspots.toml`.
+///
+/// Example: `builtin_rules().risk.pagerank` is `0.5`.
+fn builtin_rules() -> aldente_rules::hotspots::HotspotRules {
+    aldente_rules::hotspots::HotspotRules::builtin()
+        .unwrap_or_else(|e| unreachable_rules(&e.to_string()))
+}
+
+/// What `GET /defaults` returns.
+#[derive(serde::Serialize)]
+struct Defaults {
+    /// The hotspot rules in use, keys as in the TOML file.
+    hotspots: aldente_rules::hotspots::HotspotRules,
+    /// Edge weights by certainty for the measures.
+    certainty_weights: aldente_model::measures::Weights,
+    /// Hops from a test within which reachable code is `indirect`.
+    coverage_depth: u32,
+}
+
+/// `GET /defaults`: the hotspot rules and analyzer defaults in use, so the
+/// GUI's Help guide quotes them instead of hard-coding them.
+///
+/// Example: `data.hotspots.risk.pagerank` is `0.5`; `data.coverage_depth` is `4`.
+pub async fn defaults(State(s): St) -> Response {
+    ok(
+        &s,
+        "defaults",
+        Defaults {
+            hotspots: builtin_rules(),
+            certainty_weights: aldente_model::measures::Weights::default(),
+            coverage_depth: aldente_analysis::coverage::DEFAULT_DEPTH,
+        },
+    )
 }
 
 /// The built-in rules are checked by tests; a broken build stops here.

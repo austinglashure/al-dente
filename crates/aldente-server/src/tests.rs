@@ -636,3 +636,25 @@ fn measure_coverage_hotspot_cycle_churn_and_subgraph_endpoints() {
         "unknown level falls back to symbol"
     );
 }
+
+/// `/defaults`: the hotspot rules the server uses (the built-in file) and
+/// the analyzer defaults the Help guide quotes, so it never hard-codes them.
+#[test]
+fn defaults_endpoint_serves_the_rules_and_analyzer_defaults() {
+    let s = start("defaults");
+    let (status, _, body) = s.ok_get("/api/v1/defaults");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["schema"], "aldente/defaults/v1", "{env:#}");
+    let data = &env["data"];
+    let builtin =
+        serde_json::to_value(aldente_rules::hotspots::HotspotRules::builtin().unwrap()).unwrap();
+    assert_eq!(data["hotspots"], builtin);
+    assert_eq!(data["hotspots"]["risk"]["fan-in"], 0.3);
+    assert_eq!(
+        data["coverage_depth"],
+        aldente_analysis::coverage::DEFAULT_DEPTH
+    );
+    assert_eq!(data["certainty_weights"]["likely"], 0.6);
+    assert_eq!(data["certainty_weights"]["possible"], 0.25);
+}

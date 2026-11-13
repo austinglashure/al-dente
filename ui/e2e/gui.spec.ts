@@ -162,6 +162,9 @@ test.describe('panels', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('[data-guide-entry="pagerank"]')).toContainText('What it tells you');
     await expect(dialog.locator('[data-guide-entry="dominates"] svg')).toBeVisible();
+    // Thresholds come from the server's rules (rules/hotspots.toml), not the UI.
+    await expect(dialog.locator('[data-guide-entry="risky-untested"]')).toContainText('Risk in the top 5%');
+    await expect(dialog.locator('[data-guide-entry="indirect"]')).toContainText('within 4 hops');
     await page.screenshot({ path: 'test-results/help-dialog.png' });
     await page.getByTestId('help-close').click();
     await expect(dialog).toHaveCount(0);

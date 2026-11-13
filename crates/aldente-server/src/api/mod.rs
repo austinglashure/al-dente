@@ -24,7 +24,7 @@ pub use graph::{
     blindspots, expand, graph, neighborhood, node, search, snapshot, source, tree, tree_graph,
 };
 pub use libs::{lib, libs};
-pub use measures::{churn, coverage, cycles, hotspots, metrics, subgraph};
+pub use measures::{churn, coverage, cycles, defaults, hotspots, metrics, subgraph};
 
 type St = State<Arc<AppState>>;
 

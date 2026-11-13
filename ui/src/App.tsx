@@ -489,7 +489,7 @@ export function App() {
         </details>
       </aside>
       )}
-      {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <HelpDialog api={api} onClose={() => setHelpOpen(false)} />}
       {traceOpen && (
         <TraceDialog
           api={api}

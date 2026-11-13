@@ -148,6 +148,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/metrics", get(api::metrics))
         .route("/api/v1/coverage", get(api::coverage))
         .route("/api/v1/hotspots", get(api::hotspots))
+        .route("/api/v1/defaults", get(api::defaults))
         .route("/api/v1/cycles", get(api::cycles))
         .route("/api/v1/churn", get(api::churn))
         .route("/api/v1/subgraph", get(api::subgraph));

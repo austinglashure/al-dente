@@ -1,7 +1,10 @@
 // The measures guide shown under Help: what each graph measure, finding
 // and coverage status means when the graph is a codebase. Data only; the
-// dialog renders it. Diagrams use one small example call graph, and
+// dialog renders it. Thresholds and weights come from the rules and
+// analyzer defaults in use (`GET /api/v1/defaults`), never from here. Diagrams use one small example call graph, and
 // measuresGuide.test.ts checks that each diagram's claim holds on it.
+
+import type { Defaults } from './types';
 
 /** A node of the example graph, positioned in a 370 × 185 drawing. */
 export interface ExampleNode {
@@ -67,12 +70,46 @@ export interface GuideSection {
   entries: GuideEntry[];
 }
 
-export const GUIDE: GuideSection[] = [
+/** A number without needless decimals.
+ *  Example: `num(0.25)` is `'0.25'`; `num(1)` is `'1'`; `num(0.1 + 0.2)` is `'0.3'`. */
+function num(x: number): string {
+  return String(Number(x.toFixed(3)));
+}
+
+/** A 0..1 share as a whole percentage.
+ *  Example: `share(0.6)` is `'60%'`. */
+function share(x: number): string {
+  return `${Math.round(x * 100)}%`;
+}
+
+/** "top N%" for a percentile threshold.
+ *  Example: `topOf(95)` is `'top 5%'`; `topOf(99.5)` is `'top 0.5%'`. */
+function topOf(percentile: number): string {
+  return `top ${num(100 - percentile)}%`;
+}
+
+/** A list joined with commas and "or".
+ *  Example: `anyOf(['a', 'b', 'c'])` is `'a, b or c'`. */
+function anyOf(items: string[]): string {
+  return items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1] ?? ''}`;
+}
+
+/** The guide, quoting the rules and analyzer defaults in use
+ *  (`GET /api/v1/defaults`) instead of numbers of its own.
+ *  Example: `guide(d).find((s) => s.id === 'basics')?.intro` names `d.certainty_weights`. */
+export function guide(d: Defaults): GuideSection[] {
+  const w = d.certainty_weights;
+  const h = d.hotspots;
+  const r = h.risk;
+  const rw = r.pagerank + r['fan-in'] + r.dominator || 1;
+  const ru = h['risky-untested'];
+  const bp = h['must-be-bulletproof'];
+  return [
   {
     id: 'basics',
     title: 'Basic counts',
     intro:
-      'Each function is a node; an edge means "A calls or references B". Edges count by certainty: certain 1.0, likely 0.6, possible 0.25, so a guessed call counts for less but still counts. Tests and libraries are left out unless you ask for them.',
+      `Each function is a node; an edge means "A calls or references B". Edges count by certainty: certain ${num(w.certain)}, likely ${num(w.likely)}, possible ${num(w.possible)}, so a guessed call counts for less but still counts. Tests and libraries are left out unless you ask for them.`,
     entries: [
       {
         id: 'fan_in',
@@ -198,7 +235,7 @@ export const GUIDE: GuideSection[] = [
       {
         id: 'risk',
         title: 'Risk',
-        what: 'Importance × exposure. Importance blends PageRank (50%), weighted fan-in (30%) and dominator reach (20%). Exposure comes from test coverage: untested 1.0, weak 0.7, indirect 0.3, direct 0.1. With history, frequently changed code counts up to twice as much.',
+        what: `Importance × exposure. Importance blends PageRank (${share(r.pagerank / rw)}), weighted fan-in (${share(r['fan-in'] / rw)}) and dominator reach (${share(r.dominator / rw)}). Exposure comes from test coverage: untested ${num(r.untested)}, weak ${num(r.weak)}, indirect ${num(r.indirect)}, direct ${num(r.direct)} (or 1 minus measured coverage, when imported). With history, the most frequently changed code counts up to twice as much.`,
         meaning: 'Important code that tests do not protect. The risk overlay colours it; the highest scores become "risky untested" findings.',
         caveat: 'Coverage is estimated from the graph, not measured, unless you import a coverage report.',
       },
@@ -207,16 +244,46 @@ export const GUIDE: GuideSection[] = [
   {
     id: 'findings',
     title: 'Hotspot findings',
-    intro: 'Findings turn the measures into ranked, actionable items. Thresholds are in rules/hotspots.toml and can be changed with --rules. Example, benchmark and dev code is left out by default and counted instead.',
+    intro: `Findings turn the measures into ranked, actionable items. Thresholds are in rules/hotspots.toml (the values below); the CLI takes your own copy with --rules. Findings about code in a unit, or a source directory inside a unit, named ${anyOf(h.exclude.segments)} are left out and counted instead.`,
     entries: [
-      { id: 'must-be-bulletproof', title: 'Must be bulletproof', what: 'Top PageRank, or dominating a large share of the code.', meaning: 'Test it directly and harden its error handling: failures here spread.' },
-      { id: 'bottleneck', title: 'Bottleneck', what: 'Top betweenness on an articulation point.', meaning: 'Keep its interface stable; a change here ripples across a boundary.' },
-      { id: 'god-object', title: 'God object', what: 'Top god-object score.', meaning: 'Split it by responsibility.' },
-      { id: 'risky-untested', title: 'Risky untested', what: 'Top risk with an untested or weak coverage estimate. Entry points and dead code are left out.', meaning: 'Add a test that calls it.' },
-      { id: 'cycle-finding', title: 'Cycle', what: 'Every namespace or unit cycle, and function cycles of four or more.', meaning: 'Break it at the suggested edge.' },
-      { id: 'misplaced-code', title: 'Misplaced code', what: 'A function whose community lives mostly in another namespace.', meaning: 'Consider moving it there.' },
-      { id: 'hidden-coupling', title: 'Hidden coupling', what: 'Files that keep changing in the same commits although no call or require joins them (needs --with-churn).', meaning: 'An implicit dependency: a shared format, a config key, copied logic. Make it explicit or remove it.' },
-      { id: 'dead-code', title: 'Dead code', what: 'Nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls.', meaning: 'Delete it, or find the caller the analyzer cannot see.' },
+      {
+        id: 'must-be-bulletproof',
+        title: 'Must be bulletproof',
+        what: `PageRank in the ${topOf(bp['pagerank-percentile'])}, or dominating more than ${share(bp['dominator-share'])} of the code.`,
+        meaning: 'Test it directly and harden its error handling: failures here spread.',
+      },
+      {
+        id: 'bottleneck',
+        title: 'Bottleneck',
+        what: `Betweenness in the ${topOf(h.bottleneck['betweenness-percentile'])}${h.bottleneck.articulation ? ', on an articulation point' : ''}.`,
+        meaning: 'Keep its interface stable; a change here ripples across a boundary.',
+      },
+      { id: 'god-object', title: 'God object', what: `God-object score in the ${topOf(h['god-object'].percentile)}.`, meaning: 'Split it by responsibility.' },
+      {
+        id: 'risky-untested',
+        title: 'Risky untested',
+        what: `Risk in the ${topOf(ru['risk-percentile'])} with a coverage estimate of ${anyOf(ru.statuses)}. ${ru['skip-entry-points'] ? 'Entry points and dead code are left out.' : 'Dead code is left out.'}`,
+        meaning: 'Add a test that calls it.',
+      },
+      { id: 'cycle-finding', title: 'Cycle', what: `Every namespace or unit cycle, and function cycles of ${h.cycle['symbol-min-size']} or more.`, meaning: 'Break it at the suggested edge.' },
+      {
+        id: 'misplaced-code',
+        title: 'Misplaced code',
+        what: `A function in a community of at least ${h['misplaced-code']['min-community']} where ${share(h['misplaced-code']['min-share'])} or more of the members are in one other namespace.`,
+        meaning: 'Consider moving it there.',
+      },
+      {
+        id: 'hidden-coupling',
+        title: 'Hidden coupling',
+        what: `Files changed together in at least ${h['hidden-coupling']['min-support']} commits (and in ${share(h['hidden-coupling']['min-confidence'])} or more of one file's commits) although no call or require joins them. Needs history (--with-churn).`,
+        meaning: 'An implicit dependency: a shared format, a config key, copied logic. Make it explicit or remove it.',
+      },
+      {
+        id: 'dead-code',
+        title: 'Dead code',
+        what: `Nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls.${h['dead-code'].enabled ? '' : ' (Turned off in the rules in use.)'}`,
+        meaning: 'Delete it, or find the caller the analyzer cannot see.',
+      },
     ],
   },
   {
@@ -225,8 +292,8 @@ export const GUIDE: GuideSection[] = [
     intro: 'Estimated from the graph: starting from each test, and from code in test namespaces that runs when tests load, follow calls forward. Helper functions in test namespaces are passed through, not counted as tests.',
     entries: [
       { id: 'direct', title: 'Direct', what: 'A test calls it.', meaning: 'Some test exercises it on purpose.' },
-      { id: 'indirect', title: 'Indirect', what: 'Reachable from a test within four hops, through likely or certain calls.', meaning: 'Probably exercised, as a side effect of testing something else.' },
-      { id: 'weak', title: 'Weak', what: 'Reachable from a test only through possible calls or beyond four hops.', meaning: 'Might be exercised; do not count on it.' },
+      { id: 'indirect', title: 'Indirect', what: `Reachable from a test within ${d.coverage_depth} hops, through likely or certain calls.`, meaning: 'Probably exercised, as a side effect of testing something else.' },
+      { id: 'weak', title: 'Weak', what: `Reachable from a test only through possible calls or beyond ${d.coverage_depth} hops.`, meaning: 'Might be exercised; do not count on it.' },
       { id: 'untested', title: 'Untested', what: 'No test reaches it.', meaning: 'Nothing in the test suite runs it, as far as the graph can tell.' },
     ],
   },
@@ -244,9 +311,10 @@ export const GUIDE: GuideSection[] = [
     ],
   },
 ];
+}
 
-/** The entry with this ID, if any.
- *  Example: `entry('pagerank')?.title` is `'PageRank'`. */
-export function entry(id: string): GuideEntry | undefined {
-  return GUIDE.flatMap((s) => s.entries).find((e) => e.id === id);
+/** The entry with this ID in a guide, if any.
+ *  Example: `entry(guide(d), 'pagerank')?.title` is `'PageRank'`. */
+export function entry(sections: GuideSection[], id: string): GuideEntry | undefined {
+  return sections.flatMap((s) => s.entries).find((e) => e.id === id);
 }
