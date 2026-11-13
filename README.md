@@ -47,6 +47,17 @@ npx playwright install chromium     # once
 npm run e2e                         # builds the binary, then browser tests
 ```
 
+Scale corpora (WP5.1; written under `target/bench/`):
+
+```sh
+cargo run --release -p bench -- gen        # synthetic snapshot: 20 units, 8,000 namespaces, 300,000 symbols, 2M edges
+cargo run --release -- serve --snapshot target/bench/synthetic.db
+cargo run --release -p bench -- gen-src    # Clojure source monorepo (200 namespaces, 5,000 functions), its own git repo
+cargo run --release -- analyze --timings --no-cache target/bench/src-corpus
+```
+
+Both take `--help` for sizes and `--seed`.
+
 Golden files live under `fixtures/<name>/golden/`. After an intended change, review and accept them with `cargo insta review` (needs `cargo-insta`) or `INSTA_UPDATE=always cargo test --workspace`, then read the diff before committing.
 
 ## Structure
@@ -65,6 +76,7 @@ Golden files live under `fixtures/<name>/golden/`. After an intended change, rev
 | `ui/` | the GUI (React, Sigma.js); `ui/dist` is the committed build |
 | `crates/aldente-testkit` | test support: fixture paths, golden graph harness |
 | `crates/acceptance` | runner for `acceptance/repos.toml` (real repositories, needs network) |
+| `crates/bench` | synthetic corpora for scale work: a generated snapshot and generated Clojure source |
 | `docs/milestones/` | milestone evidence: summaries, screenshots |
 | `fixtures/` | crafted repositories and golden graphs (`clj-mini/EXPECTED.md` is the ground truth, `mono-mini` is a three-unit monorepo); `hostile/` safety cases |
 | `docs/plan/` | the full design and phase plan |

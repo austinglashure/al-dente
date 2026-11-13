@@ -17,8 +17,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
-/// The inline `--config` from the plan, with JSON output.
+/// The inline `--config` from the plan, with JSON output, plus the
+/// `type-mismatch` linter turned off: its findings are ignored like all lint
+/// findings, and it takes exponential time on chains of namespaces whose
+/// functions call both local and required functions (found in WP5.1).
 pub const CONFIG: &str = "{:output {:format :json} \
+ :linters {:type-mismatch {:level :off}} \
  :analysis {:arglists true :keywords true :locals true :protocol-impls true \
  :java-class-usages true :java-class-definitions true :java-member-definitions true \
  :instance-invocations true :context [:re-frame.core] \

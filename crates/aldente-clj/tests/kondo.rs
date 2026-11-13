@@ -249,3 +249,50 @@ fn a_missing_binary_is_reported_as_missing() {
         .unwrap_err();
     assert!(matches!(err, KondoError::Missing(_)), "{err}");
 }
+
+/// Namespaces in a chain (`n{i}` requires `n{i-1}`), each function calling
+/// two earlier local functions and two functions of the previous namespace.
+/// clj-kondo's `type-mismatch` linter takes exponential time on this shape
+/// (5 namespaces of 25 functions: about 20 s; 6: minutes; turned off in CONFIG).
+fn call_chain(root: &Path, namespaces: usize, fns: usize) {
+    fs::write(root.join("deps.edn"), "{:paths [\"src\"]}").unwrap();
+    fs::create_dir_all(root.join("src/chain")).unwrap();
+    // A fixed linear congruential sequence: pseudo-random callee choices.
+    let mut state = 1u64;
+    let mut below = |n: usize| {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1);
+        ((state >> 33) % n as u64) as usize
+    };
+    for i in 0..namespaces {
+        let require = if i > 0 {
+            format!("\n  (:require [chain.n{} :as r0])", i - 1)
+        } else {
+            String::new()
+        };
+        let mut text = format!("(ns chain.n{i}{require})\n");
+        for j in 0..fns {
+            let mut calls = Vec::new();
+            if j > 0 {
+                calls.push(format!("(f{} x) (f{} x)", below(j), below(j)));
+            }
+            if i > 0 {
+                calls.push(format!("(r0/f{} x) (r0/f{} x)", below(fns), below(fns)));
+            }
+            text.push_str(&format!("(defn f{j} [x] (do {} x))\n", calls.join(" ")));
+        }
+        fs::write(root.join(format!("src/chain/n{i}.clj")), text).unwrap();
+    }
+}
+
+#[test]
+fn deep_call_chains_across_namespaces_stay_fast() {
+    let root = scratch("call-chain");
+    call_chain(&root, 5, 25);
+    let started = std::time::Instant::now();
+    let run = kondo("call-chain").analyze(&root, &files(&root)).unwrap();
+    let took = started.elapsed();
+    assert_eq!(run.analysis.var_definitions.len(), 125);
+    assert!(took.as_secs() < 10, "clj-kondo took {took:?}");
+}

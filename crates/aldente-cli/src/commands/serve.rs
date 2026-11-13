@@ -1,7 +1,10 @@
 //! `aldente serve [TARGET]`: the local GUI and API on 127.0.0.1.
 
+use std::path::{Path, PathBuf};
+
+use aldente_graph::snapshot::{self, Snapshot};
 use aldente_model::analyze::ServeInfo;
-use aldente_model::{Envelope, ErrorCode, ExitCode};
+use aldente_model::{Diagnostic, Envelope, ErrorCode, ExitCode, SnapshotInfo};
 use aldente_server::{AppState, new_token, open_browser, run as serve};
 use clap::Args;
 
@@ -20,6 +23,18 @@ pub struct ServeArgs {
     /// Do not open the browser.
     #[arg(long)]
     no_open: bool,
+    /// Serve this snapshot file instead of analyzing a target, e.g. a
+    /// synthetic one from `cargo run -p bench -- gen`.
+    #[arg(long, value_name = "FILE", conflicts_with_all = ["target", "git_ref"])]
+    snapshot: Option<PathBuf>,
+}
+
+/// What `serve` needs from either a target or a snapshot file.
+struct Served {
+    snapshot: Snapshot,
+    root: PathBuf,
+    info: SnapshotInfo,
+    extra: Vec<Diagnostic>,
 }
 
 /// The envelope `schema` tag for this command's output.
@@ -30,16 +45,21 @@ const TAG: &str = "serve";
 ///
 /// Example: `aldente serve --no-open .` prints `http://127.0.0.1:41733/?token=…`.
 pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
-    let loaded = match load(&args.target, false) {
-        Ok(l) => l,
+    let served = match &args.snapshot {
+        Some(file) => open_file(file, args.target.timings),
+        None => open_target(&args.target),
+    };
+    let Served {
+        snapshot,
+        root,
+        info,
+        extra,
+    } = match served {
+        Ok(s) => s,
         Err(f) => return fail(TAG, &f, json),
     };
     let timings = args.target.timings;
-    let info = loaded.info();
-    let root = loaded.target.root.clone();
-    let extra = loaded.target.diagnostics.clone();
     let token = new_token();
-    let snapshot = loaded.outcome.snapshot;
     let state_info = info.clone();
     let no_open = args.no_open;
     let result = serve(
@@ -82,4 +102,69 @@ pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
             json,
         ),
     }
+}
+
+/// Loads (or analyzes) the target, as every other command does.
+///
+/// Example: `open_target(&args)` on clj-mini gives its cached snapshot and root.
+fn open_target(target: &TargetArgs) -> Result<Served, Failure> {
+    let loaded = load(target, false)?;
+    Ok(Served {
+        info: loaded.info(),
+        root: loaded.target.root.clone(),
+        extra: loaded.target.diagnostics.clone(),
+        snapshot: loaded.outcome.snapshot,
+    })
+}
+
+/// Opens a snapshot file directly. The source root is the snapshot's `repo`
+/// when that is an existing directory (a local snapshot from the cache),
+/// otherwise the file's own directory; `/source` serves only files the
+/// snapshot lists, and a synthetic snapshot lists none.
+///
+/// Example: `open_file(Path::new("target/bench/synthetic.db"), false)`.
+fn open_file(file: &Path, timings: bool) -> Result<Served, Failure> {
+    let started = std::time::Instant::now();
+    let usage = |why: String| {
+        Failure::new(
+            ErrorCode::Usage,
+            format!("{} is not a usable snapshot: {why}", file.display()),
+        )
+    };
+    let snapshot = match snapshot::load(file) {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return Err(usage(
+                "missing, not a snapshot, or from another schema version".into(),
+            ));
+        }
+        Err(e) => return Err(usage(e.to_string())),
+    };
+    if timings {
+        eprintln!(
+            "timings:\n  snapshot-load {:.3}s",
+            started.elapsed().as_secs_f64()
+        );
+    }
+    let repo = Path::new(&snapshot.repo);
+    let root = if repo.is_dir() {
+        repo.to_path_buf()
+    } else {
+        file.canonicalize()
+            .ok()
+            .and_then(|f| f.parent().map(Path::to_path_buf))
+            .unwrap_or_else(|| PathBuf::from("."))
+    };
+    Ok(Served {
+        info: SnapshotInfo {
+            key: snapshot.key.clone(),
+            repo: snapshot.repo.clone(),
+            rev: snapshot.rev.clone(),
+            dirty: false,
+            analyzer: snapshot.analyzer.clone(),
+        },
+        root,
+        extra: Vec::new(),
+        snapshot,
+    })
 }

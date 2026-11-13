@@ -20,6 +20,7 @@ clj-kondo --lint <source roots...>
 
 ```clojure
 {:output {:format :json}
+ :linters {:type-mismatch {:level :off}}
  :analysis {:arglists true
             :keywords true
             :locals true
@@ -34,7 +35,7 @@ clj-kondo --lint <source roots...>
 ```
 
 - `--config-dir` pointing at an empty directory is the safety-critical flag. Without it clj-kondo loads the target's `.clj-kondo/config.edn` and runs its hooks. A test must prove a hook planted in a fixture does not run.
-- Lint findings are ignored. Exit codes 2 and 3 mean "findings exist", not failure.
+- Lint findings are ignored. `type-mismatch` is turned off because it takes exponential time on chains of namespaces whose functions call both local and required functions (found in WP5.1). Exit codes 2 and 3 mean "findings exist", not failure.
 - Enforce a timeout and a memory ceiling per unit; on failure record `unparsed-file` blind spots and continue with other units.
 - Pin a minimum clj-kondo version in `aldente doctor`. Option names above come from clj-kondo's analysis documentation; WP1.3 starts by writing a probe test that asserts each bucket is present for the pinned version, and adjusts names if any differ.
 - `:locals` output is large. If it dominates run time at scale, Phase 9 may restrict it to files that need parameter flow.

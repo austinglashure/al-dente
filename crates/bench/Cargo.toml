@@ -1,0 +1,26 @@
+[package]
+name = "bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Synthetic corpora for scale work (WP5.1). Not part of the shipped binary.
+
+[dependencies]
+# The seeded xorshift generator (`measures::paths::Rng`), reused so the
+# corpus needs no random-number library.
+aldente-analysis.workspace = true
+aldente-graph.workspace = true
+aldente-model.workspace = true
+anyhow.workspace = true
+# The synthetic snapshot's key is a hash of its parameters.
+blake3.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+aldente-testkit.workspace = true
+
+[lints]
+workspace = true
