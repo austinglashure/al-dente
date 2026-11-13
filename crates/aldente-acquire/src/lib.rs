@@ -6,6 +6,7 @@
 
 pub mod cache;
 pub mod edn;
+pub mod history;
 pub mod key;
 pub mod local_git;
 pub mod manifest;

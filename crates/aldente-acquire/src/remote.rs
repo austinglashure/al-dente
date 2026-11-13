@@ -412,6 +412,42 @@ fn fetch_into(
     })
 }
 
+/// Fetches up to `commits` commits of history behind the checked-out
+/// commit of a shallow clone (for `churn`, only when asked), with the same
+/// hardening as the clone. Nothing is checked out.
+///
+/// Example: `deepen(&git, &dir, &url, 1000)` turns a `--depth 1` clone into
+/// one with up to 1,000 commits.
+pub fn deepen(git: &Git, dir: &Path, url: &RemoteUrl, commits: usize) -> Result<(), AcquireError> {
+    deepen_from(git, dir, &url.url, commits)
+}
+
+/// [`deepen`] for an already validated URL.
+///
+/// Example: see [`deepen`].
+fn deepen_from(git: &Git, dir: &Path, url: &str, commits: usize) -> Result<(), AcquireError> {
+    let head = crate::local_git::head_rev(git, dir).ok_or_else(|| AcquireError::Git {
+        step: "rev-parse".into(),
+        message: "the clone has no HEAD".into(),
+    })?;
+    let depth = format!("--depth={}", commits.max(1));
+    git.run(
+        dir,
+        &[
+            "fetch",
+            "-q",
+            &depth,
+            "--no-tags",
+            "--no-recurse-submodules",
+            "--",
+            url,
+            &head,
+        ],
+        "fetch",
+        FETCH_TIMEOUT,
+    )
+}
+
 /// Submodule paths from `.gitmodules`, as diagnostics. Read as plain text;
 /// git's config parser is not run on it.
 ///
@@ -613,6 +649,34 @@ mod tests {
         git.test_env = env;
         git.allow_file = true;
         git
+    }
+
+    /// A depth-1 clone gains history on request, still with no hook or filter run.
+    #[test]
+    fn deepen_fetches_more_history() {
+        let base = scratch("deepen");
+        let bare = hostile_bare(&base);
+        let src = base.join("src");
+        for i in 0..3 {
+            fs::write(src.join("a.clj"), format!("(ns a) ;; {i}\n")).unwrap();
+            plain_git(&src, &["commit", "-q", "-am", "more"], &[]);
+        }
+        plain_git(&src, &["push", "-q", bare.to_str().unwrap(), "main"], &[]);
+        let markers = base.join("markers");
+        fs::create_dir_all(&markers).unwrap();
+        let git = test_git(&base, hostile_env(&base, &markers));
+        let dir = base.join("clone");
+        fetch_into(&git, bare.to_str().unwrap(), &dir, None).unwrap();
+        assert!(crate::history::is_shallow(&dir));
+        let opts = crate::history::LogOptions {
+            max_commits: 10,
+            since: None,
+        };
+        assert_eq!(crate::history::numstat(&git, &dir, &opts).unwrap().len(), 1);
+        deepen_from(&git, &dir, bare.to_str().unwrap(), 100).unwrap();
+        assert_eq!(crate::history::numstat(&git, &dir, &opts).unwrap().len(), 4);
+        assert!(!markers.join("hook-ran").exists() && !markers.join("filter-ran").exists());
+        fs::remove_dir_all(base).unwrap();
     }
 
     /// Hostile case 6. The control clone shows the setup is live; the hardened
