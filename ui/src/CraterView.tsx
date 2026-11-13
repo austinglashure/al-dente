@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Api, CraterQuery } from './api';
-import { checklistCsv, checklistMarkdown, checklistRows, craterCanvas, whyPath, type CraterGraph } from './crater';
+import { allPaths, checklistCsv, checklistMarkdown, checklistRows, craterCanvas, type CraterGraph, type PathSlice } from './crater';
 import { elkLayout } from './elkLayout';
 import { GraphView, type Highlight } from './GraphView';
 import { isCore } from './model';
@@ -81,11 +81,14 @@ export function CraterView({ api, request, onClose, onSelect, hideCoreInitially 
     };
   }, [api, request, direction, depth, unlimited, minCertainty, key]);
 
+  const slice: PathSlice | null = useMemo(
+    () => (result && graph && hovered ? allPaths(result, graph, hovered) : null),
+    [result, graph, hovered],
+  );
   const highlight: Highlight | null = useMemo(() => {
     if (!result || !graph) return null;
-    if (hovered) {
-      const why = whyPath(result, graph, hovered);
-      return { nodes: new Set(why.nodes), edges: new Set(why.edges) };
+    if (slice) {
+      return { nodes: slice.nodes, edges: slice.edges, strongNodes: slice.shortestNodes, strongEdges: slice.shortestEdges };
     }
     if (result.pinned && result.pinned.path.length > 0) {
       const path = new Set(result.pinned.path);
@@ -93,7 +96,7 @@ export function CraterView({ api, request, onClose, onSelect, hideCoreInitially 
       return { nodes: path, edges: new Set(edges) };
     }
     return null;
-  }, [result, graph, hovered]);
+  }, [result, graph, slice]);
 
   const rows = useMemo(() => (result ? checklistRows(result) : []), [result]);
   const select = useCallback(
@@ -187,7 +190,7 @@ export function CraterView({ api, request, onClose, onSelect, hideCoreInitially 
             testId="crater-canvas"
           />
         )}
-        {tab === 'graph' && hovered && result && <WhyLine r={result} id={hovered} />}
+        {tab === 'graph' && hovered && result && slice && <WhyLine r={result} id={hovered} slice={slice} />}
         {tab === 'checklist' && (
           <div className="checklist" data-testid="checklist">
             <div className="tools">
@@ -250,23 +253,19 @@ function Summary({ r }: { r: CraterResult }) {
   );
 }
 
-/** "Why is this here": the hovered node's path back to the seed.
- *  Example: `checkout ← price@:book ← half-off`. */
-function WhyLine({ r, id }: { r: CraterResult; id: string }) {
-  const via = new Map(r.reach.map((x) => [x.id, x]));
-  const names = new Map(r.graph.nodes.map((n) => [n.id, n.name]));
-  const steps: string[] = [];
-  let cur: string | null | undefined = id;
-  while (cur && !steps.includes(cur)) {
-    steps.push(cur);
-    cur = via.get(cur)?.via;
-  }
-  const x = via.get(id);
-  const arrow = r.direction === 'reverse' ? ' → ' : ' ← ';
+/** "Why is this here": how many nodes and edges lie on paths between the
+ *  seed and the hovered node, and how long the shortest is.
+ *  Example: `Why here: shortest 3 steps (2 paths' worth: thick blue); all paths: 7 nodes, 9 edges`. */
+function WhyLine({ r, id, slice }: { r: CraterResult; id: string; slice: PathSlice }) {
+  const name = r.graph.nodes.find((n) => n.id === id)?.name ?? id;
+  const x = r.reach.find((e) => e.id === id);
+  const steps = Math.max(slice.shortestNodes.size - 1, 0);
   return (
     <p className="why" data-testid="why">
-      Why here: {steps.map((s) => names.get(s) ?? s).join(arrow)}
-      {x && ` (${x.path_certainty}, ${x.distance} steps)`}
+      <strong>{name}</strong>
+      {x && ` (${x.path_certainty})`}: {slice.nodes.size} nodes and {slice.edges.size} edges on paths {r.direction === 'reverse' ? 'to' : 'from'} the seed;{' '}
+      <span className="strong-path">thick blue</span> = shortest
+      {slice.shortestEdges.size > 0 && ` (${slice.shortestEdges.size} edge${slice.shortestEdges.size === 1 ? '' : 's'}${steps ? `, ${slice.shortestNodes.size} nodes` : ''})`}
     </p>
   );
 }

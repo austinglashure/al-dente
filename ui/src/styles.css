@@ -90,3 +90,4 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .modal textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 0.8rem; }
 .trace ul li { font-size: 0.8rem; }
 .libraries li.selected button { font-weight: bold; }
+.strong-path { color: #08519c; font-weight: bold; }

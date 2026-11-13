@@ -80,27 +80,6 @@ export function craterCanvas(r: CraterResult): CraterGraph {
   return g;
 }
 
-/** The nodes from `id` back to a seed along `via`, and the canvas edges
- *  between consecutive ones (either direction: in a reverse crater the
- *  edges point toward the seed). Empty for a node not in the crater.
- *  Example: in `a → b → c` seeded at `a`, `whyPath(r, g, 'c').nodes` is `['c', 'b', 'a']`. */
-export function whyPath(r: CraterResult, g: CraterGraph, id: string): { nodes: string[]; edges: string[] } {
-  const via = new Map(r.reach.map((x) => [x.id, x.via]));
-  if (!via.has(id)) return { nodes: [], edges: [] };
-  const nodes: string[] = [];
-  const edges: string[] = [];
-  let cur: string | null | undefined = id;
-  while (cur && !nodes.includes(cur)) {
-    nodes.push(cur);
-    const next: string | null | undefined = via.get(cur);
-    if (next && g.hasNode(cur) && g.hasNode(next)) {
-      edges.push(...g.outEdges(next, cur), ...g.outEdges(cur, next));
-    }
-    cur = next;
-  }
-  return { nodes, edges };
-}
-
 /** `file:line:col`, or empty.
  *  Example: `where(row)` is `'src/a.clj:3:1'`. */
 function where(row: ChecklistRow): string {
@@ -206,4 +185,72 @@ export function checklistRows(r: CraterResult): ChecklistRow[] {
       a.distance - b.distance ||
       (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
   );
+}
+
+/** What the hover highlights: everything on some path between the seed and
+ *  a node, and the parts that lie on a shortest one. */
+export interface PathSlice {
+  nodes: Set<string>;
+  edges: Set<string>;
+  shortestNodes: Set<string>;
+  shortestEdges: Set<string>;
+}
+
+/** Breadth-first distances from `starts` following `step`.
+ *  Example: from `a` over `a → b → c`, `{a: 0, b: 1, c: 2}`. */
+function distances(starts: string[], step: (n: string) => [string, string][]): Map<string, number> {
+  const dist = new Map<string, number>(starts.map((s) => [s, 0]));
+  const queue = [...starts];
+  for (let i = 0; i < queue.length; i++) {
+    const u = queue[i];
+    if (u === undefined) break;
+    const d = dist.get(u) ?? 0;
+    for (const [, v] of step(u)) {
+      if (!dist.has(v)) {
+        dist.set(v, d + 1);
+        queue.push(v);
+      }
+    }
+  }
+  return dist;
+}
+
+/** Every node and edge on a path from the seeds to `target` over the
+ *  crater's edges (in a reverse crater, from `target` to the seeds), and
+ *  those on a shortest such path. With cycles there are endlessly many
+ *  paths, so this is their union: a node or edge is included when the seed
+ *  reaches it and it reaches the target. A seed's own slice is the seed.
+ *  Example: in `a → b → d`, `a → d`, the slice of `d` is `{a, b, d}` and the
+ *  shortest part is `a → d`. */
+export function allPaths(r: CraterResult, g: CraterGraph, target: string): PathSlice {
+  const empty: PathSlice = { nodes: new Set(), edges: new Set(), shortestNodes: new Set(), shortestEdges: new Set() };
+  if (!g.hasNode(target)) return empty;
+  const seeds = r.seeds.filter((s) => g.hasNode(s));
+  if (seeds.includes(target)) {
+    return { nodes: new Set([target]), edges: new Set(), shortestNodes: new Set([target]), shortestEdges: new Set() };
+  }
+  const side = r.reach.find((x) => x.id === target)?.direction ?? r.direction;
+  const reverse = side === 'reverse';
+  const forwardStep = (n: string): [string, string][] => g.outEdges(n).map((k) => [k, g.target(k)]);
+  const backwardStep = (n: string): [string, string][] => g.inEdges(n).map((k) => [k, g.source(k)]);
+  const next = reverse ? backwardStep : forwardStep;
+  const prev = reverse ? forwardStep : backwardStep;
+  const fromSeed = distances(seeds, next);
+  const toTarget = distances([target], prev);
+  const total = fromSeed.get(target);
+  if (total === undefined) return empty;
+  const slice: PathSlice = { nodes: new Set(), edges: new Set(), shortestNodes: new Set(), shortestEdges: new Set() };
+  for (const [u, du] of fromSeed) {
+    const tu = toTarget.get(u);
+    if (tu === undefined) continue;
+    slice.nodes.add(u);
+    if (du + tu === total) slice.shortestNodes.add(u);
+    for (const [k, v] of next(u)) {
+      const tv = toTarget.get(v);
+      if (tv === undefined) continue;
+      slice.edges.add(k);
+      if (du + 1 + tv === total) slice.shortestEdges.add(k);
+    }
+  }
+  return slice;
 }

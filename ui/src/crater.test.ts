@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checklistCsv, checklistMarkdown, checklistRows, craterCanvas, libraryHighlight, unitOf, whyPath } from './crater';
+import { allPaths, checklistCsv, checklistMarkdown, checklistRows, craterCanvas, libraryHighlight, unitOf } from './crater';
 import type { ChecklistRow, CraterResult, GNode, LibraryUsage } from './types';
 
 const node = (id: string, kind = 'symbol'): GNode => ({ id, kind, name: id.split('/').pop() ?? id });
@@ -37,42 +37,6 @@ function result(over: Partial<CraterResult> = {}): CraterResult {
     ...over,
   };
 }
-
-describe('whyPath', () => {
-  it('follows via back to the seed, with the edges between', () => {
-    const r = result();
-    const g = craterCanvas(r);
-    const why = whyPath(r, g, 'c');
-    expect(why.nodes).toEqual(['c', 'b', 'a']);
-    expect(why.edges).toHaveLength(2);
-  });
-
-  it('works in reverse (edges point toward the seed)', () => {
-    const r = result({
-      direction: 'reverse',
-      seeds: ['c'],
-      reach: [
-        { id: 'c', distance: 0, path_certainty: 'certain', via: null, direction: 'reverse' },
-        { id: 'b', distance: 1, path_certainty: 'likely', via: 'c', direction: 'reverse' },
-        { id: 'a', distance: 2, path_certainty: 'likely', via: 'b', direction: 'reverse' },
-      ],
-    });
-    const why = whyPath(r, craterCanvas(r), 'a');
-    expect(why.nodes).toEqual(['a', 'b', 'c']);
-    expect(why.edges).toHaveLength(2);
-  });
-
-  it('stops on a cycle in via and on unknown nodes', () => {
-    const r = result({
-      reach: [
-        { id: 'a', distance: 1, path_certainty: 'certain', via: 'b', direction: 'forward' },
-        { id: 'b', distance: 1, path_certainty: 'certain', via: 'a', direction: 'forward' },
-      ],
-    });
-    expect(whyPath(r, craterCanvas(r), 'a').nodes).toEqual(['a', 'b']);
-    expect(whyPath(r, craterCanvas(r), 'zzz').nodes).toEqual([]);
-  });
-});
 
 describe('craterCanvas', () => {
   it('marks boundary nodes, the pinned path, faint callers and overlay edges', () => {
@@ -174,5 +138,61 @@ describe('checklistRows', () => {
       ['b', 1, 'certain'],
       ['c', 2, 'likely'],
     ]);
+  });
+});
+
+describe('allPaths', () => {
+  /** a → b → d, a → c → d, a → d, b → e (e is not on a path to d), d → a (a cycle). */
+  function diamond(direction: 'forward' | 'reverse' = 'forward'): CraterResult {
+    const e = (from: string, to: string) => ({ from, to, kind: 'calls', certainty: 'certain', reason: 'direct' });
+    const ids = ['a', 'b', 'c', 'd', 'e'];
+    return result({
+      direction,
+      seeds: [direction === 'forward' ? 'a' : 'd'],
+      graph: {
+        nodes: ids.map((i) => node(i)),
+        edges: [e('a', 'b'), e('b', 'd'), e('a', 'c'), e('c', 'd'), e('a', 'd'), e('b', 'e'), e('d', 'a')],
+        truncated: false,
+        aggregated: null,
+      },
+      reach: ids.map((id) => ({ id, distance: 0, path_certainty: 'certain' as const, via: null, direction })),
+      boundary: [],
+    });
+  }
+
+  it('covers every node and edge on a path from the seed, and marks the shortest', () => {
+    const r = diamond();
+    const g = craterCanvas(r);
+    const p = allPaths(r, g, 'd');
+    expect([...p.nodes].sort()).toEqual(['a', 'b', 'c', 'd']);
+    const pairs = (keys: Set<string>) => [...keys].map((k) => `${g.source(k)}>${g.target(k)}`).sort();
+    // The cycle edge d → a lies on a (non-simple) path a → d → a → d; e leads nowhere.
+    expect(pairs(p.edges)).toEqual(['a>b', 'a>c', 'a>d', 'b>d', 'c>d', 'd>a']);
+    expect(pairs(p.shortestEdges)).toEqual(['a>d']);
+    expect([...p.shortestNodes].sort()).toEqual(['a', 'd']);
+  });
+
+  it('keeps every shortest path when there are several', () => {
+    const r = diamond();
+    const g = craterCanvas(r);
+    g.dropEdge(g.outEdges('a', 'd')[0]);
+    const p = allPaths(r, g, 'd');
+    expect([...p.shortestNodes].sort()).toEqual(['a', 'b', 'c', 'd']);
+    expect(p.shortestEdges.size).toBe(4);
+  });
+
+  it('runs from the node to the seed in a reverse crater', () => {
+    const r = diamond('reverse');
+    const g = craterCanvas(r);
+    const p = allPaths(r, g, 'a');
+    expect([...p.nodes].sort()).toEqual(['a', 'b', 'c', 'd']);
+    expect([...p.shortestNodes].sort()).toEqual(['a', 'd']);
+  });
+
+  it('is just the seed for the seed, and empty for an unknown node', () => {
+    const r = diamond();
+    const g = craterCanvas(r);
+    expect([...allPaths(r, g, 'a').nodes]).toEqual(['a']);
+    expect(allPaths(r, g, 'zzz').nodes.size).toBe(0);
   });
 });

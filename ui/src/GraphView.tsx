@@ -10,6 +10,9 @@ import type { EdgeAttrs, NodeAttrs } from './model';
 export interface Highlight {
   nodes: Set<string>;
   edges: Set<string>;
+  /** Of those, the ones to stress (for example the shortest paths). */
+  strongNodes?: Set<string>;
+  strongEdges?: Set<string>;
 }
 
 interface Props<N extends NodeAttrs, E extends EdgeAttrs> {
@@ -35,6 +38,7 @@ interface Props<N extends NodeAttrs, E extends EdgeAttrs> {
 
 const FADED_NODE = '#e6e6e6';
 const FADED_EDGE = '#f0f0f0';
+const STRONG_EDGE = '#08519c';
 
 /** Renders `graph`; click selects, double-click expands or loads neighbors.
  *  Example: `<GraphView graph={g} version={v} selected={id} … />`. */
@@ -72,14 +76,20 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
         return {
           ...attrs,
           hidden: h.isHidden(id),
-          highlighted: id === h.selected || (h.highlight?.nodes.has(id) ?? false),
+          highlighted: id === h.selected || ((h.highlight?.strongNodes ?? h.highlight?.nodes)?.has(id) ?? false),
           ...(faded ? { color: FADED_NODE, label: '' } : {}),
         };
       },
       edgeReducer: (key, attrs) => {
         const h = handlers.current;
         const faded = h.highlight !== null && !h.highlight.edges.has(key);
-        return { ...attrs, hidden: h.isEdgeHidden(key), ...(faded ? { color: FADED_EDGE } : {}) };
+        const strong = h.highlight?.strongEdges?.has(key) ?? false;
+        return {
+          ...attrs,
+          hidden: h.isEdgeHidden(key),
+          ...(faded ? { color: FADED_EDGE } : {}),
+          ...(strong ? { color: STRONG_EDGE, size: Math.max(attrs.size * 2, 3) } : {}),
+        };
       },
     });
     s.on('clickNode', ({ node }) => handlers.current.onSelect(node));
@@ -115,6 +125,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
       data-testid={testId}
       data-visible-edges={visibleEdges}
       data-highlighted={highlight ? highlight.nodes.size : 0}
+      data-strong-edges={highlight?.strongEdges?.size ?? 0}
     />
   );
 }
