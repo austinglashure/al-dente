@@ -151,3 +151,146 @@ pub struct MeasureReport {
     /// `pagerank`, `pagerank_reverse`, `hits`.
     pub convergence: BTreeMap<String, Convergence>,
 }
+
+/// How betweenness and closeness were computed.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct Sampling {
+    /// False when every node was a source (exact).
+    pub approximate: bool,
+    /// Sources used.
+    pub pivots: u32,
+    /// Seed of the pivot choice.
+    pub seed: u64,
+}
+
+/// The second set of measures for one node of a projection.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct NodeMeasures2 {
+    pub id: NodeId,
+    /// Brandes betweenness over hop distances, normalized by (n−1)(n−2).
+    pub betweenness: f64,
+    /// Sum of 1 / distance from every other node that reaches this one.
+    pub closeness: f64,
+    /// Eigenvector centrality within the node's strongly connected
+    /// component (0 outside cycles), L2-normalized per component.
+    pub eigenvector: f64,
+    /// Index into `SecondReport::communities`.
+    pub community: u32,
+    /// Nodes this one dominates from the entry points, itself excluded.
+    pub dominates: u32,
+    pub articulation: bool,
+    /// 0..1, the mean of five percentile ranks (see `god_object`).
+    pub god_score: f64,
+}
+
+/// One community found by Louvain.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct Community {
+    pub size: u32,
+    /// Namespaces of its members (symbol level), sorted.
+    pub namespaces: Vec<String>,
+    /// Units of its members, sorted.
+    pub units: Vec<NodeId>,
+}
+
+/// A namespace whose symbols fall into several communities.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct SplitNamespace {
+    pub namespace: String,
+    /// Community index → number of the namespace's symbols in it.
+    pub communities: BTreeMap<u32, u32>,
+}
+
+/// An undirected edge whose removal disconnects part of the graph.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct Bridge {
+    pub a: NodeId,
+    pub b: NodeId,
+}
+
+/// The second set of measures on one projection.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct SecondReport {
+    pub projection: ProjectionSpec,
+    /// Sorted by ID.
+    pub nodes: Vec<NodeMeasures2>,
+    pub sampling: Sampling,
+    pub communities: Vec<Community>,
+    pub modularity: f64,
+    /// Seed of the community search.
+    pub community_seed: u64,
+    pub split_namespaces: Vec<SplitNamespace>,
+    pub bridges: Vec<Bridge>,
+    /// Entry points the dominators were computed from.
+    pub entry_points: u32,
+    /// Per strongly connected component, as in `MeasureReport::components`.
+    pub eigenvector_convergence: Vec<Convergence>,
+}
+
+/// Coupling of one namespace or unit (Robert Martin's package metrics).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct Coupling {
+    pub id: NodeId,
+    /// Afferent coupling: distinct namespaces (units) depending on this one.
+    pub afferent: u32,
+    /// Efferent coupling: distinct namespaces (units) this one depends on.
+    pub efferent: u32,
+    /// efferent / (afferent + efferent); 0 when both are 0.
+    pub instability: f64,
+    /// Protocols, multimethods and interfaces over all definitions.
+    pub abstractness: f64,
+    /// |abstractness + instability − 1|.
+    pub distance: f64,
+    /// Layer in the condensation: 0 depends on nothing in the projection.
+    pub layer: u32,
+}
+
+/// A dependency that breaks a design rule.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct Violation {
+    pub from: NodeId,
+    pub to: NodeId,
+    /// `upward` (against the layering: an edge inside a cycle that the cut
+    /// suggestion removes) or `unstable-dependency` (a stabler module
+    /// depending on a less stable one).
+    pub kind: String,
+}
+
+/// Coupling, layers and violations at namespace or unit level.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct CouplingReport {
+    pub projection: ProjectionSpec,
+    /// Sorted by ID.
+    pub modules: Vec<Coupling>,
+    pub violations: Vec<Violation>,
+}
+
+/// A symbol nothing reaches.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct DeadSymbol {
+    pub id: NodeId,
+    pub name: String,
+    pub namespace: Option<String>,
+    pub loc: Option<crate::graph::Location>,
+}
+
+/// Symbols unreachable from any entry point, test or load-time code over
+/// every invocation edge at any certainty.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct DeadCodeReport {
+    /// Roots the search started from.
+    pub roots: u32,
+    /// Sorted by ID.
+    pub dead: Vec<DeadSymbol>,
+}

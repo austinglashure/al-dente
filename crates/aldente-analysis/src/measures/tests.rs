@@ -169,7 +169,7 @@ fn cut_breaks_every_cycle_and_prefers_weak_arcs() {
 }
 
 /// Zachary's karate club (as networkx 3.7 `karate_club_graph()`, unweighted).
-const KARATE: &[(u32, u32)] = &[
+pub(super) const KARATE: &[(u32, u32)] = &[
     (0, 1),
     (0, 2),
     (0, 3),

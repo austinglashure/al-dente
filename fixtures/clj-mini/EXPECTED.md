@@ -237,3 +237,22 @@ Below, `events@L5`, `events@L9`, `events@L14` and `subs@L5` stand for these impl
 | any `dispatches` edge from `shop.pricing/price` or `shop.payment/charge` | dispatch edges start at the caller |
 | a second `shop.model/format-money` node | `.cljc` definitions merge |
 | any edge from `shop.util/apply-discount` to a local (`rule`) | locals are not nodes |
+
+## Dead code (Phase 4, WP4.2)
+
+Symbols and impls nothing reaches from an entry point (`-main`, `^:export init`), a test, or code that runs when a namespace loads (top-level forms, `def` initializers), following every invocation edge at any certainty; `implements` counts both ways and a record is alive when a constructor is used. Hand list, from reading the source:
+
+| Dead | Why |
+|---|---|
+| `shop.interop/new-id`, `shop.interop/shout` | never called (`now-ms` is used by the `with-timing` template) |
+| `shop.inventory/restock!`, `shop.inventory/available` | never called |
+| `shop.payment/free-charger` | never called (its `reify` impl stays alive through `charge` dispatch, an over-approximation) |
+| `shop.payment/Voucher`, `shop.payment/->Voucher`, `shop.payment/map->Voucher` | no Voucher is ever constructed (`charge@Voucher` stays alive through dispatch) |
+| `shop.payment/map->Card` | `-main` uses `->Card` only |
+| `shop.plugins/load-plugin`, `shop.plugins/run-script` | never called |
+| `shop.ui.views/cart-view`, `shop.ui.views/submit-button` | never called (not exported, not referenced) |
+| `shop.ui.events/reg-event-fx@:order/submit` | dispatched only from `submit-button` |
+| `shop.ui.events/reg-event-db@:order/submitted` | dispatched only from the `:order/submit` handler |
+| `shop.ui.subs/reg-sub@:cart/items` | subscribed only from `cart-view` |
+
+Everything else is alive: `shop.audit/record!` (literal `requiring-resolve` from `audit-hook`), the four `price` methods (dispatch from `checkout` and the tests), `Card` (through `->Card`), `Chargeable` (its impls are alive).

@@ -95,3 +95,45 @@ pub fn measures(
 ) -> Result<(MeasureReport, Option<String>), ProjectionError> {
     cached(store, "measures/first-set", spec, || first_set(graph, spec))
 }
+
+/// The second set of measures for `spec` and `opts`, from the store when present.
+///
+/// Example: `second(&graph, &spec, SecondOptions::default(), &store)`.
+pub fn second(
+    graph: &Graph,
+    spec: &ProjectionSpec,
+    opts: super::SecondOptions,
+    store: &dyn ResultStore,
+) -> Result<(aldente_model::measures::SecondReport, Option<String>), ProjectionError> {
+    cached(store, "measures/second-set", &(spec, opts), || {
+        super::second_set(graph, spec, opts)
+    })
+}
+
+/// Coupling, layers and violations for `spec`, from the store when present.
+///
+/// Example: `coupling(&graph, &namespace_spec, &store)`.
+pub fn coupling(
+    graph: &Graph,
+    spec: &ProjectionSpec,
+    store: &dyn ResultStore,
+) -> Result<(aldente_model::measures::CouplingReport, Option<String>), ProjectionError> {
+    cached(store, "measures/coupling", spec, || {
+        super::coupling::coupling(graph, spec)
+    })
+}
+
+/// The dead-code report, from the store when present.
+///
+/// Example: `dead_code(&graph, &store)`.
+pub fn dead_code(
+    graph: &Graph,
+    store: &dyn ResultStore,
+) -> (aldente_model::measures::DeadCodeReport, Option<String>) {
+    match cached::<_, _, std::convert::Infallible>(store, "measures/dead-code", &(), || {
+        Ok(super::deadcode::dead_code(graph))
+    }) {
+        Ok(v) => v,
+        Err(never) => match never {},
+    }
+}
