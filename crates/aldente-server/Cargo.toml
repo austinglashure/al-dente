@@ -9,6 +9,8 @@ publish.workspace = true
 [dependencies]
 aldente-analysis.workspace = true
 aldente-acquire.workspace = true
+# rules/hotspots.toml for `/hotspots`.
+aldente-rules.workspace = true
 aldente-graph.workspace = true
 aldente-model.workspace = true
 # HTTP server and runtime, server only (02-architecture.md, "Key dependencies").

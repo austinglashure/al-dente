@@ -137,3 +137,26 @@ pub fn dead_code(
         Err(never) => match never {},
     }
 }
+
+/// An in-memory store shared between threads (the local server).
+#[derive(Debug, Default)]
+pub struct SharedMemoryStore(std::sync::Mutex<HashMap<(String, String), String>>);
+
+impl ResultStore for SharedMemoryStore {
+    fn get(&self, name: &str, params: &str) -> Option<String> {
+        let map = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        map.get(&(name.to_owned(), params.to_owned())).cloned()
+    }
+
+    fn put(&self, name: &str, params: &str, json: &str) -> Result<(), String> {
+        let mut map = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        map.insert((name.to_owned(), params.to_owned()), json.to_owned());
+        Ok(())
+    }
+}

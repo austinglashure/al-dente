@@ -160,6 +160,7 @@ dependencies = [
  "aldente-analysis",
  "aldente-graph",
  "aldente-model",
+ "aldente-rules",
  "axum",
  "blake3",
  "jsonschema",

@@ -49,6 +49,14 @@ pub struct AppState {
     pub crater: std::sync::OnceLock<aldente_analysis::crater::CraterIndex>,
     /// The static coverage estimate, computed on first use.
     pub coverage: std::sync::OnceLock<aldente_model::coverage::CoverageReport>,
+    /// Measures computed so far in this session.
+    pub results: aldente_analysis::measures::cache::SharedMemoryStore,
+    /// The hotspots report, computed on first use.
+    pub hotspots: std::sync::OnceLock<aldente_model::hotspots::HotspotsReport>,
+    /// Hardened git for reading history (`/churn`); `None` turns churn off.
+    pub git: Option<aldente_acquire::remote::Git>,
+    /// The churn report, read on first use.
+    pub churn: std::sync::OnceLock<(aldente_model::churn::ChurnReport, Vec<String>)>,
 }
 
 impl AppState {
@@ -87,6 +95,10 @@ impl AppState {
             tree: std::sync::OnceLock::new(),
             crater: std::sync::OnceLock::new(),
             coverage: std::sync::OnceLock::new(),
+            results: Default::default(),
+            hotspots: std::sync::OnceLock::new(),
+            git: None,
+            churn: std::sync::OnceLock::new(),
         }
     }
 
@@ -132,7 +144,13 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/crater/trace", post(api::crater_trace))
         .route("/api/v1/lib", get(api::lib))
         .route("/api/v1/tree", get(api::tree))
-        .route("/api/v1/tree/graph", get(api::tree_graph));
+        .route("/api/v1/tree/graph", get(api::tree_graph))
+        .route("/api/v1/metrics", get(api::metrics))
+        .route("/api/v1/coverage", get(api::coverage))
+        .route("/api/v1/hotspots", get(api::hotspots))
+        .route("/api/v1/cycles", get(api::cycles))
+        .route("/api/v1/churn", get(api::churn))
+        .route("/api/v1/subgraph", get(api::subgraph));
     #[cfg(test)]
     let api = api.route("/api/v1/__panic", get(tests::panics));
     api.fallback(asset)

@@ -45,6 +45,7 @@ pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
     let result = serve(
         move |port| AppState {
             timings,
+            git: crate::commands::crater_diff::hardened_git().ok(),
             ..AppState::new(snapshot, root, state_info, &extra, token, port)
         },
         args.port,

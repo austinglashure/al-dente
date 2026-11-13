@@ -17,12 +17,14 @@ use crate::params::Params;
 mod crater;
 mod graph;
 mod libs;
+mod measures;
 
 pub use crater::{checklist, crater, crater_trace, trace_normalize};
 pub use graph::{
     blindspots, expand, graph, neighborhood, node, search, snapshot, source, tree, tree_graph,
 };
 pub use libs::{lib, libs};
+pub use measures::{churn, coverage, cycles, hotspots, metrics, subgraph};
 
 type St = State<Arc<AppState>>;
 
@@ -34,6 +36,30 @@ const EXPAND_LIMIT: usize = 200;
 /// Example: `ok(&state, "graph", payload)` gives `200` with `{"schema": "aldente/graph/v1", …}`.
 fn ok<T: Serialize>(state: &AppState, tag: &str, data: T) -> Response {
     let env = Envelope::success(tag, Some(state.info.clone()), data);
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        serde_json::to_string(&env).unwrap_or_default(),
+    )
+        .into_response()
+}
+
+/// A JSON success envelope with warnings.
+///
+/// Example: `with_warnings(&state, "churn", report, &["no git history".into()])`.
+fn with_warnings<T: Serialize>(
+    state: &AppState,
+    tag: &str,
+    data: T,
+    warnings: &[String],
+) -> Response {
+    let mut env = Envelope::success(tag, Some(state.info.clone()), data);
+    env.warnings = warnings
+        .iter()
+        .map(|m| aldente_model::Warning {
+            code: aldente_model::WarningCode::NoHistory,
+            message: m.clone(),
+        })
+        .collect();
     (
         [(header::CONTENT_TYPE, "application/json")],
         serde_json::to_string(&env).unwrap_or_default(),

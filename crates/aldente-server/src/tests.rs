@@ -595,3 +595,44 @@ fn crater_checklist_and_trace_endpoints() {
         401
     );
 }
+
+/// WP4.6 endpoints: each returns its CLI schema; `/subgraph` keeps only
+/// edges among the named nodes; churn without git is empty with a warning.
+#[test]
+fn measure_coverage_hotspot_cycle_churn_and_subgraph_endpoints() {
+    let s = start("measures");
+    for (path, schema) in [
+        ("/api/v1/metrics", "metrics"),
+        ("/api/v1/metrics?level=namespace", "metrics"),
+        ("/api/v1/coverage", "coverage"),
+        ("/api/v1/hotspots", "hotspots"),
+        ("/api/v1/cycles?level=symbol", "cycles"),
+        ("/api/v1/churn", "churn"),
+    ] {
+        let (status, _, body) = s.ok_get(path);
+        assert_eq!(status, 200, "{path}: {body}");
+        let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert!(schema_ok(schema, &env["data"]), "{path}: {env:#}");
+    }
+    let (_, _, body) = s.ok_get("/api/v1/churn");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["history"], "none");
+    assert_eq!(env["warnings"][0]["code"], "no-history");
+    let (status, _, body) = s.ok_get("/api/v1/subgraph?id=clj:.//a/f&id=clj:.//a/g");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["nodes"].as_array().unwrap().len(), 2);
+    assert!(
+        env["data"]["edges"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|e| e["kind"] != "contains")
+    );
+    assert_eq!(s.ok_get("/api/v1/subgraph").0, 400);
+    assert_eq!(
+        s.ok_get("/api/v1/metrics?level=bogus").0,
+        200,
+        "unknown level falls back to symbol"
+    );
+}
