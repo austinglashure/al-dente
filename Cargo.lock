@@ -107,6 +107,7 @@ dependencies = [
  "aldente-acquire",
  "aldente-adapter",
  "aldente-model",
+ "rayon",
  "rusqlite",
  "serde",
  "serde_json",

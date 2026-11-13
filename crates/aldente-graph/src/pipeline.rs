@@ -9,6 +9,7 @@ use aldente_acquire::walk::{Limits, walk};
 use aldente_adapter::{Adapter, AdapterError, AnalyzeCtx, FactBatch};
 use aldente_model::timing::Timings;
 use aldente_model::{BlindSpot, BlindSpotCategory, Diagnostic, DiagnosticCode, RepoPath, Site};
+use rayon::prelude::*;
 
 use crate::build::{Graph, build};
 use crate::snapshot::{self, Snapshot};
@@ -46,7 +47,9 @@ fn analyze_discovered(
     adapters: &[&dyn Adapter],
     timings: &mut Timings,
 ) -> Result<Analyzed, AdapterError> {
-    let mut batches = Vec::new();
+    // One job per (unit, claiming adapter), run in parallel; results are
+    // collected in unit order, so the graph does not depend on scheduling.
+    let mut jobs: Vec<(&aldente_model::UnitInfo, &dyn Adapter, Vec<RepoPath>)> = Vec::new();
     for unit in &discovery.report.units {
         let files: Vec<RepoPath> = discovery
             .analyzed
@@ -58,24 +61,28 @@ fn analyze_discovered(
             continue;
         }
         for adapter in adapters.iter().filter(|a| a.claims(unit)) {
-            match adapter.analyze(
-                unit,
-                AnalyzeCtx {
-                    root,
-                    files: &files,
-                },
-            ) {
-                Ok(mut batch) => {
-                    timings.merge(
-                        &format!("unit:{}", unit.dir),
-                        std::mem::take(&mut batch.timings),
-                    );
-                    batches.push(batch);
-                }
-                Err(e @ AdapterError::ToolMissing { .. }) => return Err(e),
-                Err(AdapterError::Failed(message)) => {
-                    batches.push(failed(&unit.dir, &files, adapter.id(), &message))
-                }
+            jobs.push((unit, *adapter, files.clone()));
+        }
+    }
+    let started = std::time::Instant::now();
+    let results: Vec<Result<FactBatch, AdapterError>> = jobs
+        .par_iter()
+        .map(|(unit, adapter, files)| adapter.analyze(unit, AnalyzeCtx { root, files }))
+        .collect();
+    timings.detail("units (in parallel, wall clock)", started.elapsed());
+    let mut batches = Vec::new();
+    for ((unit, adapter, files), result) in jobs.iter().zip(results) {
+        match result {
+            Ok(mut batch) => {
+                timings.merge(
+                    &format!("unit:{}", unit.dir),
+                    std::mem::take(&mut batch.timings),
+                );
+                batches.push(batch);
+            }
+            Err(e @ AdapterError::ToolMissing { .. }) => return Err(e),
+            Err(AdapterError::Failed(message)) => {
+                batches.push(failed(&unit.dir, files, adapter.id(), &message))
             }
         }
     }
@@ -331,6 +338,7 @@ mod tests {
                 "discover",
                 "key",
                 "snapshot-lookup",
+                "· units (in parallel, wall clock)",
                 "fake-stage unit:.",
                 "build",
                 "snapshot-save"
@@ -338,5 +346,56 @@ mod tests {
         );
         let hit = analyze_cached(&root, false, &[&counter], &ctx(&snaps, false)).unwrap();
         assert_eq!(labels(&hit), ["walk", "discover", "key", "snapshot-lookup"]);
+    }
+
+    /// Sleeps, then returns a node named after the unit.
+    struct Slow;
+
+    impl Adapter for Slow {
+        fn id(&self) -> &'static str {
+            "slow"
+        }
+        fn claims(&self, _: &UnitInfo) -> bool {
+            true
+        }
+        fn analyze(&self, unit: &UnitInfo, _: AnalyzeCtx<'_>) -> Result<FactBatch, AdapterError> {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            let mut batch = FactBatch::default();
+            batch
+                .timings
+                .record("slow", std::time::Duration::from_millis(300));
+            batch.diagnostics.push(Diagnostic::new(
+                Some(unit.dir.clone()),
+                DiagnosticCode::AnalyzerFailed,
+                format!("ran {}", unit.dir),
+            ));
+            Ok(batch)
+        }
+    }
+
+    #[test]
+    fn units_are_analyzed_in_parallel_and_merged_in_unit_order() {
+        let dir = scratch("parallel");
+        let root = dir.join("repo");
+        for u in ["a", "b", "c", "d"] {
+            std::fs::create_dir_all(root.join(u).join("src")).unwrap();
+            std::fs::write(root.join(u).join("deps.edn"), "{}").unwrap();
+            std::fs::write(root.join(u).join("src/x.clj"), "(ns x)").unwrap();
+        }
+        let started = std::time::Instant::now();
+        let a = analyze(&root, false, &[&Slow]).unwrap();
+        let took = started.elapsed();
+        assert!(
+            took < std::time::Duration::from_millis(1000),
+            "took {took:?}"
+        );
+        let ran: Vec<String> = a
+            .graph
+            .diagnostics
+            .iter()
+            .filter(|d| d.message.starts_with("ran "))
+            .map(|d| d.message.clone())
+            .collect();
+        assert_eq!(ran, ["ran .", "ran a", "ran b", "ran c", "ran d"]);
     }
 }
