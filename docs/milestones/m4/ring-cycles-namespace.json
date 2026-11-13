@@ -1,0 +1,28 @@
+{
+  "schema": "aldente/cycles/v1",
+  "ok": true,
+  "snapshot": {
+    "key": "b3:d36539640f0a077b276d11d294bdfa8851ecf9823165658461fad5cfa1c371ba",
+    "repo": "~/.cache/aldente/repos/github.com/ring-clojure/ring",
+    "rev": "5f745bbc7daefa097d7e9cf6394b44dce51cf597",
+    "dirty": false,
+    "analyzer": "0.1.0"
+  },
+  "data": {
+    "projection": {
+      "kind": "structure",
+      "level": "namespace",
+      "weights": {
+        "certain": 1.0,
+        "likely": 0.6,
+        "possible": 0.25
+      },
+      "min_certainty": "possible",
+      "include_tests": false,
+      "include_externals": false
+    },
+    "components": []
+  },
+  "warnings": [],
+  "error": null
+}

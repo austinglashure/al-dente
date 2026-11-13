@@ -264,7 +264,7 @@ fn bulletproof(inp: &Inputs<'_>, rules: &HotspotRules) -> Vec<Finding> {
             let why = if hits[i] {
                 format!(
                     "much important code ends up calling it (PageRank in the top {:.0}%)",
-                    100.0 - ranks[i] * 100.0
+                    ((1.0 - ranks[i]) * 100.0).ceil().max(1.0)
                 )
             } else {
                 format!(

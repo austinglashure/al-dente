@@ -1,0 +1,83 @@
+86 findings
+
+  1. must-be-bulletproof  clj:ring-core//ring.util.response/find-header  (1.00)
+     ring.util.response/find-header: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 3, pagerank 0.013, pagerank_percentile 99.747
+
+  2. risky-untested  clj:ring-bench//ring.bench.servlet/bench-env  (1.00)
+     ring.bench.servlet/bench-env is heavily used (importance 0.28) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.283, risk 0.283
+
+  3. must-be-bulletproof  clj:ring-core//ring.util.response/header  (0.99)
+     ring.util.response/header: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 5, pagerank 0.010, pagerank_percentile 99.494
+
+  4. bottleneck  clj:ring-core//ring.util.response/url-response  (0.99)
+     ring.util.response/url-response: many call paths run through it and removing it disconnects part of the graph; a change here ripples widely, so keep its interface stable.
+     evidence: articulation 1, betweenness 0.001
+
+  5. risky-untested  clj:ring-bench//ring.bench.servlet/-main  (0.99)
+     ring.bench.servlet/-main is heavily used (importance 0.26) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.263, risk 0.263
+
+  6. must-be-bulletproof  clj:ring-core//ring.util.response/get-header  (0.99)
+     ring.util.response/get-header: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 6, pagerank 0.008, pagerank_percentile 99.241
+
+  7. bottleneck  clj:ring-core//ring.middleware.resource/resource-request  (0.99)
+     ring.middleware.resource/resource-request: many call paths run through it and removing it disconnects part of the graph; a change here ripples widely, so keep its interface stable.
+     evidence: articulation 1, betweenness 0.000
+
+  8. risky-untested  clj:ring-core//ring.middleware.cookies/class-by-name  (0.99)
+     ring.middleware.cookies/class-by-name is heavily used (importance 0.22) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.217, risk 0.217
+
+  9. must-be-bulletproof  clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type  (0.99)
+     ring.core.protocols/find-charset-in-content-type: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 1, pagerank 0.006, pagerank_percentile 98.987
+
+ 10. risky-untested  clj:ring-core//ring.middleware.session.cookie/deserialize  (0.99)
+     ring.middleware.session.cookie/deserialize is heavily used (importance 0.29) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.294, risk 0.206
+
+ 11. must-be-bulletproof  clj:ring-core//ring.util.time/formatter  (0.99)
+     ring.util.time/formatter: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 2, pagerank 0.006, pagerank_percentile 98.734
+
+ 12. risky-untested  clj:ring-core-protocols//ring.core.protocols/response-charset  (0.99)
+     ring.core.protocols/response-charset is heavily used (importance 0.29) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.290, risk 0.203
+
+ 13. risky-untested  clj:ring-core//ring.middleware.session.cookie/seal  (0.98)
+     ring.middleware.session.cookie/seal is heavily used (importance 0.28) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.277, risk 0.194
+
+ 14. must-be-bulletproof  clj:ring-core//ring.middleware.resource/resource-request  (0.98)
+     ring.middleware.resource/resource-request: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 2, pagerank 0.006, pagerank_percentile 98.228
+
+ 15. must-be-bulletproof  clj:ring-devel//ring.middleware.lint/lint  (0.98)
+     ring.middleware.lint/lint: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling.
+     evidence: dominates 0, fan_in 2, pagerank 0.006, pagerank_percentile 98.228
+
+ 16. risky-untested  clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type  (0.98)
+     ring.core.protocols/find-charset-in-content-type is heavily used (importance 0.27) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.274, risk 0.192
+
+ 17. god-object  clj:ring-core//ring.middleware.file-info/file-info-response  (0.98)
+     ring.middleware.file-info/file-info-response does too much: it calls 7 functions and sits in the densest core (k = 3); split it by responsibility.
+     evidence: core 3, fan_out 7, god_score 0.979, hub 0.170
+
+ 18. risky-untested  clj:ring-core-protocols//ring.core.protocols/re-charset  (0.98)
+     ring.core.protocols/re-charset is heavily used (importance 0.21) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.208, risk 0.145
+
+ 19. risky-untested  clj:ring-core//ring.util.parsing/re-token  (0.97)
+     ring.util.parsing/re-token is heavily used (importance 0.19) but tests reach it only through uncertain calls; add a test that calls it.
+     evidence: exposure 0.700, importance 0.191, risk 0.134
+
+ 20. risky-untested  clj:ring-devel//ring.handler.dump/req-pair  (0.97)
+     ring.handler.dump/req-pair is heavily used (importance 0.13) but no test reaches it; add a test that calls it.
+     evidence: exposure 1, importance 0.131, risk 0.131
+
+66 more (--top 86)

@@ -111,3 +111,67 @@ fn measure_commands_print_their_envelopes() {
     assert_eq!(d["data"]["dead"].as_array().unwrap().len(), 16);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Namespace cycles over `requires` (M4's independent check, done by hand
+/// here): a → b → c → a and d ⇄ e, e also requiring a; f is outside.
+#[test]
+fn cycles_finds_require_cycles() {
+    let dir = std::env::temp_dir().join(format!(
+        "aldente-hotspots-cli-{}-nscycles",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    let src = dir.join("repo/src/x");
+    std::fs::create_dir_all(&src).unwrap();
+    std::fs::write(dir.join("repo/deps.edn"), "{:paths [\"src\"]}\n").unwrap();
+    for (ns, reqs) in [
+        ("a", "b"),
+        ("b", "c"),
+        ("c", "a"),
+        ("d", "e"),
+        ("e", "d x.a"),
+        ("f", "a"),
+    ] {
+        let reqs: String = reqs
+            .split(' ')
+            .map(|r| {
+                format!(
+                    " [x.{} :as {}]",
+                    r.trim_start_matches("x."),
+                    r.replace('.', "-")
+                )
+            })
+            .collect();
+        std::fs::write(
+            src.join(format!("{ns}.clj")),
+            format!("(ns x.{ns} (:require{reqs}))\n"),
+        )
+        .unwrap();
+    }
+    let v = json(&dir, &["cycles"]);
+    let comps: Vec<Vec<String>> = v["data"]["components"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            c["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|n| n.as_str().unwrap().to_owned())
+                .collect()
+        })
+        .collect();
+    assert_eq!(
+        comps,
+        vec![
+            vec![
+                "clj:.//x.a".to_owned(),
+                "clj:.//x.b".into(),
+                "clj:.//x.c".into()
+            ],
+            vec!["clj:.//x.d".to_owned(), "clj:.//x.e".into()],
+        ]
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

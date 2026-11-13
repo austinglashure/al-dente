@@ -1,0 +1,28 @@
+{
+  "schema": "aldente/cycles/v1",
+  "ok": true,
+  "snapshot": {
+    "key": "b3:add594ac73d05c36b2849cf9478ea4e3ca556b38c9a73d0d45cae73eef2b9510",
+    "repo": "~/.cache/aldente/repos/github.com/metosin/reitit",
+    "rev": "1d2fc6735f53e2026fed98e92322a29f7a35c371",
+    "dirty": false,
+    "analyzer": "0.1.0"
+  },
+  "data": {
+    "projection": {
+      "kind": "structure",
+      "level": "namespace",
+      "weights": {
+        "certain": 1.0,
+        "likely": 0.6,
+        "possible": 0.25
+      },
+      "min_certainty": "possible",
+      "include_tests": false,
+      "include_externals": false
+    },
+    "components": []
+  },
+  "warnings": [],
+  "error": null
+}

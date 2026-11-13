@@ -1,0 +1,4497 @@
+{
+  "schema": "aldente/hotspots/v1",
+  "ok": true,
+  "snapshot": {
+    "key": "b3:d36539640f0a077b276d11d294bdfa8851ecf9823165658461fad5cfa1c371ba",
+    "repo": "~/.cache/aldente/repos/github.com/ring-clojure/ring",
+    "rev": "5f745bbc7daefa097d7e9cf6394b44dce51cf597",
+    "dirty": false,
+    "analyzer": "0.1.0"
+  },
+  "data": {
+    "rules": "builtin",
+    "churn": false,
+    "findings": [
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-core//ring.util.response/find-header",
+        "nodes": [
+          "clj:ring-core//ring.util.response/find-header"
+        ],
+        "score": 0.9974683544303797,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 3.0,
+          "pagerank": 0.012954451752049815,
+          "pagerank_percentile": 99.74683544303798
+        },
+        "reason": "ring.util.response/find-header: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-bench//ring.bench.servlet/bench-env",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/bench-env"
+        ],
+        "score": 0.9974093264248705,
+        "evidence": {
+          "exposure": 1.0,
+          "importance": 0.28271465131928375,
+          "risk": 0.28271465131928375
+        },
+        "reason": "ring.bench.servlet/bench-env is heavily used (importance 0.28) but no test reaches it; add a test that calls it."
+      },
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-core//ring.util.response/header",
+        "nodes": [
+          "clj:ring-core//ring.util.response/header"
+        ],
+        "score": 0.9949367088607595,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 5.0,
+          "pagerank": 0.009884412599001227,
+          "pagerank_percentile": 99.49367088607595
+        },
+        "reason": "ring.util.response/header: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "bottleneck",
+        "subject": "clj:ring-core//ring.util.response/url-response",
+        "nodes": [
+          "clj:ring-core//ring.util.response/url-response"
+        ],
+        "score": 0.9949367088607595,
+        "evidence": {
+          "articulation": 1.0,
+          "betweenness": 0.0005166556877333024
+        },
+        "reason": "ring.util.response/url-response: many call paths run through it and removing it disconnects part of the graph; a change here ripples widely, so keep its interface stable."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-bench//ring.bench.servlet/-main",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/-main"
+        ],
+        "score": 0.9948186528497409,
+        "evidence": {
+          "exposure": 1.0,
+          "importance": 0.26325204620393966,
+          "risk": 0.26325204620393966
+        },
+        "reason": "ring.bench.servlet/-main is heavily used (importance 0.26) but no test reaches it; add a test that calls it."
+      },
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-core//ring.util.response/get-header",
+        "nodes": [
+          "clj:ring-core//ring.util.response/get-header"
+        ],
+        "score": 0.9924050632911392,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 6.0,
+          "pagerank": 0.008126587240523075,
+          "pagerank_percentile": 99.24050632911391
+        },
+        "reason": "ring.util.response/get-header: much important code ends up calling it (PageRank in the top 1%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "bottleneck",
+        "subject": "clj:ring-core//ring.middleware.resource/resource-request",
+        "nodes": [
+          "clj:ring-core//ring.middleware.resource/resource-request"
+        ],
+        "score": 0.9924050632911392,
+        "evidence": {
+          "articulation": 1.0,
+          "betweenness": 0.0004843647072499709
+        },
+        "reason": "ring.middleware.resource/resource-request: many call paths run through it and removing it disconnects part of the graph; a change here ripples widely, so keep its interface stable."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.middleware.cookies/class-by-name",
+        "nodes": [
+          "clj:ring-core//ring.middleware.cookies/class-by-name"
+        ],
+        "score": 0.9922279792746114,
+        "evidence": {
+          "exposure": 1.0,
+          "importance": 0.21701628547730897,
+          "risk": 0.21701628547730897
+        },
+        "reason": "ring.middleware.cookies/class-by-name is heavily used (importance 0.22) but no test reaches it; add a test that calls it."
+      },
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type",
+        "nodes": [
+          "clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type"
+        ],
+        "score": 0.9898734177215189,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 1.0,
+          "pagerank": 0.005814226192227311,
+          "pagerank_percentile": 98.9873417721519
+        },
+        "reason": "ring.core.protocols/find-charset-in-content-type: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.middleware.session.cookie/deserialize",
+        "nodes": [
+          "clj:ring-core//ring.middleware.session.cookie/deserialize"
+        ],
+        "score": 0.9896373056994818,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.2943854788627687,
+          "risk": 0.2060698352039381
+        },
+        "reason": "ring.middleware.session.cookie/deserialize is heavily used (importance 0.29) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-core//ring.util.time/formatter",
+        "nodes": [
+          "clj:ring-core//ring.util.time/formatter"
+        ],
+        "score": 0.9873417721518988,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 2.0,
+          "pagerank": 0.005793646534299292,
+          "pagerank_percentile": 98.73417721518987
+        },
+        "reason": "ring.util.time/formatter: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core-protocols//ring.core.protocols/response-charset",
+        "nodes": [
+          "clj:ring-core-protocols//ring.core.protocols/response-charset"
+        ],
+        "score": 0.9870466321243523,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.28959800849635914,
+          "risk": 0.2027186059474514
+        },
+        "reason": "ring.core.protocols/response-charset is heavily used (importance 0.29) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.middleware.session.cookie/seal",
+        "nodes": [
+          "clj:ring-core//ring.middleware.session.cookie/seal"
+        ],
+        "score": 0.9844559585492227,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.27666593547792706,
+          "risk": 0.19366615483454894
+        },
+        "reason": "ring.middleware.session.cookie/seal is heavily used (importance 0.28) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-core//ring.middleware.resource/resource-request",
+        "nodes": [
+          "clj:ring-core//ring.middleware.resource/resource-request"
+        ],
+        "score": 0.9822784810126582,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 2.0,
+          "pagerank": 0.005608762750354155,
+          "pagerank_percentile": 98.22784810126582
+        },
+        "reason": "ring.middleware.resource/resource-request: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "must-be-bulletproof",
+        "subject": "clj:ring-devel//ring.middleware.lint/lint",
+        "nodes": [
+          "clj:ring-devel//ring.middleware.lint/lint"
+        ],
+        "score": 0.9822784810126582,
+        "evidence": {
+          "dominates": 0.0,
+          "fan_in": 2.0,
+          "pagerank": 0.005608762750354155,
+          "pagerank_percentile": 98.22784810126582
+        },
+        "reason": "ring.middleware.lint/lint: much important code ends up calling it (PageRank in the top 2%); test it directly and harden its error handling."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type",
+        "nodes": [
+          "clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type"
+        ],
+        "score": 0.9818652849740933,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.2744103534256983,
+          "risk": 0.1920872473979888
+        },
+        "reason": "ring.core.protocols/find-charset-in-content-type is heavily used (importance 0.27) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "god-object",
+        "subject": "clj:ring-core//ring.middleware.file-info/file-info-response",
+        "nodes": [
+          "clj:ring-core//ring.middleware.file-info/file-info-response"
+        ],
+        "score": 0.979240506329114,
+        "evidence": {
+          "core": 3.0,
+          "fan_out": 7.0,
+          "god_score": 0.979240506329114,
+          "hub": 0.1700299349370435
+        },
+        "reason": "ring.middleware.file-info/file-info-response does too much: it calls 7 functions and sits in the densest core (k = 3); split it by responsibility."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core-protocols//ring.core.protocols/re-charset",
+        "nodes": [
+          "clj:ring-core-protocols//ring.core.protocols/re-charset"
+        ],
+        "score": 0.9766839378238342,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.2077013264506529,
+          "risk": 0.145390928515457
+        },
+        "reason": "ring.core.protocols/re-charset is heavily used (importance 0.21) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.util.parsing/re-token",
+        "nodes": [
+          "clj:ring-core//ring.util.parsing/re-token"
+        ],
+        "score": 0.9715025906735751,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.19147116564385117,
+          "risk": 0.1340298159506958
+        },
+        "reason": "ring.util.parsing/re-token is heavily used (importance 0.19) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-devel//ring.handler.dump/req-pair",
+        "nodes": [
+          "clj:ring-devel//ring.handler.dump/req-pair"
+        ],
+        "score": 0.966321243523316,
+        "evidence": {
+          "exposure": 1.0,
+          "importance": 0.13117345929506274,
+          "risk": 0.13117345929506274
+        },
+        "reason": "ring.handler.dump/req-pair is heavily used (importance 0.13) but no test reaches it; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-devel//ring.handler.dump/style-resource",
+        "nodes": [
+          "clj:ring-devel//ring.handler.dump/style-resource"
+        ],
+        "score": 0.966321243523316,
+        "evidence": {
+          "exposure": 1.0,
+          "importance": 0.13117345929506274,
+          "risk": 0.13117345929506274
+        },
+        "reason": "ring.handler.dump/style-resource is heavily used (importance 0.13) but no test reaches it; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.middleware.cookies/CookieDateTime",
+        "nodes": [
+          "clj:ring-core//ring.middleware.cookies/CookieDateTime"
+        ],
+        "score": 0.961139896373057,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.18683909892138506,
+          "risk": 0.13078736924496953
+        },
+        "reason": "ring.middleware.cookies/CookieDateTime is heavily used (importance 0.19) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.middleware.cookies/CookieInterval",
+        "nodes": [
+          "clj:ring-core//ring.middleware.cookies/CookieInterval"
+        ],
+        "score": 0.961139896373057,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.18683909892138506,
+          "risk": 0.13078736924496953
+        },
+        "reason": "ring.middleware.cookies/CookieInterval is heavily used (importance 0.19) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "risky-untested",
+        "subject": "clj:ring-core//ring.util.response/add-ending-slash",
+        "nodes": [
+          "clj:ring-core//ring.util.response/add-ending-slash"
+        ],
+        "score": 0.9559585492227979,
+        "evidence": {
+          "exposure": 0.7,
+          "importance": 0.18309008728242965,
+          "risk": 0.12816306109770076
+        },
+        "reason": "ring.util.response/add-ending-slash is heavily used (importance 0.18) but tests reach it only through uncertain calls; add a test that calls it."
+      },
+      {
+        "kind": "god-object",
+        "subject": "clj:ring-core//ring.middleware.multipart-params/parse-multipart-params",
+        "nodes": [
+          "clj:ring-core//ring.middleware.multipart-params/parse-multipart-params"
+        ],
+        "score": 0.890126582278481,
+        "evidence": {
+          "core": 2.0,
+          "fan_out": 8.0,
+          "god_score": 0.890126582278481,
+          "hub": 4.739007296639962e-74
+        },
+        "reason": "ring.middleware.multipart-params/parse-multipart-params does too much: it calls 8 functions and sits in the densest core (k = 2); split it by responsibility."
+      },
+      {
+        "kind": "god-object",
+        "subject": "clj:ring-jetty-adapter//ring.adapter.jetty/async-proxy-handler",
+        "nodes": [
+          "clj:ring-jetty-adapter//ring.adapter.jetty/async-proxy-handler"
+        ],
+        "score": 0.8774683544303796,
+        "evidence": {
+          "core": 2.0,
+          "fan_out": 4.0,
+          "god_score": 0.8774683544303796,
+          "hub": 1.0108821550100357e-12
+        },
+        "reason": "ring.adapter.jetty/async-proxy-handler does too much: it calls 4 functions and sits in the densest core (k = 2); split it by responsibility."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-core//ring.util.io/last-modified-date",
+        "nodes": [
+          "clj:ring-core//ring.util.io/last-modified-date"
+        ],
+        "score": 0.6666666666666666,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.9523809523809523
+        },
+        "reason": "ring.util.io/last-modified-date: 95% of the code it works with is in ring.util.response; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-core//ring.middleware.multipart-params/default-store",
+        "nodes": [
+          "clj:ring-core//ring.middleware.multipart-params/default-store"
+        ],
+        "score": 0.6222222222222221,
+        "evidence": {
+          "community_size": 9.0,
+          "share": 0.8888888888888888
+        },
+        "reason": "ring.middleware.multipart-params/default-store: 89% of the code it works with is in ring.middleware.multipart-params.temp-file; consider moving it there."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//javax.servlet/complete@reify:L49",
+        "nodes": [
+          "clj:ring-bench//javax.servlet/complete@reify:L49"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/complete@reify:L49: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/addHeader@reify:L34",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/addHeader@reify:L34"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/addHeader@reify:L34: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getAttribute@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getAttribute@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getAttribute@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getCharacterEncoding@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getCharacterEncoding@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getCharacterEncoding@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getContentLength@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getContentLength@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getContentLength@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getContentType@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getContentType@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getContentType@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getHeaderNames@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getHeaderNames@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getHeaderNames@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getHeaders@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getHeaders@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getHeaders@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getInputStream@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getInputStream@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getInputStream@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getMethod@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getMethod@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getMethod@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getOutputStream@reify:L34",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getOutputStream@reify:L34"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getOutputStream@reify:L34: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getProtocol@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getProtocol@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getProtocol@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getQueryString@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getQueryString@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getQueryString@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getRemoteAddr@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getRemoteAddr@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getRemoteAddr@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getRequestURI@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getRequestURI@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getRequestURI@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getScheme@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getScheme@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getScheme@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getServerName@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getServerName@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getServerName@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/getServerPort@reify:L16",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/getServerPort@reify:L16"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/getServerPort@reify:L16: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/setContentType@reify:L34",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/setContentType@reify:L34"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/setContentType@reify:L34: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/setHeader@reify:L34",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/setHeader@reify:L34"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/setHeader@reify:L34: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/setStatus@reify:L34",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/setStatus@reify:L34"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.bench.servlet/setStatus@reify:L34: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//java.lang/iterator@reify:L48",
+        "nodes": [
+          "clj:ring-core//java.lang/iterator@reify:L48"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/iterator@reify:L48: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//org.apache.commons.fileupload2.core/getCharacterEncoding@reify:L40",
+        "nodes": [
+          "clj:ring-core//org.apache.commons.fileupload2.core/getCharacterEncoding@reify:L40"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/getCharacterEncoding@reify:L40: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//org.apache.commons.fileupload2.core/getContentLength@reify:L40",
+        "nodes": [
+          "clj:ring-core//org.apache.commons.fileupload2.core/getContentLength@reify:L40"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/getContentLength@reify:L40: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//org.apache.commons.fileupload2.core/getContentType@reify:L40",
+        "nodes": [
+          "clj:ring-core//org.apache.commons.fileupload2.core/getContentType@reify:L40"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/getContentType@reify:L40: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//org.apache.commons.fileupload2.core/getInputStream@reify:L40",
+        "nodes": [
+          "clj:ring-core//org.apache.commons.fileupload2.core/getInputStream@reify:L40"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/getInputStream@reify:L40: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//org.apache.commons.fileupload2.core/isMultipartRelated@reify:L40",
+        "nodes": [
+          "clj:ring-core//org.apache.commons.fileupload2.core/isMultipartRelated@reify:L40"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/isMultipartRelated@reify:L40: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//org.apache.commons.fileupload2.core/update@reify:L23",
+        "nodes": [
+          "clj:ring-core//org.apache.commons.fileupload2.core/update@reify:L23"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/update@reify:L23: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//ring.middleware.multipart-params/hasNext@reify:L51",
+        "nodes": [
+          "clj:ring-core//ring.middleware.multipart-params/hasNext@reify:L51"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/hasNext@reify:L51: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//ring.middleware.multipart-params/next@reify:L51",
+        "nodes": [
+          "clj:ring-core//ring.middleware.multipart-params/next@reify:L51"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.multipart-params/next@reify:L51: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//ring.middleware.session.cookie/->CookieStore",
+        "nodes": [
+          "clj:ring-core//ring.middleware.session.cookie/->CookieStore"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.session.cookie/->CookieStore: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-core//ring.middleware.session.memory/->MemoryStore",
+        "nodes": [
+          "clj:ring-core//ring.middleware.session.memory/->MemoryStore"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.middleware.session.memory/->MemoryStore: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//jakarta.servlet/onComplete@reify:L144",
+        "nodes": [
+          "clj:ring-jetty-adapter//jakarta.servlet/onComplete@reify:L144"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onComplete@reify:L144: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//jakarta.servlet/onError@reify:L144",
+        "nodes": [
+          "clj:ring-jetty-adapter//jakarta.servlet/onError@reify:L144"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onError@reify:L144: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//jakarta.servlet/onStartAsync@reify:L144",
+        "nodes": [
+          "clj:ring-jetty-adapter//jakarta.servlet/onStartAsync@reify:L144"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onStartAsync@reify:L144: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//jakarta.servlet/onTimeout@reify:L144",
+        "nodes": [
+          "clj:ring-jetty-adapter//jakarta.servlet/onTimeout@reify:L144"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onTimeout@reify:L144: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketBinary@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketBinary@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketBinary@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketClose@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketClose@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketClose@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketConnect@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketConnect@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketConnect@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketError@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketError@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketError@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketPing@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketPing@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketPing@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketPong@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketPong@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketPong@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketText@reify:L68",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketText@reify:L68"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/onWebSocketText@reify:L68: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/writeFailed@reify:L59",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/writeFailed@reify:L59"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/writeFailed@reify:L59: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/writeSuccess@reify:L59",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/writeSuccess@reify:L59"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/writeSuccess@reify:L59: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.server/createWebSocket@reify:L93",
+        "nodes": [
+          "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.server/createWebSocket@reify:L93"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/createWebSocket@reify:L93: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-listener",
+        "nodes": [
+          "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-listener"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/websocket-listener: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-socket",
+        "nodes": [
+          "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-socket"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/websocket-socket: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-jetty-adapter//ring.websocket.protocols/-send-async@reify:L43",
+        "nodes": [
+          "clj:ring-jetty-adapter//ring.websocket.protocols/-send-async@reify:L43"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.adapter.jetty/-send-async@reify:L43: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "dead-code",
+        "subject": "clj:ring-websocket-protocols//ring.websocket.protocols/AsyncSocket",
+        "nodes": [
+          "clj:ring-websocket-protocols//ring.websocket.protocols/AsyncSocket"
+        ],
+        "score": 0.5,
+        "evidence": {},
+        "reason": "ring.websocket.protocols/AsyncSocket: nothing reaches it from an entry point, a test or load-time code, even counting uncertain calls; delete it or find its caller."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/-main",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/-main"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/-main: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/async-context",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/async-context"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/async-context: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/bench-env",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/bench-env"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/bench-env: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/bench-opts",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/bench-opts"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/bench-opts: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/http-servlet-request",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/http-servlet-request"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/http-servlet-request: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/http-servlet-response",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/http-servlet-response"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/http-servlet-response: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/ring-response",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/ring-response"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/ring-response: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      },
+      {
+        "kind": "misplaced-code",
+        "subject": "clj:ring-bench//ring.bench.servlet/servlet-handler",
+        "nodes": [
+          "clj:ring-bench//ring.bench.servlet/servlet-handler"
+        ],
+        "score": 0.43333333333333335,
+        "evidence": {
+          "community_size": 21.0,
+          "share": 0.6190476190476191
+        },
+        "reason": "ring.bench.servlet/servlet-handler: 62% of the code it works with is in ring.util.servlet; consider moving it there."
+      }
+    ],
+    "risk": [
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/bench-env",
+        "risk": 0.28271465131928375,
+        "importance": 0.28271465131928375,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/-main",
+        "risk": 0.26325204620393966,
+        "importance": 0.26325204620393966,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/class-by-name",
+        "risk": 0.21701628547730897,
+        "importance": 0.21701628547730897,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/deserialize",
+        "risk": 0.2060698352039381,
+        "importance": 0.2943854788627687,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/response-charset",
+        "risk": 0.2027186059474514,
+        "importance": 0.28959800849635914,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/seal",
+        "risk": 0.19366615483454894,
+        "importance": 0.27666593547792706,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/find-charset-in-content-type",
+        "risk": 0.1920872473979888,
+        "importance": 0.2744103534256983,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-listener",
+        "risk": 0.16701628547730898,
+        "importance": 0.16701628547730898,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/re-charset",
+        "risk": 0.145390928515457,
+        "importance": 0.2077013264506529,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-socket",
+        "risk": 0.1401341658406243,
+        "importance": 0.1401341658406243,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.parsing/re-token",
+        "risk": 0.1340298159506958,
+        "importance": 0.19147116564385117,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.handler.dump/req-pair",
+        "risk": 0.13117345929506274,
+        "importance": 0.13117345929506274,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.handler.dump/style-resource",
+        "risk": 0.13117345929506274,
+        "importance": 0.13117345929506274,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/CookieDateTime",
+        "risk": 0.13078736924496953,
+        "importance": 0.18683909892138506,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/CookieInterval",
+        "risk": 0.13078736924496953,
+        "importance": 0.18683909892138506,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/build-request-map",
+        "risk": 0.1293087998586285,
+        "importance": 0.431029332862095,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/add-ending-slash",
+        "risk": 0.12816306109770076,
+        "importance": 0.18309008728242965,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/StreamableResponseBody",
+        "risk": 0.12551058976796123,
+        "importance": 0.12551058976796123,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/SizableResponseBody",
+        "risk": 0.12551058976796123,
+        "importance": 0.12551058976796123,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/datetime-format",
+        "risk": 0.12551058976796123,
+        "importance": 0.12551058976796123,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/unseal",
+        "risk": 0.1210311873431904,
+        "importance": 0.17290169620455773,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/response-writer",
+        "risk": 0.11691139983411628,
+        "importance": 0.16701628547730898,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/same-site-values",
+        "risk": 0.11638465521697663,
+        "importance": 0.16626379316710949,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/set-cookie-attrs",
+        "risk": 0.11638465521697663,
+        "importance": 0.16626379316710949,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/serialize",
+        "risk": 0.11431517621254587,
+        "importance": 0.16330739458935126,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/bench-opts",
+        "risk": 0.10938131798595042,
+        "importance": 0.10938131798595042,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/build-request-map",
+        "risk": 0.10617027270134703,
+        "importance": 0.3539009090044901,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/style-resource",
+        "risk": 0.10585054904358765,
+        "importance": 0.1512150700622681,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.handler.dump/ring-keys",
+        "risk": 0.10400489405861352,
+        "importance": 0.10400489405861352,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/PingListener",
+        "risk": 0.10400489405861352,
+        "importance": 0.10400489405861352,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/decrypt",
+        "risk": 0.10365193542332726,
+        "importance": 0.1480741934618961,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/async-context",
+        "risk": 0.09903554222863212,
+        "importance": 0.09903554222863212,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/http-servlet-request",
+        "risk": 0.09903554222863212,
+        "importance": 0.09903554222863212,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/http-servlet-response",
+        "risk": 0.09903554222863212,
+        "importance": 0.09903554222863212,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/ring-response",
+        "risk": 0.09903554222863212,
+        "importance": 0.09903554222863212,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/servlet-handler",
+        "risk": 0.09903554222863212,
+        "importance": 0.09903554222863212,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/re-cookie-octet",
+        "risk": 0.09841640948248394,
+        "importance": 0.14059487068926277,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/str->bytes",
+        "risk": 0.098093916088437,
+        "importance": 0.1401341658406243,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/html-exception",
+        "risk": 0.09752733341374259,
+        "importance": 0.1393247620196323,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.time/formatter",
+        "risk": 0.09708481352808947,
+        "importance": 0.32361604509363157,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.lint/lint",
+        "risk": 0.09494403843991313,
+        "importance": 0.31648012813304377,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/connection-content-length",
+        "risk": 0.09251368088813222,
+        "importance": 0.13216240126876033,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/connection-last-modified",
+        "risk": 0.09251368088813222,
+        "importance": 0.13216240126876033,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/jar-directory?",
+        "risk": 0.09251368088813222,
+        "importance": 0.13216240126876033,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.parsing/re-quoted",
+        "risk": 0.09232590096085275,
+        "importance": 0.13189414422978965,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.parsing/find-content-type-charset",
+        "risk": 0.09162174111695477,
+        "importance": 0.3054058037231826,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/http-config",
+        "risk": 0.09102238648063721,
+        "importance": 0.30340795493545736,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/->seconds",
+        "risk": 0.08899587289129436,
+        "importance": 0.12713696127327767,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/rfc822-format",
+        "risk": 0.08899587289129436,
+        "importance": 0.12713696127327767,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/re-cookie-value",
+        "risk": 0.08598034733260082,
+        "importance": 0.12282906761800118,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/-pong",
+        "risk": 0.08580411776344003,
+        "importance": 0.28601372587813345,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/path-info",
+        "risk": 0.08448241354794213,
+        "importance": 0.2816080451598071,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/canonical-path",
+        "risk": 0.08419183721880719,
+        "importance": 0.280639457396024,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.io/last-modified-date",
+        "risk": 0.08181462415317493,
+        "importance": 0.27271541384391645,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/elem-partial",
+        "risk": 0.08122090236325569,
+        "importance": 0.11602986051893671,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/async-jetty-raise",
+        "risk": 0.08045498324814788,
+        "importance": 0.2681832774938263,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.time/http-date-formats",
+        "risk": 0.07738507223417118,
+        "importance": 0.2579502407805706,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/write-cookies",
+        "risk": 0.07412802465115996,
+        "importance": 0.24709341550386654,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file-info/make-http-format",
+        "risk": 0.07299094745374733,
+        "importance": 0.24330315817915776,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/directory-transversal?",
+        "risk": 0.07216563773062858,
+        "importance": 0.24055212576876195,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/crypt-algorithm",
+        "risk": 0.0718238684163002,
+        "importance": 0.2394128947210007,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/valid-attr?",
+        "risk": 0.07110809667187973,
+        "importance": 0.10158299524554247,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.params/assoc-param-map",
+        "risk": 0.0694620292009581,
+        "importance": 0.23154009733652703,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.params/parse-params",
+        "risk": 0.0694620292009581,
+        "importance": 0.23154009733652703,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/merge-servlet-keys",
+        "risk": 0.06915400491344743,
+        "importance": 0.23051334971149146,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/merge-servlet-keys",
+        "risk": 0.06915400491344743,
+        "importance": 0.23051334971149146,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/background-thread",
+        "risk": 0.06865454848449473,
+        "importance": 0.09807792640642106,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/strip-quotes",
+        "risk": 0.06716966022886282,
+        "importance": 0.22389886742954276,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/progress-listener",
+        "risk": 0.06677272704101989,
+        "importance": 0.2225757568033996,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/server-connector",
+        "risk": 0.06587984674834145,
+        "importance": 0.2195994891611382,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/url-as-file",
+        "risk": 0.06586219388808141,
+        "importance": 0.21954064629360473,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.keyword-params/keyword-syntax?",
+        "risk": 0.06532285356948987,
+        "importance": 0.2177428452316329,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/find-header",
+        "risk": 0.065,
+        "importance": 0.65,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/file-data",
+        "risk": 0.06361914609197021,
+        "importance": 0.2120638203065674,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//javax.servlet/complete@reify:L49",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/addHeader@reify:L34",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getAttribute@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getCharacterEncoding@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getContentLength@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getContentType@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getHeaderNames@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getHeaders@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getInputStream@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getMethod@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getOutputStream@reify:L34",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getProtocol@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getQueryString@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getRemoteAddr@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getRequestURI@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getScheme@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getServerName@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/getServerPort@reify:L16",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/setContentType@reify:L34",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/setHeader@reify:L34",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-bench//ring.bench.servlet/setStatus@reify:L34",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//java.lang/iterator@reify:L48",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//org.apache.commons.fileupload2.core/getCharacterEncoding@reify:L40",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//org.apache.commons.fileupload2.core/getContentLength@reify:L40",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//org.apache.commons.fileupload2.core/getContentType@reify:L40",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//org.apache.commons.fileupload2.core/getInputStream@reify:L40",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//org.apache.commons.fileupload2.core/isMultipartRelated@reify:L40",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//org.apache.commons.fileupload2.core/update@reify:L23",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/hasNext@reify:L51",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/next@reify:L51",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/->CookieStore",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.memory/->MemoryStore",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/SessionStore",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket.protocols/on-close@clojure.lang.IPersistentMap",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket.protocols/on-error@clojure.lang.IPersistentMap",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket.protocols/on-message@clojure.lang.IPersistentMap",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket.protocols/on-open@clojure.lang.IPersistentMap",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket.protocols/on-ping@clojure.lang.IPersistentMap",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket.protocols/on-pong@clojure.lang.IPersistentMap",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//jakarta.servlet/onComplete@reify:L144",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//jakarta.servlet/onError@reify:L144",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//jakarta.servlet/onStartAsync@reify:L144",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//jakarta.servlet/onTimeout@reify:L144",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketBinary@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketClose@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketConnect@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketError@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketPing@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketPong@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/onWebSocketText@reify:L68",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/writeFailed@reify:L59",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.api/writeSuccess@reify:L59",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//org.eclipse.jetty.ee9.websocket.server/createWebSocket@reify:L93",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.websocket.protocols/-close@reify:L43",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.websocket.protocols/-open?@reify:L43",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.websocket.protocols/-ping@reify:L43",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.websocket.protocols/-pong@reify:L43",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.websocket.protocols/-send-async@reify:L43",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.websocket.protocols/-send@reify:L43",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/AsyncSocket",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/Listener",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/Socket",
+        "risk": 0.06325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 1.0,
+        "status": "untested",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/header",
+        "risk": 0.06315064036745975,
+        "importance": 0.6315064036745974,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/parse-cookies",
+        "risk": 0.06223813034120563,
+        "importance": 0.20746043447068543,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/set-cookies",
+        "risk": 0.06223813034120563,
+        "importance": 0.20746043447068543,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/get-header",
+        "risk": 0.06136600219008568,
+        "importance": 0.6136600219008568,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.parsing/re-charset",
+        "risk": 0.060932701830792545,
+        "importance": 0.20310900610264182,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.mime-type/filename-ext",
+        "risk": 0.060883175503899295,
+        "importance": 0.202943918346331,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/expired?",
+        "risk": 0.060766670104159606,
+        "importance": 0.20255556701386537,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/assoc-vec",
+        "risk": 0.060193644334859006,
+        "importance": 0.2006454811161967,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/websocket-response?",
+        "risk": 0.060078559320810944,
+        "importance": 0.20026186440270316,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/upgrade-to-websocket",
+        "risk": 0.060078559320810944,
+        "importance": 0.20026186440270316,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/websocket-creator",
+        "risk": 0.059542389283865044,
+        "importance": 0.1984746309462168,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/content-length",
+        "risk": 0.059297946436666,
+        "importance": 0.19765982145555333,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/last-modified",
+        "risk": 0.059297946436666,
+        "importance": 0.19765982145555333,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/async-jetty-respond",
+        "risk": 0.05924122329744088,
+        "importance": 0.19747074432480294,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/write-attr-map",
+        "risk": 0.05910502433785743,
+        "importance": 0.1970167477928581,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/write-value",
+        "risk": 0.05910502433785743,
+        "importance": 0.1970167477928581,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/find-param",
+        "risk": 0.058438806342106284,
+        "importance": 0.1947960211403543,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/read-session@CookieStore",
+        "risk": 0.05787324117697312,
+        "importance": 0.08267605882424732,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/read-session@MemoryStore",
+        "risk": 0.05787324117697312,
+        "importance": 0.08267605882424732,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/ex-response",
+        "risk": 0.0569598261505475,
+        "importance": 0.18986608716849168,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/date-header",
+        "risk": 0.0561120985077899,
+        "importance": 0.18704032835929968,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/resource-data@:file",
+        "risk": 0.055469700748345716,
+        "importance": 0.07924242964049388,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/resource-data@:jar",
+        "risk": 0.055469700748345716,
+        "importance": 0.07924242964049388,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/->seconds@Duration",
+        "risk": 0.055456292479891894,
+        "importance": 0.07922327497127414,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/rfc822-format@ZonedDateTime",
+        "risk": 0.055456292479891894,
+        "importance": 0.07922327497127414,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/delete-session@CookieStore",
+        "risk": 0.05544983675986542,
+        "importance": 0.07921405251409347,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/delete-session@MemoryStore",
+        "risk": 0.05544983675986542,
+        "importance": 0.07921405251409347,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/write-session@CookieStore",
+        "risk": 0.05544983675986542,
+        "importance": 0.07921405251409347,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/write-session@MemoryStore",
+        "risk": 0.05544983675986542,
+        "importance": 0.07921405251409347,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/body-size-in-bytes@Object",
+        "risk": 0.054941783366871534,
+        "importance": 0.07848826195267362,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/body-size-in-bytes@String",
+        "risk": 0.054941783366871534,
+        "importance": 0.07848826195267362,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/body-size-in-bytes@java.io.File",
+        "risk": 0.054941783366871534,
+        "importance": 0.07848826195267362,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/body-size-in-bytes@nil",
+        "risk": 0.054941783366871534,
+        "importance": 0.07848826195267362,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/print-string-secret-key-deprecation",
+        "risk": 0.054674845981429236,
+        "importance": 0.18224948660476412,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.parsing/re-value",
+        "risk": 0.05446129179488989,
+        "importance": 0.18153763931629965,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/decode-values",
+        "risk": 0.054051819256170926,
+        "importance": 0.1801727308539031,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/parse-content-type-charset",
+        "risk": 0.05358483903511786,
+        "importance": 0.17861613011705954,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/set-progress-listener",
+        "risk": 0.05358483903511786,
+        "importance": 0.17861613011705954,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/crypt-type",
+        "risk": 0.05314630534709371,
+        "importance": 0.17715435115697906,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/html-ex-response",
+        "risk": 0.051808539975155186,
+        "importance": 0.1726951332505173,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/text-ex-response",
+        "risk": 0.051808539975155186,
+        "importance": 0.1726951332505173,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/hmac-algorithm",
+        "risk": 0.05063943376379907,
+        "importance": 0.16879811254599691,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/make-async-service-method",
+        "risk": 0.050608925386380815,
+        "importance": 0.16869641795460272,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/make-blocking-service-method",
+        "risk": 0.050608925386380815,
+        "importance": 0.16869641795460272,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/make-async-service-method",
+        "risk": 0.050608925386380815,
+        "importance": 0.16869641795460272,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/make-blocking-service-method",
+        "risk": 0.050608925386380815,
+        "importance": 0.16869641795460272,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/redirect-status-codes",
+        "risk": 0.050104885643192695,
+        "importance": 0.16701628547730898,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.reload/reloader",
+        "risk": 0.050104885643192695,
+        "importance": 0.16701628547730898,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/-close",
+        "risk": 0.050104885643192695,
+        "importance": 0.16701628547730898,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/-open?",
+        "risk": 0.050104885643192695,
+        "importance": 0.16701628547730898,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/-ping",
+        "risk": 0.050104885643192695,
+        "importance": 0.16701628547730898,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/get-client-cert",
+        "risk": 0.04936310715443687,
+        "importance": 0.16454369051478956,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/get-content-length",
+        "risk": 0.04936310715443687,
+        "importance": 0.16454369051478956,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/get-headers",
+        "risk": 0.04936310715443687,
+        "importance": 0.16454369051478956,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/make-output-stream",
+        "risk": 0.04821508313352835,
+        "importance": 0.16071694377842782,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/set-headers",
+        "risk": 0.04821508313352835,
+        "importance": 0.16071694377842782,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.memory/MemoryStore",
+        "risk": 0.048209785311704625,
+        "importance": 0.16069928437234876,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/make-output-stream",
+        "risk": 0.04805475471174484,
+        "importance": 0.16018251570581615,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/set-headers",
+        "risk": 0.04805475471174484,
+        "importance": 0.16018251570581615,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/get-client-cert",
+        "risk": 0.0470571911265413,
+        "importance": 0.15685730375513768,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/get-content-length",
+        "risk": 0.0470571911265413,
+        "importance": 0.15685730375513768,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/get-headers",
+        "risk": 0.0470571911265413,
+        "importance": 0.15685730375513768,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/find-file-named",
+        "risk": 0.046575650717450325,
+        "importance": 0.15525216905816774,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/find-file-starting-with",
+        "risk": 0.046575650717450325,
+        "importance": 0.15525216905816774,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/safe-path?",
+        "risk": 0.046575650717450325,
+        "importance": 0.15525216905816774,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/do-every",
+        "risk": 0.046518889697616944,
+        "importance": 0.15506296565872316,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/remove-old-files",
+        "risk": 0.046518889697616944,
+        "importance": 0.15506296565872316,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.time/format-date",
+        "risk": 0.04642724109677334,
+        "importance": 0.1547574703225778,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.keyword-params/keyify-params",
+        "risk": 0.045879105539214156,
+        "importance": 0.15293035179738051,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/assoc-nested",
+        "risk": 0.04584474173376158,
+        "importance": 0.15281580577920528,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/param-pairs",
+        "risk": 0.04584474173376158,
+        "importance": 0.15281580577920528,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/content-type",
+        "risk": 0.04483342373418762,
+        "importance": 0.44833423734187616,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/find-index-file",
+        "risk": 0.04464714554411766,
+        "importance": 0.1488238184803922,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/safely-find-file",
+        "risk": 0.04464714554411766,
+        "importance": 0.1488238184803922,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/safe-file-resource?",
+        "risk": 0.04456560087436016,
+        "importance": 0.14855200291453385,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/ensure-shutdown-clean-up",
+        "risk": 0.04451359020337888,
+        "importance": 0.14837863401126294,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/make-temp-file",
+        "risk": 0.04451359020337888,
+        "importance": 0.14837863401126294,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/start-clean-up",
+        "risk": 0.04451359020337888,
+        "importance": 0.14837863401126294,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session/bare-session-request",
+        "risk": 0.04432522992130557,
+        "importance": 0.1477507664043519,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session/bare-session-response",
+        "risk": 0.04432522992130557,
+        "importance": 0.1477507664043519,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.time/trim-quotes",
+        "risk": 0.04430261965049891,
+        "importance": 0.1476753988349964,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream@String",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream@clojure.lang.ISeq",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream@java.io.File",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream@java.io.InputStream",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream@nil",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/body-string@String",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/body-string@clojure.lang.ISeq",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/body-string@java.io.File",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/body-string@java.io.InputStream",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/body-string@nil",
+        "risk": 0.04427643234275774,
+        "importance": 0.06325204620393964,
+        "exposure": 0.7,
+        "status": "weak",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.mime-type/default-mime-types",
+        "risk": 0.04412015084681233,
+        "importance": 0.14706716948937446,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/unix-domain-server-connector",
+        "risk": 0.04411815359347763,
+        "importance": 0.14706051197825876,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-type/guess-mime-type",
+        "risk": 0.04392199812675537,
+        "importance": 0.1464066604225179,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.params/assoc-query-params",
+        "risk": 0.04392199812675537,
+        "importance": 0.1464066604225179,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/re-cookie",
+        "risk": 0.04379649578122962,
+        "importance": 0.14598831927076542,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/decode-field",
+        "risk": 0.04378022644814988,
+        "importance": 0.1459340881604996,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/parse-html5-charset",
+        "risk": 0.04378022644814988,
+        "importance": 0.1459340881604996,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/response",
+        "risk": 0.0435378277995521,
+        "importance": 0.435378277995521,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/get-resources",
+        "risk": 0.04235253410891209,
+        "importance": 0.14117511369637364,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.resource/wrap-resource-prefer-handler",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.resource/wrap-resource-prefer-resources",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.lint/check-req",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.lint/check-resp",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/wrap-stacktrace-log",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/wrap-stacktrace-web",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/-send",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/-send-async",
+        "risk": 0.042040249752187286,
+        "importance": 0.1401341658406243,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/etag-match?",
+        "risk": 0.041042923113662956,
+        "importance": 0.13680974371220986,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/not-modified-since?",
+        "risk": 0.041042923113662956,
+        "importance": 0.13680974371220986,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.keyword-params/re-namespaced-keyword",
+        "risk": 0.04080794152137182,
+        "importance": 0.13602647173790608,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.keyword-params/re-plain-keyword",
+        "risk": 0.04080794152137182,
+        "importance": 0.13602647173790608,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/ssl-context-factory",
+        "risk": 0.040737307016045714,
+        "importance": 0.13579102338681906,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/find-file",
+        "risk": 0.04010948631280089,
+        "importance": 0.1336982877093363,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/parse-cookie-header",
+        "risk": 0.04002133709817531,
+        "importance": 0.1334044569939177,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/cached-response?",
+        "risk": 0.03994344442052597,
+        "importance": 0.13314481473508658,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/dissoc-header",
+        "risk": 0.03994344442052597,
+        "importance": 0.13314481473508658,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/ok-response?",
+        "risk": 0.03994344442052597,
+        "importance": 0.13314481473508658,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/read-request?",
+        "risk": 0.03994344442052597,
+        "importance": 0.13314481473508658,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file/ensure-dir",
+        "risk": 0.03935203778851882,
+        "importance": 0.13117345929506274,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file/wrap-file-prefer-files",
+        "risk": 0.03935203778851882,
+        "importance": 0.13117345929506274,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file/wrap-file-prefer-handler",
+        "risk": 0.03935203778851882,
+        "importance": 0.13117345929506274,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/get-secret-key",
+        "risk": 0.03935203778851882,
+        "importance": 0.13117345929506274,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/valid-secret-key?",
+        "risk": 0.03935203778851882,
+        "importance": 0.13117345929506274,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session/session-options",
+        "risk": 0.03935203778851882,
+        "importance": 0.13117345929506274,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/async-timeout-listener",
+        "risk": 0.038864799370103946,
+        "importance": 0.12954933123367982,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/create-threadpool",
+        "risk": 0.038864799370103946,
+        "importance": 0.12954933123367982,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/http-connector",
+        "risk": 0.038864799370103946,
+        "importance": 0.12954933123367982,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/ssl-connector",
+        "risk": 0.038864799370103946,
+        "importance": 0.12954933123367982,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/unix-socket-connector",
+        "risk": 0.038864799370103946,
+        "importance": 0.12954933123367982,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/update-servlet-response",
+        "risk": 0.038563695118336086,
+        "importance": 0.38563695118336083,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file-info/guess-mime-type",
+        "risk": 0.03823834997499909,
+        "importance": 0.12746116658333032,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file-info/not-modified-since?",
+        "risk": 0.03823834997499909,
+        "importance": 0.12746116658333032,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/resource-data",
+        "risk": 0.03816407398504699,
+        "importance": 0.12721357995015664,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/build-param-map",
+        "risk": 0.038069676675223575,
+        "importance": 0.12689892225074526,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/file-item-iterable",
+        "risk": 0.038069676675223575,
+        "importance": 0.12689892225074526,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/file-upload",
+        "risk": 0.038069676675223575,
+        "importance": 0.12689892225074526,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/multipart-form?",
+        "risk": 0.038069676675223575,
+        "importance": 0.12689892225074526,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/parse-file-item",
+        "risk": 0.038069676675223575,
+        "importance": 0.12689892225074526,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/handle-request-and-errors",
+        "risk": 0.03800793180668458,
+        "importance": 0.12669310602228195,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/async-proxy-handler",
+        "risk": 0.03800793180668458,
+        "importance": 0.12669310602228195,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/context-handler",
+        "risk": 0.03800793180668458,
+        "importance": 0.12669310602228195,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/create-server",
+        "risk": 0.03800793180668458,
+        "importance": 0.12669310602228195,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/proxy-handler",
+        "risk": 0.03800793180668458,
+        "importance": 0.12669310602228195,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/body-size-in-bytes",
+        "risk": 0.03725907275966269,
+        "importance": 0.12419690919887563,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/nest-params",
+        "risk": 0.03692735970019802,
+        "importance": 0.12309119900066007,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/update-servlet-response",
+        "risk": 0.036752316791025495,
+        "importance": 0.36752316791025497,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.head/head-response",
+        "risk": 0.03495294582509302,
+        "importance": 0.3495294582509302,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.time/attempt-parse",
+        "risk": 0.0341718173347721,
+        "importance": 0.11390605778257368,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.resource/resource-request",
+        "risk": 0.03164801281330438,
+        "importance": 0.31648012813304377,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/CookieStore",
+        "risk": 0.031201468217584055,
+        "importance": 0.10400489405861352,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.mime-type/ext-mime-type",
+        "risk": 0.031103969915887198,
+        "importance": 0.311039699158872,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/content-type",
+        "risk": 0.030559830677544336,
+        "importance": 0.30559830677544336,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/default-store",
+        "risk": 0.030432051549606903,
+        "importance": 0.10144017183202302,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/content-too-large-handler",
+        "risk": 0.03039500462848351,
+        "importance": 0.10131668209494504,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/unsupported-charset-handler",
+        "risk": 0.03039500462848351,
+        "importance": 0.10131668209494504,
+        "exposure": 0.3,
+        "status": "indirect",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file/file-request",
+        "risk": 0.030124692700558866,
+        "importance": 0.30124692700558864,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/status",
+        "risk": 0.028829750348661323,
+        "importance": 0.2882975034866132,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/on-message",
+        "risk": 0.027078052475067834,
+        "importance": 0.2707805247506783,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core-protocols//ring.core.protocols/write-body-to-stream",
+        "risk": 0.025764741328030433,
+        "importance": 0.2576474132803043,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/hmac",
+        "risk": 0.024812954184730774,
+        "importance": 0.24812954184730773,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/character-encoding",
+        "risk": 0.021005353646932352,
+        "importance": 0.2100535364693235,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/make-service-method",
+        "risk": 0.019295734529565133,
+        "importance": 0.1929573452956513,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/make-service-method",
+        "risk": 0.019295734529565133,
+        "importance": 0.1929573452956513,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/cookies-request",
+        "risk": 0.01908333979608717,
+        "importance": 0.19083339796087168,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/cookies-response",
+        "risk": 0.01908333979608717,
+        "importance": 0.19083339796087168,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.memory/memory-store",
+        "risk": 0.01822494866047641,
+        "importance": 0.18224948660476412,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/parse-multipart-params",
+        "risk": 0.017844118632290032,
+        "importance": 0.17844118632290032,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/resource-response",
+        "risk": 0.017458808250825342,
+        "importance": 0.17458808250825342,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.temp-file/temp-file-store",
+        "risk": 0.01739761922611593,
+        "importance": 0.17397619226115932,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.time/parse-date",
+        "risk": 0.01714941857566227,
+        "importance": 0.1714941857566227,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/file-response",
+        "risk": 0.01702720088554933,
+        "importance": 0.1702720088554933,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/get-charset",
+        "risk": 0.016934206886372993,
+        "importance": 0.16934206886372993,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-type/content-type-response",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file-info/file-info-response",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.keyword-params/keyword-params-request",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/nested-params-request",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/not-modified-response",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.params/params-request",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/content-length",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/in-context?",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/update-header",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/on-close",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/on-error",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/on-pong",
+        "risk": 0.0167016285477309,
+        "importance": 0.16701628547730898,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/encrypt",
+        "risk": 0.016330739458935126,
+        "importance": 0.16330739458935126,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/url-response",
+        "risk": 0.014855200291453386,
+        "importance": 0.14855200291453385,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.params/assoc-form-params",
+        "risk": 0.01464066604225179,
+        "importance": 0.1464066604225179,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/read-session",
+        "risk": 0.01409480966851704,
+        "importance": 0.1409480966851704,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/urlencoded-form?",
+        "risk": 0.01405672666569746,
+        "importance": 0.14056726665697458,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/content-length-response",
+        "risk": 0.014013416584062431,
+        "importance": 0.1401341658406243,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.flash/flash-request",
+        "risk": 0.014013416584062431,
+        "importance": 0.1401341658406243,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.flash/flash-response",
+        "risk": 0.014013416584062431,
+        "importance": 0.1401341658406243,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/on-open",
+        "risk": 0.014013416584062431,
+        "importance": 0.1401341658406243,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.io/close!",
+        "risk": 0.013314481473508659,
+        "importance": 0.13314481473508658,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.head/head-request",
+        "risk": 0.013117345929506275,
+        "importance": 0.13117345929506274,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session/session-request",
+        "risk": 0.013117345929506275,
+        "importance": 0.13117345929506274,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session/session-response",
+        "risk": 0.013117345929506275,
+        "importance": 0.13117345929506274,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/pong",
+        "risk": 0.013117345929506275,
+        "importance": 0.13117345929506274,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-websocket-protocols//ring.websocket.protocols/on-ping",
+        "risk": 0.013117345929506275,
+        "importance": 0.13117345929506274,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/delete-session",
+        "risk": 0.012710007144455499,
+        "importance": 0.12710007144455499,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.store/write-session",
+        "risk": 0.012710007144455499,
+        "importance": 0.12710007144455499,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/request-context",
+        "risk": 0.012689892225074526,
+        "importance": 0.12689892225074526,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/multipart-params-request",
+        "risk": 0.012669310602228196,
+        "importance": 0.12669310602228195,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/parse-nested-keys",
+        "risk": 0.012309119900066008,
+        "importance": 0.12309119900066007,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-length/wrap-content-length",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.content-type/wrap-content-type",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.cookies/wrap-cookies",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file-info/wrap-file-info",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.file/wrap-file",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.flash/wrap-flash",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.head/wrap-head",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.keyword-params/wrap-keyword-params",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params.byte-array/byte-array-store",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.multipart-params/wrap-multipart-params",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.nested-params/wrap-nested-params",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.not-modified/wrap-not-modified",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.params/wrap-params",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.resource/wrap-resource",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session.cookie/cookie-store",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.middleware.session/wrap-session",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.async/raising",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.io/piped-input-stream",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.io/string-input-stream",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/body-string",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/request-url",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.request/set-context",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/bad-request",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/charset",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/created",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/not-found",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/redirect",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/redirect-after-post",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/response?",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.util.response/set-cookie",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/close",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/open?",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/ping",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/request-protocols",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/send",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-core//ring.websocket/upgrade-request?",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.handler.dump/handle-dump",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.lint/wrap-lint",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.reload/wrap-reload",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-devel//ring.middleware.stacktrace/wrap-stacktrace",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/defservice",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jakarta-servlet//ring.util.jakarta.servlet/servlet",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-jetty-adapter//ring.adapter.jetty/run-jetty",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/defservice",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      },
+      {
+        "id": "clj:ring-servlet//ring.util.servlet/servlet",
+        "risk": 0.006325204620393964,
+        "importance": 0.06325204620393964,
+        "exposure": 0.1,
+        "status": "direct",
+        "measured": null,
+        "churn": null
+      }
+    ]
+  },
+  "warnings": [],
+  "error": null
+}
