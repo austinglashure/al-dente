@@ -8,14 +8,17 @@ import { libraryHighlight } from './crater';
 import { CraterView, type CraterRequest } from './CraterView';
 import { Details, type Tools } from './Details';
 import { GraphView } from './GraphView';
-import { LibraryList, LibraryPanel } from './Libraries';
+import { CanvasBar } from './CanvasBar';
+import { LeftPanel } from './LeftPanel';
+import { LibraryPanel } from './Libraries';
+import { SourcePanel } from './SourcePanel';
 import { TraceDialog } from './TraceDialog';
 import { layout } from './layout';
-import { certaintyColor, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
+import { edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
-import { TreeView, dirChildren, findDir, topDirIds } from './tree';
-import { TOP_CHOICES, loadViewPrefs, saveViewPrefs } from './viewPrefs';
+import { dirChildren, findDir } from './tree';
+import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
 interface Crumb {
@@ -35,12 +38,7 @@ export function App() {
   const [source, setSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [hideTests, setHideTests] = useState(false);
-  const [hideExternals, setHideExternals] = useState(true);
-  const [hideInterop, setHideInterop] = useState(false);
-  const [hideCore, setHideCore] = useState(false);
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<GNode[]>([]);
+  const [hide, setHide] = useState<HideOptions>({ hideTests: false, hideExternals: true, hideInterop: false, hideCore: false });
   const [panels, setPanels] = usePanels();
   const [spots, setSpots] = useState<BlindSpot[]>([]);
   const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
@@ -331,10 +329,7 @@ export function App() {
     [graph, open, neighbors],
   );
 
-  const isHidden = useCallback(
-    (id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), { hideTests, hideExternals, hideInterop, hideCore }),
-    [graph, hideTests, hideExternals, hideInterop, hideCore],
-  );
+  const isHidden = useCallback((id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), hide), [graph, hide]);
 
   const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
   const counts = { certain: 0, likely: 0, possible: 0 };
@@ -353,17 +348,8 @@ export function App() {
 
   const visible = graph
     .mapNodes((_id, a) => a.node)
-    .filter((n) => !hidden(n, { hideTests, hideExternals, hideInterop, hideCore }))
+    .filter((n) => !hidden(n, hide))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
-
-  const runSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    api
-      .search(query)
-      .then((r) => setResults(r.matches))
-      .catch(fail);
-  };
 
   return (
     <div
@@ -373,214 +359,57 @@ export function App() {
       }}
     >
       {panels.leftOpen && (
-      <aside className="left">
-        <form onSubmit={runSearch} className="search">
-          <input data-testid="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search functions…" aria-label="Search" />
-        </form>
-        {results.length > 0 && (
-          <ul className="results" data-testid="results">
-            {results.map((n) => (
-              <li key={n.id}>
-                <button type="button" data-node-id={n.id} onClick={() => follow(n.id)} title={n.id}>
-                  {n.name} <span className="muted">{n.namespace ?? n.kind}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <label>
-          <input
-            type="checkbox"
-            data-testid="hide-tests"
-            checked={hideTests}
-            onChange={(e) => {
-              setHideTests(e.target.checked);
-              redraw();
-            }}
-          />{' '}
-          Hide tests
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            data-testid="hide-externals"
-            checked={hideExternals}
-            onChange={(e) => {
-              setHideExternals(e.target.checked);
-              redraw();
-            }}
-          />{' '}
-          Hide external libraries
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            data-testid="hide-interop"
-            checked={hideInterop}
-            onChange={(e) => {
-              setHideInterop(e.target.checked);
-              redraw();
-            }}
-          />{' '}
-          Hide interop exits (Java, JS)
-        </label>
-        <label title="clojure.core and cljs.core: let, or, map, str, … Shown again when unchecked.">
-          <input
-            type="checkbox"
-            data-testid="hide-core"
-            checked={hideCore}
-            onChange={(e) => {
-              setHideCore(e.target.checked);
-              redraw();
-            }}
-          />{' '}
-          Hide Clojure core (let, or, map…)
-        </label>
-        <fieldset className="legend" data-testid="legend">
-          <legend>Edges by certainty</legend>
-          {(['certain', 'likely', 'possible'] as const).map((level) => (
-            <label key={level} data-testid={`legend-${level}`}>
-              <input type="checkbox" data-testid={`show-${level}`} checked={levels[level]} onChange={(e) => setLevel(level, e.target.checked)} />{' '}
-              <span className={`swatch swatch-${level}`} style={{ borderTopColor: certaintyColor(level) }} /> {level} ({counts[level]})
-            </label>
-          ))}
-        </fieldset>
-        {notice && (
-          <p className="notice" data-testid="notice">
-            {notice}
-          </p>
-        )}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <LibraryList libs={libs} selected={libUsage?.library ?? null} onSelect={pickLibrary} />
-        <details className="blindspots" data-testid="blindspots" open={spots.length > 0 && spots.length <= 20}>
-          <summary>Blind spots ({spots.length})</summary>
-          <p className="muted small-print">What the analyzer cannot see through. Click one to show it.</p>
-          <ul>
-            {spots.map((b, i) => (
-              <li key={`${b.category}-${b.node ?? ''}-${i}`}>
-                <span className={`badge badge-${b.category}`}>{b.category}</span>{' '}
-                {b.node ? (
-                  <button type="button" data-node-id={b.node} onClick={() => b.node && follow(b.node)} title={b.message}>
-                    {b.site ? `${b.site.file}:${b.site.line}` : b.node}
-                  </button>
-                ) : (
-                  <span title={b.message}>{b.site ? `${b.site.file}:${b.site.line}` : '–'}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </details>
-        {view === 'namespaces' && crumbs.length <= 1 && tree ? (
-          <TreeView
-            root={tree}
-            collapsed={collapsed}
-            selected={selected}
-            onToggle={toggleDir}
-            onSelect={select}
-            onExpandAll={() => setCollapsed(new Set())}
-            onCollapseAll={() => setCollapsed(new Set(topDirIds(tree)))}
-          />
-        ) : (
-        <>
-        <h2>On the canvas ({visible.length})</h2>
-        <ul className="nodes" data-testid="node-list">
-          {visible.map((n) => (
-            <li key={n.id} className={n.id === selected ? 'selected' : ''}>
-              <button type="button" className="name" data-node-id={n.id} onClick={() => select(n.id)} title={`${n.kind}: ${n.id}`}>
-                {labelFor(n)}
-              </button>
-              {isAggregate(n) && (
-                <button type="button" className="small" data-open={n.id} onClick={() => open(n)} title="Show only this">
-                  open
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-        </>
-        )}
-      </aside>
+        <LeftPanel
+          api={api}
+          hide={hide}
+          onHide={(next) => {
+            setHide(next);
+            redraw();
+          }}
+          levels={levels}
+          counts={counts}
+          onLevel={setLevel}
+          notice={notice}
+          error={error}
+          onError={fail}
+          libs={libs}
+          selectedLib={libUsage?.library ?? null}
+          onPickLib={pickLibrary}
+          spots={spots}
+          tree={view === 'namespaces' && crumbs.length <= 1 ? tree : null}
+          collapsed={collapsed}
+          onToggleDir={toggleDir}
+          onSetCollapsed={setCollapsed}
+          visible={visible}
+          selected={selected}
+          onSelect={select}
+          onFollow={follow}
+          onOpen={open}
+        />
       )}
       {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}
       <main className="center">
         {crater ? (
-          <CraterView key={JSON.stringify(crater)} api={api} request={crater} onClose={() => setCrater(null)} onSelect={select} hideCoreInitially={hideCore} />
+          <CraterView key={JSON.stringify(crater)} api={api} request={crater} onClose={() => setCrater(null)} onSelect={select} hideCoreInitially={!!hide.hideCore} />
         ) : (
         <>
-        <nav className="breadcrumb" data-testid="breadcrumb" aria-label="What is open">
-          {crumbs.map((c, i) => (
-            <span key={`${i}-${c.label}`}>
-              {i > 0 && <span className="muted"> › </span>}
-              {i < crumbs.length - 1 ? (
-                <button type="button" onClick={() => show(c, crumbs.slice(0, i))}>
-                  {c.label}
-                </button>
-              ) : (
-                <strong>{c.label}</strong>
-              )}
-            </span>
-          ))}
-          <span className="view-switch" role="group" aria-label="Overview">
-            <button type="button" data-testid="view-units" aria-pressed={view === 'units'} onClick={() => switchView('units')} title="Units and how they depend on each other">
-              Units
-            </button>
-            <button
-              type="button"
-              data-testid="view-namespaces"
-              aria-pressed={view === 'namespaces'}
-              onClick={() => switchView('namespaces')}
-              title="Every namespace in the repository on one map (no externals)"
-            >
-              All namespaces
-            </button>
-          </span>
-          {view === 'namespaces' && (
-            <label className="top-select" title="How many namespaces to show, busiest first">
-              Top{' '}
-              <select
-                data-testid="top"
-                value={top}
-                onChange={(e) => {
-                  setTop(Number(e.target.value));
-                  setNotice(null);
-                }}
-              >
-                {TOP_CHOICES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <button type="button" className="paste-trace" data-testid="paste-trace" onClick={() => setTraceOpen(true)} title="Paste a stack trace and pin a crater to it">
-            Paste trace
-          </button>
-          <span className="panel-toggles">
-            <button
-              type="button"
-              data-testid="toggle-left"
-              aria-pressed={panels.leftOpen}
-              onClick={() => setPanels({ leftOpen: !panels.leftOpen })}
-              title={panels.leftOpen ? 'Hide the list' : 'Show the list'}
-            >
-              {panels.leftOpen ? '◀ list' : '▶ list'}
-            </button>
-            <button
-              type="button"
-              data-testid="toggle-right"
-              aria-pressed={panels.rightOpen}
-              onClick={() => setPanels({ rightOpen: !panels.rightOpen })}
-              title={panels.rightOpen ? 'Hide details' : 'Show details'}
-            >
-              {panels.rightOpen ? 'details ▶' : 'details ◀'}
-            </button>
-          </span>
-        </nav>
+        <CanvasBar
+          crumbs={crumbs}
+          onCrumb={(i) => {
+            const c = crumbs[i];
+            if (c) show(c, crumbs.slice(0, i));
+          }}
+          view={view}
+          onView={switchView}
+          top={top}
+          onTop={(n) => {
+            setTop(n);
+            setNotice(null);
+          }}
+          onPasteTrace={() => setTraceOpen(true)}
+          panels={panels}
+          setPanels={setPanels}
+        />
         <GraphView
           graph={graph}
           version={version}
@@ -633,32 +462,5 @@ export function App() {
         />
       )}
     </div>
-  );
-}
-
-/** The selected node's source with a button that copies it. Keyed by the
- *  selection, so "Copied" resets when the selection changes.
- *  Example: `<SourcePanel source="(defn f [] 1)" />`. */
-function SourcePanel({ source }: { source: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    void navigator.clipboard
-      ?.writeText(source)
-      .then(() => {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
-      })
-      .catch(() => setCopied(false));
-  };
-  return (
-    <section>
-      <div className="details-head">
-        <h2>Source</h2>
-        <button type="button" data-testid="copy-source" onClick={copy} title="Copy the source to the clipboard">
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-      <pre data-testid="source">{source}</pre>
-    </section>
   );
 }
