@@ -11,6 +11,7 @@ Principle from the handoff: types make inference easier, and optional types are 
 **Build**
 - Two-day spike: compare Tree-sitter plus an own resolver against `oxc` (parser, semantic, resolver) for TypeScript, and Tree-sitter against `ruff`'s parser crates for Python, on parse speed, error tolerance and how much scope and import information comes for free. Write the result into `decisions.md` as D13.
 - Review the `Adapter` trait and `FactBatch` against what the two languages need (classes and methods, decorators, module-level code, re-exports); extend the model if required and update `03-graph-model.md`.
+- Check the same review against Java and C# (decision D12), without building them: overloaded methods (signatures in IDs), interfaces and abstract classes with several implementers, nested and partial classes, annotations and attributes. Record anything the model cannot express in `03-graph-model.md` as a known gap.
 - Language tags `py` and `ts` (JavaScript files are analyzed by the `ts` adapter with `langs: ["js"]`).
 
 **Accept**

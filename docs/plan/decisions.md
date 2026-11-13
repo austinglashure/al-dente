@@ -73,3 +73,9 @@ Matches Leña's manifest. Add the full license text as `LICENSE`, SPDX headers a
 **Decision.** Parse with Tree-sitter (or `oxc` for TypeScript if the Phase 10 spike prefers it), resolve imports and scopes in Rust, treat type annotations as evidence that raises certainty.
 
 **Why.** Keeps the single-binary promise and the static rule (the TypeScript compiler and Python tools want the project's dependencies installed). It fits the over-approximate-with-certainty model. Phase 10 opens with a time-boxed spike that can revise the parser choice but not the no-runtime constraint.
+
+## D12. Java and C# are later languages, after Phase 10
+
+**Decision** (Austin, 2026-11-13). Java and C# join the language list as goals after Phase 10. They get no phase or work packages yet. Like D11, they will be native Rust adapters with no JVM or .NET runtime: Tree-sitter plus our own resolver, build files (`pom.xml`, `.csproj`) read as data, Gradle build scripts only on a best-effort, read-as-data basis, and reflection and dependency injection as blind spots or catalog rules.
+
+**Why.** Both are statically typed with directory-shaped packages, so they fit the certainty model well. A Java adapter would also let Clojure's interop exits end at real Java code. Naming them now lets WP10.1's model review check the model against them (overloading needs signatures in IDs; interface dispatch). **Not chosen for now:** Rust, C and C++ (discussed the same day; Rust would let Al Dente analyze itself, but C and C++ need build flags the static rule cannot get).

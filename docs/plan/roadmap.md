@@ -30,6 +30,8 @@ Twelve phases. Each ends in something Austin can run. Work packages (WPs) and th
 - **New languages after the model has been stressed** by eight phases of Clojure. The adapter trait exists from Phase 1 so nothing Clojure-specific leaks into the core.
 - **Execution last.** It is the only feature that can hurt the user, so it lands after the vetting it depends on.
 
+**Later languages.** Java and C# come after Phase 10 (decision D12). They have no phase yet.
+
 Phases 6, 7 and 8 are independent of each other and can be reordered to taste after Phase 5. Phase 9 can move earlier if the acceptance repositories turn out to be slow.
 
 ## Use-case trace
@@ -54,6 +56,7 @@ Phases 6, 7 and 8 are independent of each other and can be reordered to taste af
 | Three operating systems | 0 onward | `02` |
 | Scale, monorepos | 1 (units), 5, 9 | `02`, `06` |
 | Python, TypeScript | 10 | phase 10, decision D11 |
+| Java, C# | after 10 (no phase yet) | decision D12 |
 
 ## Acceptance repositories
 
