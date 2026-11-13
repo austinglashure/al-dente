@@ -117,3 +117,21 @@ export interface BlindspotReport {
   blindspots: BlindSpot[];
   diagnostics: { path: string | null; code: string; message: string }[];
 }
+
+/** A row of the directory tree: a directory, or a chain of directories that
+ *  each hold only the next one, shown as one row. */
+export interface TreeDir {
+  id: string | null;
+  path: string;
+  label: string;
+  dirs: TreeDir[];
+  files: TreeFile[];
+}
+
+/** A source file in the tree. */
+export interface TreeFile {
+  path: string;
+  name: string;
+  namespaces: string[];
+  status: 'analyzed' | 'parse-error' | 'not-analyzed';
+}

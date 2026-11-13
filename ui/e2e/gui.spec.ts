@@ -16,6 +16,8 @@ function guardNetwork(page: Page): string[] {
 
 /** The node-list entry for a node ID. */
 const listed = (page: Page, id: string) => page.locator(`[data-testid="node-list"] [data-node-id="${id}"]`);
+/** The directory-tree row for a node ID (a directory or a file's namespace). */
+const inTree = (page: Page, id: string) => page.locator(`[data-testid="tree"] [data-node-id="${id}"]`);
 
 test.describe('clj-mini', () => {
   let server: Server;
@@ -256,16 +258,15 @@ test.describe('global namespace map', () => {
       await page.getByTestId('view-namespaces').click();
       await expect(page.getByTestId('view-namespaces')).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByTestId('breadcrumb')).toContainText('All namespaces');
-      await expect(listed(page, 'clj:services/orders//orders.core')).toBeVisible();
-      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
-      await expect(listed(page, 'unit:services/orders')).toHaveCount(0);
-      // Repository code only: no externals on the global map.
-      await expect(page.locator('[data-testid="node-list"] [data-node-id^="ext:"]')).toHaveCount(0);
+      // The left panel is the directory tree, fully expanded.
+      await expect(inTree(page, 'clj:services/orders//orders.core')).toBeVisible();
+      await expect(inTree(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await expect(page.getByTestId('node-list')).toHaveCount(0);
 
       // Node cap: keep the namespace level, show only the busiest.
       await page.getByTestId('top').selectOption('100');
       await expect(page.getByTestId('top')).toHaveValue('100');
-      await expect.poll(() => requests.some((u) => u.includes('scope=repo') && u.includes('top=100'))).toBe(true);
+      await expect.poll(() => requests.some((u) => u.includes('/tree/graph') && u.includes('top=100'))).toBe(true);
 
       await page.getByTestId('view-units').click();
       await expect(listed(page, 'unit:services/orders')).toBeVisible();
@@ -290,14 +291,16 @@ test.describe('requests', () => {
       expect(api('graph')).toHaveLength(1);
 
       await page.getByTestId('view-namespaces').click();
-      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await expect(inTree(page, 'clj:services/billing//billing.core')).toBeVisible();
       await page.getByTestId('top').selectOption('100');
       await page.waitForTimeout(300);
-      // Initial units load, namespaces at 250, namespaces at 100; nothing else.
-      expect(api('graph')).toHaveLength(3);
+      // The units load, then the tree map at 250 and at 100; nothing else.
+      expect(api('graph')).toHaveLength(1);
+      expect(api('tree/graph')).toHaveLength(2);
+      expect(api('tree')).toHaveLength(1);
       expect(api('snapshot')).toHaveLength(1);
 
-      await listed(page, 'clj:services/billing//billing.core').click();
+      await inTree(page, 'clj:services/billing//billing.core').click();
       await expect(page.getByTestId('details')).toContainText('billing.core');
       await page.waitForTimeout(300);
       expect(api('source')).toHaveLength(0);
@@ -311,18 +314,21 @@ test.describe('remembered view', () => {
   test('a reload reopens the namespace map with the chosen Top', async ({ page }) => {
     const server = await startServer('mono-mini');
     try {
-      guardNetwork(page);
+      const requests = guardNetwork(page);
       await page.goto(server.url);
       await expect(listed(page, 'unit:services/orders')).toBeVisible();
       await page.getByTestId('view-namespaces').click();
       await page.getByTestId('top').selectOption('500');
-      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await expect(inTree(page, 'clj:services/billing//billing.core')).toBeVisible();
 
+      const before = requests.length;
       await page.reload();
       await expect(page.getByTestId('view-namespaces')).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByTestId('top')).toHaveValue('500');
-      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
-      await expect(listed(page, 'unit:services/orders')).toHaveCount(0);
+      await expect(inTree(page, 'clj:services/billing//billing.core')).toBeVisible();
+      await page.waitForTimeout(300);
+      const after = requests.slice(before).filter((u) => new URL(u).pathname === '/api/v1/tree/graph');
+      expect(after, 'the remembered view loads once').toHaveLength(1);
     } finally {
       server.close();
     }
@@ -344,6 +350,47 @@ test.describe('source', () => {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       expect(copied).toBe(await page.getByTestId('source').innerText());
       expect(copied).toContain('(defn checkout');
+    } finally {
+      server.close();
+    }
+  });
+});
+
+test.describe('directory tree', () => {
+  test('collapsing a directory folds the graph to it; expand all and collapse all', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      const requests = guardNetwork(page);
+      await page.goto(server.url);
+      await page.getByTestId('view-namespaces').click();
+      const services = page.locator('[data-testid="tree-toggle"][data-dir="dir:services"]');
+      await expect(services).toHaveAttribute('aria-expanded', 'true');
+
+      await services.click();
+      await expect(services).toHaveAttribute('aria-expanded', 'false');
+      await expect(inTree(page, 'clj:services/orders//orders.core')).toHaveCount(0);
+      await expect.poll(() => requests.some((u) => u.includes('/tree/graph') && decodeURIComponent(u).includes('collapsed=dir:services'))).toBe(true);
+
+      // A directory selected shows what it holds and what it uses.
+      await inTree(page, 'dir:services').click();
+      const details = page.getByTestId('details');
+      await expect(details.locator('h2')).toHaveText('services/');
+      await expect(details).toContainText('directory');
+      await expect(details.locator('[data-testid="child"][data-node-id="dir:services/orders"]')).toBeVisible();
+      // Two rows: a calls edge and a requires edge.
+      await expect(details.locator('[data-testid="callee"][data-node-id="clj:libs/common//common.util"]')).toHaveCount(2);
+
+      // Double-clicking a collapsed directory on the canvas expands it (via the tools here).
+      await details.locator('[data-action="open"]').click();
+      await expect(services).toHaveAttribute('aria-expanded', 'true');
+      await expect(inTree(page, 'clj:services/orders//orders.core')).toBeVisible();
+
+      await page.getByTestId('tree-collapse-all').click();
+      await expect(services).toHaveAttribute('aria-expanded', 'false');
+      await expect(page.locator('[data-testid="tree-toggle"][data-dir="dir:libs/common/src/common"]')).toHaveAttribute('aria-expanded', 'false');
+      await page.getByTestId('tree-expand-all').click();
+      await expect(services).toHaveAttribute('aria-expanded', 'true');
+      await expect(inTree(page, 'clj:libs/common//common.util')).toBeVisible();
     } finally {
       server.close();
     }

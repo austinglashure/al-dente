@@ -29,6 +29,7 @@ export function newGraph(): CanvasGraph {
 
 const KIND_COLORS: Record<string, string> = {
   unit: '#6a51a3',
+  directory: '#807dba',
   namespace: '#2171b5',
   symbol: '#238b45',
   impl: '#41ab5d',
@@ -115,7 +116,7 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
       label: labelFor(n),
       x: base.x + (random() - 0.5) * 10,
       y: base.y + (random() - 0.5) * 10,
-      size: n.kind === 'unit' || n.kind === 'namespace' ? 8 : n.kind === 'hole' ? 7 : 4,
+      size: n.kind === 'unit' || n.kind === 'directory' ? 9 : n.kind === 'namespace' ? 8 : n.kind === 'hole' ? 7 : 4,
       color: kindColor(n.kind),
       node: n,
     });
@@ -147,6 +148,7 @@ export function dropNodes(g: CanvasGraph, ids: string[]): void {
  *  Example: `labelFor({kind: 'unit', name: 'modules/reitit-core'})` is `'reitit-core'`. */
 export function labelFor(n: GNode): string {
   if (n.kind === 'hole') return `⚠ ${n.name}`;
+  if (n.kind === 'directory') return `${n.name}/`;
   if (n.kind !== 'unit') return n.name;
   if (n.name === '.') return '(root)';
   return n.name.split('/').pop() ?? n.name;
@@ -156,7 +158,7 @@ export function labelFor(n: GNode): string {
  *  loading its neighborhood.
  *  Example: `isAggregate({kind: 'namespace'} as GNode)` is `true`. */
 export function isAggregate(n: GNode): boolean {
-  return n.kind === 'unit' || n.kind === 'namespace';
+  return n.kind === 'unit' || n.kind === 'namespace' || n.kind === 'directory';
 }
 
 /** Whether a node ID can have source to show: symbols, impls and holes do;

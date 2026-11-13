@@ -9,7 +9,8 @@ import { GraphView } from './GraphView';
 import { layout } from './layout';
 import { certaintyColor, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
-import type { BlindSpot, GNode, Payload, ShowResult, UnitInfo } from './types';
+import type { BlindSpot, GNode, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
+import { TreeView, dirChildren, findDir, topDirIds } from './tree';
 import { TOP_CHOICES, loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
@@ -43,6 +44,9 @@ export function App() {
   const [top, setTop] = useState(initialPrefs.top);
   useEffect(() => saveViewPrefs({ view, top }), [view, top]);
   const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
+  const [tree, setTree] = useState<TreeDir | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const collapsedRef = useRef(collapsed);
   // Read at load time, so the root views (and the effect that loads the
   // first one) do not change identity when these do.
   const topRef = useRef(top);
@@ -50,7 +54,8 @@ export function App() {
   useLayoutEffect(() => {
     topRef.current = top;
     namespaceCountRef.current = namespaceCount;
-  }, [top, namespaceCount]);
+    collapsedRef.current = collapsed;
+  }, [top, namespaceCount, collapsed]);
 
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   // A ref, so callbacks that read the levels keep their identity and do not
@@ -79,7 +84,7 @@ export function App() {
       namespaces: {
         label: 'All namespaces',
         load: () =>
-          api.allNamespaces(topRef.current).then(({ data }) => {
+          api.treeGraph([...collapsedRef.current], topRef.current).then(({ data }) => {
             if (data.truncated) {
               const shown = data.nodes.filter((n) => n.kind === 'namespace').length;
               const total = namespaceCountRef.current;
@@ -125,11 +130,32 @@ export function App() {
     show(roots[initialPrefs.view], []);
   }, [api, show, fail, roots, initialPrefs]);
 
-  // A new Top value reloads the namespace map.
+  // A new Top value or a folded/unfolded directory reloads the namespace
+  // map; not on the first render, which the first-view effect loads.
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
     if (view === 'namespaces') show(roots.namespaces, []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [top]);
+  }, [top, collapsed]);
+
+  // The tree is loaded the first time the namespace view is shown.
+  useEffect(() => {
+    if (view === 'namespaces' && tree === null) api.tree().then(setTree).catch(fail);
+  }, [view, tree, api, fail]);
+
+  /** Folds or unfolds one directory of the tree. */
+  const toggleDir = useCallback((id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   /** Switches the canvas to the unit overview or the global namespace map. */
   const switchView = useCallback(
@@ -146,6 +172,26 @@ export function App() {
       setSelected(id);
       setDetails(null);
       setSource(null);
+      if (id.startsWith('dir:')) {
+        // Directories are not stored: describe one from the tree and the
+        // edges on the canvas.
+        const node: GNode = graph.hasNode(id)
+          ? graph.getNodeAttribute(id, 'node')
+          : { id, kind: 'directory', name: (tree && findDir(tree, id)?.label) ?? id };
+        const neighbor = (key: string, other: string): Neighbor => {
+          const e = graph.getEdgeAttribute(key, 'edge');
+          const o = graph.hasNode(other) ? graph.getNodeAttribute(other, 'node') : null;
+          return { id: other, name: o ? labelFor(o) : other, kind: e.kind, certainty: e.certainty ?? null, reason: e.reason ?? null, sites: e.sites ?? [], count: e.count ?? null };
+        };
+        const has = graph.hasNode(id);
+        setDetails({
+          node,
+          callers: has ? graph.inEdges(id).map((k) => neighbor(k, graph.source(k))) : [],
+          callees: has ? graph.outEdges(id).map((k) => neighbor(k, graph.target(k))) : [],
+          children: tree ? dirChildren(tree, id) : [],
+        });
+        return;
+      }
       api.node(id).then(setDetails).catch(fail);
       if (hasSource(id)) {
         api
@@ -154,7 +200,7 @@ export function App() {
           .catch(() => setSource(''));
       }
     },
-    [api, fail],
+    [api, fail, graph, tree],
   );
 
   const deselect = useCallback(() => {
@@ -175,6 +221,10 @@ export function App() {
    *  namespaces it talks to as context) on a canvas of its own. */
   const open = useCallback(
     (n: GNode) => {
+      if (n.kind === 'directory') {
+        toggleDir(n.id);
+        return;
+      }
       let load: () => Promise<Payload>;
       if (n.kind === 'unit') {
         load = () => api.unitGraph(n.id).then((r) => r.data);
@@ -189,7 +239,7 @@ export function App() {
       show({ label: labelFor(n), load }, crumbs);
       select(n.id);
     },
-    [api, graph, crumbs, show, select],
+    [api, graph, crumbs, show, select, toggleDir],
   );
 
   const expandHere = useCallback(
@@ -374,6 +424,18 @@ export function App() {
             ))}
           </ul>
         </details>
+        {view === 'namespaces' && crumbs.length <= 1 && tree ? (
+          <TreeView
+            root={tree}
+            collapsed={collapsed}
+            selected={selected}
+            onToggle={toggleDir}
+            onSelect={select}
+            onExpandAll={() => setCollapsed(new Set())}
+            onCollapseAll={() => setCollapsed(new Set(topDirIds(tree)))}
+          />
+        ) : (
+        <>
         <h2>On the canvas ({visible.length})</h2>
         <ul className="nodes" data-testid="node-list">
           {visible.map((n) => (
@@ -389,6 +451,8 @@ export function App() {
             </li>
           ))}
         </ul>
+        </>
+        )}
       </aside>
       )}
       {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}

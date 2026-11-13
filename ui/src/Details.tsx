@@ -22,6 +22,7 @@ function where(n: GNode): string {
 /** What an aggregate's children are called.
  *  Example: `childNoun('unit')` is `'namespaces'`. */
 function childNoun(kind: string): string {
+  if (kind === 'directory') return 'directories and files';
   return kind === 'unit' ? 'namespaces' : kind === 'namespace' ? 'functions and vars' : 'implementations';
 }
 
@@ -29,7 +30,8 @@ function childNoun(kind: string): string {
  *  Example: `<Details d={show} unit={info} tools={tools} />`. */
 export function Details({ d, unit, tools, onClose }: { d: ShowResult; unit: UnitInfo | undefined; tools: Tools; onClose: () => void }) {
   const n = d.node;
-  const aggregate = n.kind === 'unit' || n.kind === 'namespace';
+  const aggregate = n.kind === 'unit' || n.kind === 'namespace' || n.kind === 'directory';
+  const directory = n.kind === 'directory';
   const relations = aggregate ? ['Used by', 'Depends on'] : ['Callers', 'Callees'];
   return (
     <section data-testid="details">
@@ -46,11 +48,11 @@ export function Details({ d, unit, tools, onClose }: { d: ShowResult; unit: Unit
       </p>
       <div className="tools">
         {aggregate && (
-          <button type="button" data-action="open" onClick={() => tools.open(n)} title="Show only this on the canvas">
-            Open
+          <button type="button" data-action="open" onClick={() => tools.open(n)} title={directory ? 'Unfold this directory in the tree and the graph' : 'Show only this on the canvas'}>
+            {directory ? 'Expand' : 'Open'}
           </button>
         )}
-        {aggregate && (
+        {aggregate && !directory && (
           <button type="button" data-action="expand" onClick={() => tools.expandHere(n.id)} title="Add its contents to the canvas">
             Expand here
           </button>

@@ -2,7 +2,7 @@
 // opened (`/?token=…`); it is kept in sessionStorage, removed from the
 // address bar, and sent as a header on every API call.
 
-import type { BlindspotReport, Envelope, FindResult, Payload, ShowResult, SnapshotOverview } from './types';
+import type { BlindspotReport, Envelope, FindResult, Payload, ShowResult, SnapshotOverview, TreeDir } from './types';
 
 const TOKEN_KEY = 'aldente-token';
 
@@ -75,8 +75,11 @@ export class Api {
 
   snapshot = () => this.json<SnapshotOverview>('snapshot');
   graph = () => this.envelope<Payload>('graph');
-  /** The `top` busiest repository namespaces (and holes), without externals. */
-  allNamespaces = (top: number) => this.envelope<Payload>('graph', { level: 'namespace', scope: 'repo', top });
+  /** The repository's directory tree. */
+  tree = () => this.json<TreeDir>('tree');
+  /** The repository's code at the tree's resolution: each collapsed
+   *  directory one node, at most the `top` busiest nodes. */
+  treeGraph = (collapsed: string[], top: number) => this.envelope<Payload>('tree/graph', { collapsed, top });
   unitGraph = (unit: string) => this.envelope<Payload>('graph', { level: 'namespace', unit });
   neighborhood = (id: string) => this.json<Payload>('neighborhood', { id, depth: 1 });
   expand = (id: string, visible: string[]) => this.json<Payload>('expand', { id, visible });
