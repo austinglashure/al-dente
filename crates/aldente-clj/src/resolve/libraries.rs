@@ -133,6 +133,7 @@ impl<'a> Resolver<'a> {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         });
         self.edge(
             id,

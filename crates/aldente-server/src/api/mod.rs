@@ -21,14 +21,15 @@ mod measures;
 
 pub use crater::{checklist, crater, crater_trace, trace_normalize};
 pub use graph::{
-    blindspots, expand, graph, neighborhood, node, search, snapshot, source, tree, tree_graph,
+    blindspots, expand, expand_post, graph, neighborhood, node, search, snapshot, source, tree,
+    tree_graph,
 };
 pub use libs::{lib, libs};
 pub use measures::{churn, coverage, cycles, defaults, hotspots, metrics, subgraph};
 
 type St = State<Arc<AppState>>;
 
-/// The most children `/expand` returns before marking the result truncated.
+/// The most children one `/expand` page returns (`limit` is clamped to it).
 const EXPAND_LIMIT: usize = 200;
 
 /// A JSON success envelope.

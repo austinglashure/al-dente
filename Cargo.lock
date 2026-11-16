@@ -163,6 +163,7 @@ dependencies = [
  "aldente-model",
  "aldente-rules",
  "axum",
+ "bench",
  "blake3",
  "jsonschema",
  "rust-embed",

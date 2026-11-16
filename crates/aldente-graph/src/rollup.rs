@@ -8,6 +8,8 @@
 //! - `unit`: units; invocation edges rolled up between different units.
 //!   Externals have no library until Phase 2, so they are left out.
 //!
+//! Unit and namespace nodes carry `members`, how many nodes they contain.
+//!
 //! Rolled-up edges carry `count`, `by_certainty`, the strongest certainty,
 //! and the most frequent reason among their members (ties: the first in
 //! `Reason` order), so they still satisfy the edge invariants.
@@ -108,6 +110,7 @@ impl Graph {
         );
         edges.sort_by(|a, b| (&a.from, &a.to, a.kind).cmp(&(&b.from, &b.to, b.kind)));
         let mut nodes: Vec<Node> = nodes.into_values().collect();
+        self.set_members(&mut nodes);
         nodes.sort_unstable_by(|a, b| a.id.cmp(&b.id));
         GraphPayload {
             nodes,
@@ -153,6 +156,22 @@ impl Graph {
         }
     }
 
+    /// Sets `members` on the unit and namespace nodes: how many nodes each
+    /// contains directly.
+    ///
+    /// Example: a namespace with functions `f` and `g` gets `members: Some(2)`.
+    pub(crate) fn set_members(&self, nodes: &mut [Node]) {
+        let mut contained: HashMap<&NodeId, u64> = HashMap::new();
+        for e in self.edges.iter().filter(|e| e.kind == EdgeKind::Contains) {
+            *contained.entry(&e.from).or_default() += 1;
+        }
+        for n in nodes {
+            if matches!(n.kind, NodeKind::Namespace | NodeKind::Unit) {
+                n.members = Some(contained.get(&n.id).copied().unwrap_or(0));
+            }
+        }
+    }
+
     /// The node for a group ID: the stored node if there is one, otherwise a
     /// synthesized namespace-level external.
     ///
@@ -173,6 +192,7 @@ impl Graph {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         })
     }
 }
@@ -232,6 +252,7 @@ mod tests {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         }
     }
 
@@ -319,6 +340,37 @@ mod tests {
         for e in &p.edges {
             e.validate().unwrap();
         }
+    }
+
+    /// WP5.2: aggregates say how many children they contain.
+    #[test]
+    fn rolled_up_aggregates_carry_their_member_counts() {
+        let mut g = graph();
+        for (from, to) in [
+            ("unit:.", "clj:.//a"),
+            ("unit:.", "clj:.//b"),
+            ("clj:.//a", "clj:.//a/f"),
+            ("clj:.//a", "clj:.//a/g"),
+            ("clj:.//b", "clj:.//b/h"),
+        ] {
+            let mut e = edge(from, to, EdgeKind::Contains, Certainty::Certain);
+            e.certainty = None;
+            e.reason = None;
+            g.edges.push(e);
+        }
+        let members = |p: &GraphPayload, s: &str| {
+            p.nodes
+                .iter()
+                .find(|n| n.id == id(s))
+                .and_then(|n| n.members)
+        };
+        let ns = g.payload(AggregationLevel::Namespace);
+        assert_eq!(members(&ns, "clj:.//a"), Some(2));
+        assert_eq!(members(&ns, "clj:.//b"), Some(1));
+        assert_eq!(
+            members(&g.payload(AggregationLevel::Unit), "unit:."),
+            Some(2)
+        );
     }
 
     #[test]

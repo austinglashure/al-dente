@@ -27,6 +27,7 @@ impl<'a> Resolver<'a> {
                 loc: location(&def.filename, def.row, def.col, def.end_row, def.end_col),
                 doc: def.doc.clone(),
                 signature: None,
+                members: None,
             });
             node.langs.insert(lang);
             if is_test {
@@ -66,6 +67,7 @@ impl<'a> Resolver<'a> {
             loc: location(&file, 1, 1, None, None),
             doc: None,
             signature: None,
+            members: None,
         });
         node.langs.extend(langs);
     }
@@ -127,6 +129,7 @@ impl<'a> Resolver<'a> {
                 loc: location(&def.filename, def.row, def.col, def.end_row, def.end_col),
                 doc: def.doc.clone(),
                 signature: def.arglist_strs.as_ref().map(|a| a.join(" ")),
+                members: None,
             });
             node.langs.insert(lang);
             node.flags.extend(flags);
@@ -274,6 +277,7 @@ impl<'a> Resolver<'a> {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         });
         self.edge(
             id,

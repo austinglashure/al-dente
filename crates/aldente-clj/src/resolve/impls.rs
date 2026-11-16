@@ -147,6 +147,7 @@ impl<'a> Resolver<'a> {
             ),
             doc: None,
             signature: None,
+            members: None,
         });
         node.unit = Some(NodeId::Unit(self.unit.dir.clone()));
         node.langs.insert(lang);

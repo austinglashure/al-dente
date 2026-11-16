@@ -21,6 +21,54 @@ pub(crate) async fn panics() -> &'static str {
     panic!("handler panic for tests")
 }
 
+/// Test-only middleware: a graph envelope over the payload cap becomes a
+/// 500 naming the overflow, so any test that reaches it fails.
+///
+/// Example: a `/graph` answer with 2,001 nodes gives 500.
+pub(crate) async fn cap_check(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let res = next.run(req).await;
+    let (parts, body) = res.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, usize::MAX).await else {
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "unreadable body",
+        )
+            .into_response();
+    };
+    if let Some(msg) = cap_violation(&bytes) {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
+    }
+    axum::response::Response::from_parts(parts, axum::body::Body::from(bytes))
+}
+
+/// What is over the cap in a graph envelope, if anything.
+///
+/// Example: `{"schema":"aldente/graph/v1","data":{"nodes":[…2001…]}}` gives
+/// `Some("payload cap exceeded: 2001 nodes, 0 edges")`.
+fn cap_violation(body: &[u8]) -> Option<String> {
+    use aldente_graph::rollup::{MAX_EDGES, MAX_NODES};
+    let env: serde_json::Value = serde_json::from_slice(body).ok()?;
+    if !env["schema"].as_str()?.starts_with("aldente/graph/") {
+        return None;
+    }
+    let len = |k: &str| env["data"][k].as_array().map_or(0, Vec::len);
+    let (n, e) = (len("nodes"), len("edges"));
+    (n > MAX_NODES || e > MAX_EDGES).then(|| format!("payload cap exceeded: {n} nodes, {e} edges"))
+}
+
+#[test]
+fn cap_violation_spots_oversized_graph_envelopes_only() {
+    let nodes = vec![serde_json::json!({}); 2001];
+    let over = serde_json::json!({"schema": "aldente/graph/v1", "data": {"nodes": nodes}});
+    assert!(cap_violation(over.to_string().as_bytes()).is_some());
+    let crater = serde_json::json!({"schema": "aldente/crater/v1", "data": {"nodes": nodes}});
+    assert!(cap_violation(crater.to_string().as_bytes()).is_none());
+}
+
 /// A repository with one file and a two-symbol graph, under the temp dir.
 ///
 /// Example: `fixture("source")` gives the root and a snapshot of `src/a.clj`.
@@ -57,6 +105,7 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
                 }),
                 doc: Some("<script>alert(1)</script>".into()),
                 signature: None,
+                members: None,
             },
         );
     }
@@ -82,6 +131,7 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
             }),
             doc: None,
             signature: None,
+            members: None,
         },
     );
     for child in ["clj:.//a/f", "clj:.//a/g"] {
@@ -132,6 +182,7 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
                     loc: None,
                     doc: None,
                     signature: None,
+                    members: None,
                 },
             );
         }
@@ -181,6 +232,37 @@ struct Running {
 /// Example: `start("guard")`.
 fn start(name: &str) -> Running {
     let (root, snap) = fixture(name);
+    start_with(root, snap)
+}
+
+/// A synthetic snapshot over the payload cap at symbol and namespace level,
+/// with one 1,000-symbol namespace.
+///
+/// Example: `big("cap")` gives 2,500 namespaces in 4 units.
+fn big(name: &str) -> (PathBuf, Snapshot) {
+    let root = std::env::temp_dir().join(format!("aldente-server-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let spec = bench::synth::Spec {
+        units: 4,
+        namespaces: 2_500,
+        symbols: 12_000,
+        edges: 40_000,
+        hubs: 3,
+        big_namespace: 1_000,
+        seed: 7,
+    };
+    let corpus = bench::synth::synthesize(&spec).unwrap();
+    (
+        root.canonicalize().unwrap(),
+        bench::out::to_snapshot(&spec, corpus),
+    )
+}
+
+/// Starts a server for a snapshot on a free port.
+///
+/// Example: `start_with(root, snap)`.
+fn start_with(root: PathBuf, snap: Snapshot) -> Running {
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let info = SnapshotInfo {
@@ -657,4 +739,154 @@ fn defaults_endpoint_serves_the_rules_and_analyzer_defaults() {
     );
     assert_eq!(data["certainty_weights"]["likely"], 0.6);
     assert_eq!(data["certainty_weights"]["possible"], 0.25);
+}
+
+/// A raw POST with the legitimate headers; returns status and body.
+///
+/// Example: `s.ok_post("/api/v1/expand?id=a", "[]")`.
+impl Running {
+    fn ok_post(&self, path: &str, body: &str) -> (u16, String) {
+        let h = self.good();
+        let refs: Vec<(&str, &str)> = h.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        post(self.port, path, &refs, body)
+    }
+}
+
+/// The node IDs of a graph envelope, in order.
+///
+/// Example: `node_ids(&body)` is `["clj:.//a/f", "clj:.//a"]`.
+fn node_ids(body: &str) -> Vec<String> {
+    let env: serde_json::Value = serde_json::from_str(body).unwrap();
+    env["data"]["nodes"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{env:#}"))
+        .iter()
+        .map(|n| n["id"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+/// WP5.2: `/expand` pages with `offset` and `limit`; children not loaded
+/// are the aggregate itself; `POST` takes the visible IDs as a JSON array.
+#[test]
+fn expand_pages_and_takes_visible_by_post() {
+    let s = start("expand-pages");
+    let a = "clj%3A.%2F%2Fa";
+    let (status, _, body) = s.ok_get(&format!("/api/v1/expand?id={a}&limit=1"));
+    assert_eq!(status, 200, "{body}");
+    let first = node_ids(&body);
+    assert_eq!(first.len(), 2, "one child and the rest: {first:?}");
+    assert_eq!(first[1], "clj:.//a");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["truncated"], true);
+    assert_eq!(env["data"]["nodes"][1]["members"], 2);
+    assert!(schema_ok("graph", &env["data"]), "{env:#}");
+    let visible = serde_json::to_string(&[first[0].as_str(), "clj:.//a"]).unwrap();
+    let (status, body) = s.ok_post(&format!("/api/v1/expand?id={a}&offset=1&limit=1"), &visible);
+    assert_eq!(status, 200, "{body}");
+    let second = node_ids(&body);
+    assert_eq!(second.len(), 1, "the last child, no rest: {second:?}");
+    assert_ne!(second[0], first[0]);
+    let (status, _) = s.ok_post(&format!("/api/v1/expand?id={a}"), "not json");
+    assert_eq!(status, 400);
+}
+
+/// WP5.2: `level=auto` gives the finest level that fits the cap and says
+/// which (`aggregated.level`).
+#[test]
+fn graph_level_auto_picks_the_finest_level_that_fits() {
+    let s = start("auto");
+    let (_, _, body) = s.ok_get("/api/v1/graph?level=auto");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["aggregated"]["level"], "symbol", "{env:#}");
+    assert!(env["warnings"].as_array().unwrap().is_empty());
+    let (root, snap) = big("auto-big");
+    let s = start_with(root, snap);
+    let (_, _, body) = s.ok_get("/api/v1/graph?level=auto");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["aggregated"]["level"], "unit", "{env:#}");
+    assert_eq!(env["data"]["truncated"], false);
+}
+
+/// WP5.2: on a corpus over the cap, no graph response exceeds it (the
+/// test-only cap check turns a violation into a 500), the big namespace
+/// pages, and the rollups are warm without any request.
+#[test]
+fn no_graph_response_exceeds_the_payload_cap() {
+    let (root, snap) = big("cap");
+    let biggest = snap
+        .graph
+        .nodes
+        .values()
+        .filter(|n| n.kind == aldente_model::NodeKind::Namespace)
+        .max_by_key(|n| {
+            snap.graph
+                .edges
+                .iter()
+                .filter(|e| e.kind == EdgeKind::Contains && e.from == n.id)
+                .count()
+        })
+        .unwrap()
+        .id
+        .to_string();
+    let s = start_with(root, snap);
+    let enc = |id: &str| id.replace(':', "%3A").replace('/', "%2F");
+    let big_ns = enc(&biggest);
+    let mut paths: Vec<String> = [
+        "/api/v1/graph",
+        "/api/v1/graph?level=symbol",
+        "/api/v1/graph?level=namespace",
+        "/api/v1/graph?level=unit",
+        "/api/v1/graph?level=auto",
+        "/api/v1/graph?level=namespace&top=5000",
+        "/api/v1/graph?level=symbol&scope=repo",
+        "/api/v1/tree/graph",
+    ]
+    .iter()
+    .map(|p| (*p).to_owned())
+    .collect();
+    paths.push(format!("/api/v1/expand?id={big_ns}&limit=100000"));
+    paths.push(format!("/api/v1/neighborhood?id={big_ns}&depth=10"));
+    for path in &paths {
+        let (status, _, body) = s.ok_get(path);
+        assert_eq!(status, 200, "{path}: {}", &body[..body.len().min(300)]);
+    }
+    // The 1,000 children come in pages of at most 200.
+    let mut loaded: Vec<String> = Vec::new();
+    loop {
+        let visible = serde_json::to_string(&loaded).unwrap();
+        let path = format!("/api/v1/expand?id={big_ns}&offset={}", loaded.len());
+        let (status, body) = s.ok_post(&path, &visible);
+        assert_eq!(status, 200, "{path}");
+        let ids: Vec<String> = node_ids(&body)
+            .into_iter()
+            .filter(|id| id != &biggest)
+            .collect();
+        assert!(ids.len() <= 200 && !ids.is_empty(), "{path}: {}", ids.len());
+        loaded.extend(ids);
+        let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+        if env["data"]["truncated"] == false {
+            break;
+        }
+    }
+    assert_eq!(loaded.len(), 1_000);
+}
+
+/// WP5.2: the namespace and unit rollups and the edge index are computed
+/// when the server starts, not on the first request.
+#[test]
+fn rollups_are_warmed_at_start() {
+    let state = Arc::new({
+        let (root, snap) = fixture("warm");
+        let info = SnapshotInfo {
+            key: snap.key.clone(),
+            repo: snap.repo.clone(),
+            rev: None,
+            dirty: false,
+            analyzer: "test".into(),
+        };
+        AppState::new(snap, root, info, &[], "t".into(), 1)
+    });
+    assert!(!state.cache.is_warm());
+    warm(Arc::clone(&state)).join().unwrap();
+    assert!(state.cache.is_warm());
 }

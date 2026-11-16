@@ -23,6 +23,8 @@ serde_json.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
+# Synthetic corpora over the payload cap (WP5.2 tests).
+bench.workspace = true
 jsonschema.workspace = true
 
 [lints]

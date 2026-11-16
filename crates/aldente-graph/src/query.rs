@@ -1,7 +1,7 @@
 //! Lookups shared by the CLI and the server: resolving short symbol names,
 //! searching, direct neighbors, and neighborhoods.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::str::FromStr;
 
 use aldente_model::query::{Child, Neighbor};
@@ -486,6 +486,11 @@ pub fn fit(
     let start = order.iter().position(|l| *l == level).unwrap_or(1);
     let mut last = GraphPayload::default();
     for l in &order[start..] {
+        // Without a unit filter the node count is known before copying the
+        // level (2,000,000 edges at symbol level take a while to copy).
+        if *l != AggregationLevel::Unit && f.unit.is_none() && too_many_nodes(graph, cache, *l, f) {
+            continue;
+        }
         let mut p = filter(graph, cache.payload(graph, *l).into_owned(), f);
         if p.nodes.len() <= MAX_NODES && p.edges.len() <= MAX_EDGES {
             if *l != level {
@@ -496,6 +501,32 @@ pub fn fit(
         last = p;
     }
     (cap(last), true)
+}
+
+/// Whether `level` has more than [`MAX_NODES`] nodes after the `repo_only`
+/// filter (the only node filter besides `unit`), counted without copying.
+///
+/// Example: a 300,000-symbol graph at `Symbol` level gives `true`.
+fn too_many_nodes(graph: &Graph, cache: &Cache, level: AggregationLevel, f: &Filter) -> bool {
+    let kept = |n: &&Node| {
+        !f.repo_only
+            || !matches!(
+                n.kind,
+                NodeKind::External | NodeKind::Platform | NodeKind::Library
+            )
+    };
+    match level {
+        AggregationLevel::Symbol => graph.nodes.values().filter(kept).count() > MAX_NODES,
+        _ => {
+            cache
+                .payload(graph, level)
+                .nodes
+                .iter()
+                .filter(kept)
+                .count()
+                > MAX_NODES
+        }
+    }
 }
 
 /// The `n` nodes with the most calls in and out (invocation edges, each
@@ -586,187 +617,296 @@ pub fn cap(mut p: GraphPayload) -> GraphPayload {
     p
 }
 
-/// [`expand`] using the edge index: only the children's own edges are
-/// read, so the cost depends on the namespace, not on the graph. Equal to
+/// An expand page within the payload cap: interop exits and holes go
+/// first (fewest edges first, ties by ID), then the lightest edges; the
+/// children and the rest stay. `truncated` when anything was dropped.
+///
+/// Example: a page of 200 namespaces calling 3,000 Java methods keeps the
+/// namespaces and the 1,800 most-called methods.
+pub fn cap_expanded(mut p: GraphPayload) -> GraphPayload {
+    let leaf = |id: &NodeId| matches!(id, NodeId::Platform(_) | NodeId::Hole(_));
+    if p.nodes.len() > MAX_NODES {
+        let mut degree: HashMap<&NodeId, usize> = HashMap::new();
+        for e in &p.edges {
+            *degree.entry(&e.from).or_default() += 1;
+            *degree.entry(&e.to).or_default() += 1;
+        }
+        let mut leaves: Vec<(usize, NodeId)> = p
+            .nodes
+            .iter()
+            .filter(|n| leaf(&n.id))
+            .map(|n| (degree.get(&n.id).copied().unwrap_or(0), n.id.clone()))
+            .collect();
+        leaves.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+        let over = p.nodes.len() - MAX_NODES;
+        let drop: BTreeSet<NodeId> = leaves.into_iter().take(over).map(|(_, id)| id).collect();
+        p.nodes.retain(|n| !drop.contains(&n.id));
+        p.edges
+            .retain(|e| !drop.contains(&e.from) && !drop.contains(&e.to));
+        p.truncated = true;
+    }
+    if p.edges.len() > MAX_EDGES {
+        p.edges
+            .sort_by_key(|e| std::cmp::Reverse(e.count.unwrap_or(1)));
+        p.edges.truncate(MAX_EDGES);
+        p.edges
+            .sort_by(|a, b| (&a.from, &a.to, a.kind).cmp(&(&b.from, &b.to, b.kind)));
+        p.truncated = true;
+    }
+    p
+}
+
+/// Which children of an aggregate to return: `limit` from `offset` in
+/// best-connected order; `limit` 0 means all from `offset`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Page {
+    pub offset: usize,
+    pub limit: usize,
+}
+
+impl Page {
+    /// Every child.
+    pub const ALL: Page = Page {
+        offset: 0,
+        limit: 0,
+    };
+
+    /// The children this page covers out of `total`.
+    ///
+    /// Example: `Page { offset: 200, limit: 200 }.range(450)` is `200..400`.
+    fn range(self, total: usize) -> std::ops::Range<usize> {
+        let start = self.offset.min(total);
+        let end = if self.limit == 0 {
+            total
+        } else {
+            start.saturating_add(self.limit).min(total)
+        };
+        start..end
+    }
+}
+
+/// What both versions of expand gather before assembling the answer.
+struct Gathered<'g> {
+    /// Children, best-connected first, ties by ID.
+    children: Vec<NodeId>,
+    /// Every node inside each child (the child included) → that child.
+    owner: HashMap<NodeId, NodeId>,
+    /// Invocation and `requires` edges touching any child or member.
+    edges: Vec<&'g Edge>,
+}
+
+/// Ranks children by the invocation edges touching their members (an edge
+/// inside one child counts once), ties by ID.
+///
+/// Example: a namespace whose functions make 9 calls ranks before one with 2.
+fn rank(children: &mut [NodeId], owner: &HashMap<NodeId, NodeId>, edges: &[&Edge]) {
+    let mut degree: HashMap<&NodeId, usize> = HashMap::new();
+    for e in edges.iter().filter(|e| INVOCATION.contains(&e.kind)) {
+        let (a, b) = (owner.get(&e.from), owner.get(&e.to));
+        for c in [a, b].into_iter().flatten() {
+            *degree.entry(c).or_default() += 1;
+        }
+        if let (Some(a), Some(b)) = (a, b)
+            && a == b
+            && let Some(d) = degree.get_mut(a)
+        {
+            *d -= 1;
+        }
+    }
+    let deg = |n: &NodeId| degree.get(n).copied().unwrap_or(0);
+    children.sort_by(|a, b| deg(b).cmp(&deg(a)).then_with(|| a.cmp(b)));
+}
+
+/// Builds the expand answer from what was gathered: the page's children,
+/// the aggregate itself while some children are neither in the page nor on
+/// screen (the "rest", standing for them), and the edges with an end in the
+/// page or the rest. An edge end is placed as itself if it is in the page,
+/// on screen, an interop exit or a hole; as its child if inside one (the
+/// rest if that child is not loaded); else as its namespace or unit if on
+/// screen; else the edge is dropped. Edges among what is already on screen
+/// are not sent again.
+///
+/// Example: see [`expand`].
+fn assemble(
+    graph: &Graph,
+    id: &NodeId,
+    g: Gathered<'_>,
+    visible: &[NodeId],
+    page: Page,
+    members: impl Fn(&NodeId) -> Option<u64>,
+) -> GraphPayload {
+    let total = g.children.len();
+    let range = page.range(total);
+    let in_page: BTreeSet<&NodeId> = g.children[range.clone()].iter().collect();
+    let shown: BTreeSet<&NodeId> = visible.iter().collect();
+    let rest = g
+        .children
+        .iter()
+        .any(|c| !in_page.contains(c) && !shown.contains(c));
+    let loaded = |c: &NodeId| in_page.contains(c) || shown.contains(c);
+    let place = |n: &NodeId| -> Option<NodeId> {
+        if loaded(n) || matches!(n, NodeId::Platform(_) | NodeId::Hole(_)) {
+            return Some(n.clone());
+        }
+        if let Some(child) = g.owner.get(n) {
+            return Some(if loaded(child) {
+                child.clone()
+            } else {
+                id.clone()
+            });
+        }
+        [graph.namespace_of(n), graph.unit_of(n)]
+            .into_iter()
+            .flatten()
+            .find(|x| shown.contains(x))
+    };
+    let new = |n: &NodeId| in_page.contains(n) || (rest && n == id);
+    let mut groups: BTreeMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = BTreeMap::new();
+    for e in &g.edges {
+        let (Some(from), Some(to)) = (place(&e.from), place(&e.to)) else {
+            continue;
+        };
+        if from != to && (new(&from) || new(&to)) {
+            groups.entry((from, to, e.kind)).or_default().push(e);
+        }
+    }
+    let edges: Vec<Edge> = groups
+        .into_iter()
+        .map(|((from, to, kind), list)| match list.as_slice() {
+            [one] if one.from == from && one.to == to => (*one).clone(),
+            _ => roll(from, to, kind, &list),
+        })
+        .collect();
+    let leaves: BTreeSet<NodeId> = edges
+        .iter()
+        .flat_map(|e: &Edge| [e.from.clone(), e.to.clone()])
+        .filter(|n| matches!(n, NodeId::Platform(_) | NodeId::Hole(_)) && !shown.contains(n))
+        .collect();
+    let node = |n: &NodeId| {
+        let mut node = graph.group_node(n);
+        node.members = members(n);
+        node
+    };
+    let mut nodes: Vec<Node> = g.children[range].iter().map(node).collect();
+    if rest {
+        nodes.push(node(id));
+    }
+    nodes.extend(leaves.iter().map(|n| graph.group_node(n)));
+    GraphPayload {
+        nodes,
+        edges,
+        truncated: rest,
+        aggregated: None,
+    }
+}
+
+/// How many nodes `id` contains directly, for aggregates; `None` for others.
+///
+/// Example: a namespace with 3 functions gives `Some(3)`; a function `None`.
+fn member_count(id: &NodeId, contained: usize) -> Option<u64> {
+    matches!(id, NodeId::Unit(_) | NodeId::Namespace(_)).then_some(contained as u64)
+}
+
+/// [`expand`] using the edge index: only the aggregate's own members' edges
+/// are read, so the cost depends on its size, not on the graph's. Equal to
 /// [`expand`] (pinned by a test), which stays as the simple reference.
 ///
-/// Example: `expand_in(g, cache, shop.pricing, &[shop.core], 0)`.
+/// Example: `expand_in(g, cache, shop.pricing, &[shop.core], Page::ALL)`.
 pub fn expand_in(
     graph: &Graph,
     cache: &Cache,
     id: &NodeId,
     visible: &[NodeId],
-    limit: usize,
+    page: Page,
 ) -> GraphPayload {
     let adj = cache.adjacency(graph);
-    let edge = |i: &usize| graph.edges.get(*i);
-    let mut children: Vec<NodeId> = adj
-        .outgoing(id)
-        .iter()
-        .filter_map(edge)
-        .filter(|e| e.kind == EdgeKind::Contains)
-        .map(|e| e.to.clone())
-        .collect();
-    // Invocation edges touching the node, each counted once (a self-loop is
-    // both outgoing and incoming).
-    let degree = |n: &NodeId| {
-        let out = adj.outgoing(n).iter().filter_map(edge);
-        let inc = adj
-            .incoming(n)
+    let contained = |n: &NodeId| -> Vec<NodeId> {
+        adj.outgoing(n)
             .iter()
-            .filter_map(edge)
-            .filter(|e| &e.from != n);
-        out.chain(inc)
-            .filter(|e| INVOCATION.contains(&e.kind))
-            .count()
+            .filter_map(|i| graph.edges.get(*i))
+            .filter(|e| e.kind == EdgeKind::Contains)
+            .map(|e| e.to.clone())
+            .collect()
     };
-    let degrees: BTreeMap<NodeId, usize> =
-        children.iter().map(|c| (c.clone(), degree(c))).collect();
-    let deg = |n: &NodeId| degrees.get(n).copied().unwrap_or(0);
-    children.sort_by(|a, b| deg(b).cmp(&deg(a)).then_with(|| a.cmp(b)));
-    let truncated = limit > 0 && children.len() > limit;
-    if truncated {
-        children.truncate(limit);
-    }
-    let kids: BTreeSet<&NodeId> = children.iter().collect();
-    let shown: BTreeSet<&NodeId> = visible.iter().collect();
-    let place = |n: &NodeId| -> Option<NodeId> {
-        if kids.contains(n)
-            || shown.contains(n)
-            || matches!(n, NodeId::Platform(_) | NodeId::Hole(_))
-        {
-            return Some(n.clone());
+    let mut children = contained(id);
+    let mut owner: HashMap<NodeId, NodeId> = HashMap::new();
+    for c in &children {
+        let mut queue = vec![c.clone()];
+        while let Some(n) = queue.pop() {
+            if owner.contains_key(&n) {
+                continue;
+            }
+            queue.extend(contained(&n));
+            owner.insert(n, c.clone());
         }
-        [graph.namespace_of(n), graph.unit_of(n)]
-            .into_iter()
-            .flatten()
-            .find(|g| shown.contains(g))
-    };
-    // The children's edges, in stored order (as `expand` reads them).
-    let mut touching: Vec<usize> = children
-        .iter()
-        .flat_map(|c| adj.outgoing(c).iter().chain(adj.incoming(c)).copied())
+    }
+    let mut touching: Vec<usize> = owner
+        .keys()
+        .flat_map(|n| adj.outgoing(n).iter().chain(adj.incoming(n)).copied())
         .collect();
     touching.sort_unstable();
     touching.dedup();
-    let mut groups: BTreeMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = BTreeMap::new();
-    for e in touching
+    let edges: Vec<&Edge> = touching
         .iter()
-        .filter_map(edge)
+        .filter_map(|i| graph.edges.get(*i))
         .filter(|e| INVOCATION.contains(&e.kind) || e.kind == EdgeKind::Requires)
-    {
-        let (Some(from), Some(to)) = (place(&e.from), place(&e.to)) else {
-            continue;
-        };
-        if from != to {
-            groups.entry((from, to, e.kind)).or_default().push(e);
-        }
-    }
-    let edges: Vec<Edge> = groups
-        .into_iter()
-        .map(|((from, to, kind), members)| match members.as_slice() {
-            [one] if one.from == from && one.to == to => (*one).clone(),
-            _ => roll(from, to, kind, &members),
-        })
         .collect();
-    let leaves: BTreeSet<NodeId> = edges
-        .iter()
-        .flat_map(|e: &Edge| [e.from.clone(), e.to.clone()])
-        .filter(|n| matches!(n, NodeId::Platform(_) | NodeId::Hole(_)))
-        .collect();
-    GraphPayload {
-        nodes: children
-            .iter()
-            .chain(leaves.iter())
-            .map(|c| graph.group_node(c))
-            .collect(),
+    rank(&mut children, &owner, &edges);
+    let gathered = Gathered {
+        children,
+        owner,
         edges,
-        truncated,
-        aggregated: None,
-    }
+    };
+    assemble(graph, id, gathered, visible, page, |n| {
+        member_count(n, contained(n).len())
+    })
 }
 
 /// Children of an aggregate (unit → namespaces, namespace → its symbols and
-/// impls, multimethod or protocol method → impls), best-connected first, at
-/// most `limit`, plus invocation and `requires` edges from or to them. An
-/// edge end that is not a child is shown as itself if `visible`, else as its
-/// namespace or unit if that is visible (rolled up with a count), else dropped.
+/// impls, multimethod or protocol method → impls), best-connected first,
+/// one [`Page`] of them, plus invocation and `requires` edges from or to
+/// them, placed as [`assemble`] describes. Scans every edge; the reference
+/// for [`expand_in`].
 ///
 /// Example: expanding `clj:.//shop.pricing` with `shop.util` visible gives
 /// `half-off`, `price` and the four `price@…` impls, with
 /// `price@:book -calls-> shop.util` rolled up.
-pub fn expand(graph: &Graph, id: &NodeId, visible: &[NodeId], limit: usize) -> GraphPayload {
-    let mut children: Vec<NodeId> = graph
-        .edges
-        .iter()
-        .filter(|e| e.kind == EdgeKind::Contains && &e.from == id)
-        .map(|e| e.to.clone())
-        .collect();
-    let degree = |n: &NodeId| {
+pub fn expand(graph: &Graph, id: &NodeId, visible: &[NodeId], page: Page) -> GraphPayload {
+    let contained = |n: &NodeId| -> Vec<NodeId> {
         graph
             .edges
             .iter()
-            .filter(|e| INVOCATION.contains(&e.kind) && (&e.from == n || &e.to == n))
-            .count()
+            .filter(|e| e.kind == EdgeKind::Contains && &e.from == n)
+            .map(|e| e.to.clone())
+            .collect()
     };
-    children.sort_by(|a, b| degree(b).cmp(&degree(a)).then_with(|| a.cmp(b)));
-    let truncated = limit > 0 && children.len() > limit;
-    if truncated {
-        children.truncate(limit);
-    }
-    let kids: BTreeSet<&NodeId> = children.iter().collect();
-    let shown: BTreeSet<&NodeId> = visible.iter().collect();
-    let place = |n: &NodeId| -> Option<NodeId> {
-        // Interop exits and holes are leaves of the code being expanded.
-        if kids.contains(n)
-            || shown.contains(n)
-            || matches!(n, NodeId::Platform(_) | NodeId::Hole(_))
-        {
-            return Some(n.clone());
+    let mut children = contained(id);
+    let mut owner: HashMap<NodeId, NodeId> = HashMap::new();
+    for c in &children {
+        let mut queue = vec![c.clone()];
+        while let Some(n) = queue.pop() {
+            if owner.contains_key(&n) {
+                continue;
+            }
+            queue.extend(contained(&n));
+            owner.insert(n, c.clone());
         }
-        [graph.namespace_of(n), graph.unit_of(n)]
-            .into_iter()
-            .flatten()
-            .find(|g| shown.contains(g))
-    };
-    let mut groups: BTreeMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = BTreeMap::new();
-    for e in graph
+    }
+    let edges: Vec<&Edge> = graph
         .edges
         .iter()
         .filter(|e| INVOCATION.contains(&e.kind) || e.kind == EdgeKind::Requires)
-    {
-        if !kids.contains(&e.from) && !kids.contains(&e.to) {
-            continue;
-        }
-        let (Some(from), Some(to)) = (place(&e.from), place(&e.to)) else {
-            continue;
-        };
-        if from != to {
-            groups.entry((from, to, e.kind)).or_default().push(e);
-        }
-    }
-    let edges: Vec<Edge> = groups
-        .into_iter()
-        .map(|((from, to, kind), members)| match members.as_slice() {
-            [one] if one.from == from && one.to == to => (*one).clone(),
-            _ => roll(from, to, kind, &members),
-        })
+        .filter(|e| owner.contains_key(&e.from) || owner.contains_key(&e.to))
         .collect();
-    let leaves: BTreeSet<NodeId> = edges
-        .iter()
-        .flat_map(|e: &Edge| [e.from.clone(), e.to.clone()])
-        .filter(|n| matches!(n, NodeId::Platform(_) | NodeId::Hole(_)))
-        .collect();
-    GraphPayload {
-        nodes: children
-            .iter()
-            .chain(leaves.iter())
-            .map(|c| graph.group_node(c))
-            .collect(),
+    rank(&mut children, &owner, &edges);
+    let gathered = Gathered {
+        children,
+        owner,
         edges,
-        truncated,
-        aggregated: None,
-    }
+    };
+    assemble(graph, id, gathered, visible, page, |n| {
+        member_count(n, contained(n).len())
+    })
 }
 
 #[cfg(test)]
@@ -794,6 +934,7 @@ mod tests {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         }
     }
 
@@ -917,14 +1058,30 @@ mod tests {
         );
         assert_eq!(only_calls.edges.len(), 1);
         let ns = NodeId::from_str("clj:services/orders//orders.core").unwrap();
-        let e = expand(&g, &ns, &[], 10);
+        let e = expand(
+            &g,
+            &ns,
+            &[],
+            Page {
+                offset: 0,
+                limit: 10,
+            },
+        );
         assert_eq!(e.nodes.len(), 1, "orders.core contains total");
         assert!(e.edges.is_empty(), "charge! is neither a child nor visible");
         let charge = NodeId::from_str("clj:services/orders//orders.core/charge!").unwrap();
-        let e = expand(&g, &ns, std::slice::from_ref(&charge), 10);
+        let e = expand(
+            &g,
+            &ns,
+            std::slice::from_ref(&charge),
+            Page {
+                offset: 0,
+                limit: 10,
+            },
+        );
         assert_eq!(e.edges.len(), 1);
         assert_eq!(e.edges[0].count, None, "a single raw edge is kept as is");
-        assert!(expand(&g, &ns, &[], 0).nodes.len() == 1);
+        assert!(expand(&g, &ns, &[], Page::ALL).nodes.len() == 1);
     }
 
     #[test]
@@ -1041,6 +1198,175 @@ mod tests {
         assert_eq!(callers.len(), 1, "{callers:?}");
     }
 
+    /// Namespace `n` holding `a`, `b`, `c` (best-connected in that order),
+    /// each calling `o/x`; `a` also calls `b` and `c`.
+    fn paged() -> Graph {
+        let mut g = Graph::default();
+        let mut add = |id: &str, ns: Option<&str>| {
+            let mut n = node(id);
+            n.namespace = ns.map(Into::into);
+            n.unit = Some(NodeId::from_str("unit:.").unwrap());
+            g.nodes.insert(n.id.clone(), n);
+        };
+        add("unit:.", None);
+        add("clj:.//n", None);
+        add("clj:.//o", None);
+        for s in ["a", "b", "c"] {
+            add(&format!("clj:.//n/{s}"), Some("n"));
+        }
+        add("clj:.//o/x", Some("o"));
+        let calls = |f: &str, t: &str| edge(f, t, EdgeKind::Calls, Some(Certainty::Certain));
+        let contains = |f: &str, t: &str| edge(f, t, EdgeKind::Contains, None);
+        g.edges = vec![
+            contains("unit:.", "clj:.//n"),
+            contains("unit:.", "clj:.//o"),
+            contains("clj:.//n", "clj:.//n/a"),
+            contains("clj:.//n", "clj:.//n/b"),
+            contains("clj:.//n", "clj:.//n/c"),
+            contains("clj:.//o", "clj:.//o/x"),
+            calls("clj:.//n/a", "clj:.//o/x"),
+            calls("clj:.//n/b", "clj:.//o/x"),
+            calls("clj:.//n/c", "clj:.//o/x"),
+            calls("clj:.//n/a", "clj:.//n/b"),
+            calls("clj:.//n/a", "clj:.//n/c"),
+        ];
+        g
+    }
+
+    /// `(from, to, count)` of each edge, as short names.
+    fn shape(p: &GraphPayload) -> Vec<(String, String, Option<u64>)> {
+        let short = |id: &NodeId| id.to_string().trim_start_matches("clj:.//").to_owned();
+        p.edges
+            .iter()
+            .map(|e| (short(&e.from), short(&e.to), e.count))
+            .collect()
+    }
+
+    fn ids(list: &[&str]) -> Vec<NodeId> {
+        list.iter()
+            .map(|s| NodeId::from_str(&format!("clj:.//{s}")).unwrap())
+            .collect()
+    }
+
+    /// WP5.2: pages of children; children not loaded yet are the aggregate
+    /// itself (the "rest"), so every edge still has an end on screen.
+    #[test]
+    fn expand_pages_children_and_rolls_the_rest_into_the_aggregate() {
+        let g = paged();
+        let n = NodeId::from_str("clj:.//n").unwrap();
+        let cache = Cache::default();
+        let page = |offset, visible: &[&str]| {
+            let p = expand_in(&g, &cache, &n, &ids(visible), Page { offset, limit: 1 });
+            assert_eq!(p, expand(&g, &n, &ids(visible), Page { offset, limit: 1 }));
+            p
+        };
+        let one = page(0, &["o"]);
+        let names: Vec<String> = one.nodes.iter().map(|n| n.name.clone()).collect();
+        assert_eq!(names, ["a", "n"], "page 1 and the rest");
+        assert_eq!(
+            one.nodes[1].members,
+            Some(3),
+            "the rest says how many in all"
+        );
+        assert!(one.truncated);
+        let s = |f: &str, t: &str, c: Option<u64>| (f.to_owned(), t.to_owned(), c);
+        assert_eq!(
+            shape(&one),
+            [
+                s("n", "o", Some(2)),
+                s("n/a", "n", Some(2)),
+                s("n/a", "o", Some(1))
+            ]
+        );
+        // Page 2: `a` is on screen now; edges among what was already shown
+        // are not sent again.
+        let two = page(1, &["o", "n", "n/a"]);
+        let names: Vec<String> = two.nodes.iter().map(|n| n.name.clone()).collect();
+        assert_eq!(names, ["b", "n"]);
+        assert_eq!(
+            shape(&two),
+            [
+                s("n", "o", Some(1)),
+                s("n/a", "n", Some(1)),
+                s("n/a", "n/b", None),
+                s("n/b", "o", Some(1)),
+            ]
+        );
+        // The last page: no rest, so no aggregate node and not truncated.
+        let three = page(2, &["o", "n", "n/a", "n/b"]);
+        let names: Vec<String> = three.nodes.iter().map(|n| n.name.clone()).collect();
+        assert_eq!(names, ["c"]);
+        assert!(!three.truncated);
+        assert_eq!(
+            shape(&three),
+            [s("n/a", "n/c", None), s("n/c", "o", Some(1))]
+        );
+    }
+
+    /// WP5.2: a unit expands into namespaces with its symbols' calls rolled
+    /// up between them, and each namespace says how many children it has.
+    #[test]
+    fn expanding_a_unit_rolls_calls_up_to_its_namespaces() {
+        let g = two_namespaces();
+        let unit = NodeId::from_str("unit:.").unwrap();
+        let p = expand_in(&g, &Cache::default(), &unit, &[], Page::ALL);
+        assert_eq!(p, expand(&g, &unit, &[], Page::ALL));
+        let members: Vec<(String, Option<u64>)> = p
+            .nodes
+            .iter()
+            .map(|n| (n.name.clone(), n.members))
+            .collect();
+        assert_eq!(
+            members,
+            [
+                ("billing.core".to_owned(), Some(1)),
+                ("orders.core".to_owned(), Some(2))
+            ]
+        );
+        let calls = p
+            .edges
+            .iter()
+            .find(|e| e.kind == EdgeKind::Calls)
+            .expect("a rolled-up call");
+        assert_eq!(calls.from.to_string(), "clj:.//orders.core");
+        assert_eq!(calls.to.to_string(), "clj:.//billing.core");
+        assert_eq!(calls.count, Some(1));
+        assert!(p.edges.iter().any(|e| e.kind == EdgeKind::Requires));
+    }
+
+    /// WP5.2: an expand page over the cap drops interop exits and holes
+    /// (fewest edges first) and the lightest edges, never the children.
+    #[test]
+    fn cap_expanded_keeps_the_children() {
+        let mut p = GraphPayload::default();
+        p.nodes.push(node("clj:.//n/a"));
+        for i in 0..MAX_NODES + 5 {
+            let exit = format!("java:x.Y{i:05}#m");
+            p.nodes.push(node(&exit));
+            for _ in 0..usize::from(i < 10) + 1 {
+                p.edges.push(edge(
+                    "clj:.//n/a",
+                    &exit,
+                    EdgeKind::Calls,
+                    Some(Certainty::Certain),
+                ));
+            }
+        }
+        let capped = cap_expanded(p);
+        assert!(capped.truncated);
+        assert_eq!(capped.nodes.len(), MAX_NODES);
+        assert_eq!(capped.nodes[0].id.to_string(), "clj:.//n/a");
+        assert!(
+            capped
+                .nodes
+                .iter()
+                .any(|n| n.id.to_string() == "java:x.Y00000#m"),
+            "busiest kept"
+        );
+        let kept: BTreeSet<&NodeId> = capped.nodes.iter().map(|n| &n.id).collect();
+        assert!(capped.edges.iter().all(|e| kept.contains(&e.to)));
+    }
+
     #[test]
     fn expanding_keeps_interop_exits_and_holes() {
         let mut g = two_namespaces();
@@ -1056,7 +1382,10 @@ mod tests {
             &g,
             &NodeId::from_str("clj:.//orders.core").unwrap(),
             &[],
-            10,
+            Page {
+                offset: 0,
+                limit: 10,
+            },
         );
         assert!(
             p.nodes

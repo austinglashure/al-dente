@@ -109,6 +109,7 @@ impl<'a> Resolver<'a> {
             loc: location(at.file, pos.line, pos.col, None, None),
             doc: None,
             signature: None,
+            members: None,
         });
         node.langs.insert(lang);
         self.blindspots.push(BlindSpot {

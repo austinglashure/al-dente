@@ -37,6 +37,7 @@ fn node_in(ns: &str, name: &str) -> Node {
         loc: None,
         doc: None,
         signature: None,
+        members: None,
     }
 }
 

@@ -35,6 +35,24 @@ impl Cache {
         }
     }
 
+    /// Computes every view now (the server does this at load).
+    ///
+    /// Example: after `cache.warm(g)`, `cache.is_warm()` is true.
+    pub fn warm(&self, graph: &Graph) {
+        let _ = self.payload(graph, AggregationLevel::Namespace);
+        let _ = self.payload(graph, AggregationLevel::Unit);
+        let _ = self.adjacency(graph);
+    }
+
+    /// Whether every view is computed.
+    ///
+    /// Example: `Cache::default().is_warm()` is false.
+    pub fn is_warm(&self) -> bool {
+        self.namespace.get().is_some()
+            && self.unit.get().is_some()
+            && self.adjacency.get().is_some()
+    }
+
     /// The stored edges indexed by source and target, built on first use.
     ///
     /// Example: `cache.adjacency(g).outgoing(&checkout)` lists checkout's edges.

@@ -530,6 +530,7 @@ mod tests {
                     loc: None,
                     doc: Some("doc with 'quotes' and \u{1b}".into()),
                     signature: None,
+                    members: None,
                 },
             );
         }

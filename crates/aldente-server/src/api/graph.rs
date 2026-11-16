@@ -26,7 +26,8 @@ pub async fn snapshot(State(s): St) -> Response {
 
 /// `GET /graph?level=&unit=&min_certainty=&kinds=&scope=&top=`: a graph
 /// within the payload cap. Default level: unit for several units, else
-/// namespace. With `top=N` the level is kept and only the N nodes with the
+/// namespace; `level=auto` is the finest level that fits, named in
+/// `aggregated.level`. With `top=N` the level is kept and only the N nodes with the
 /// most calls in and out are returned (`truncated` when some were dropped);
 /// without it a too-large level falls back to a coarser one.
 ///
@@ -38,6 +39,18 @@ pub async fn graph(State(s): St, RawQuery(q): RawQuery) -> Response {
     } else {
         AggregationLevel::Namespace
     };
+    if p.get("level") == Some("auto") {
+        let (mut payload, _) = query::fit(
+            &s.snapshot.graph,
+            &s.cache,
+            AggregationLevel::Symbol,
+            &filter_from(&p),
+        );
+        payload.aggregated = payload.aggregated.or(Some(aldente_model::Aggregation {
+            level: AggregationLevel::Symbol,
+        }));
+        return ok(&s, "graph", payload);
+    }
     let level = p
         .get("level")
         .and_then(token::<AggregationLevel>)
@@ -91,29 +104,62 @@ pub async fn neighborhood(State(s): St, RawQuery(q): RawQuery) -> Response {
     ok(&s, "graph", query::cap(hood))
 }
 
-/// `GET /expand?id=&visible=…`: children of an aggregate and their edges to
-/// what is on screen.
+/// `GET /expand?id=&visible=…&offset=&limit=`: one page of an aggregate's
+/// children (best-connected first; `limit` at most 200, the default) and
+/// their edges to what is on screen. While children remain, the aggregate
+/// itself comes back too, standing for them.
 ///
-/// Example: `?id=clj:.//shop.pricing&visible=clj:.//shop.util`.
+/// Example: `?id=clj:.//shop.pricing&visible=clj:.//shop.util&limit=2`.
 pub async fn expand(State(s): St, RawQuery(q): RawQuery) -> Response {
     let p = Params::parse(q.as_deref());
-    let id = match resolve_id(&s, "graph", p.get("id")) {
-        Ok(id) => id,
-        Err(res) => return *res,
-    };
     let visible: Vec<NodeId> = p
         .all("visible")
         .iter()
         .filter_map(|v| v.parse().ok())
         .collect();
+    expand_page(&s, &p, &visible)
+}
+
+/// `POST /expand?id=&offset=&limit=` with the visible IDs as a JSON array
+/// of strings in the body: [`expand`] for screens too big for a URL.
+///
+/// Example: body `["clj:.//shop.util", "clj:.//shop.core"]`.
+pub async fn expand_post(State(s): St, RawQuery(q): RawQuery, body: String) -> Response {
+    let p = Params::parse(q.as_deref());
+    let Ok(ids) = serde_json::from_str::<Vec<String>>(&body) else {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "graph",
+            ErrorCode::Usage,
+            "the body must be a JSON array of node IDs",
+            None,
+        );
+    };
+    let visible: Vec<NodeId> = ids.iter().filter_map(|v| v.parse().ok()).collect();
+    expand_page(&s, &p, &visible)
+}
+
+/// The shared body of [`expand`] and [`expand_post`].
+///
+/// Example: `expand_page(&s, &params, &[])`.
+fn expand_page(s: &crate::AppState, p: &Params, visible: &[NodeId]) -> Response {
+    let id = match resolve_id(s, "graph", p.get("id")) {
+        Ok(id) => id,
+        Err(res) => return *res,
+    };
+    let number = |k: &str| p.get(k).and_then(|v| v.parse::<usize>().ok());
+    let page = query::Page {
+        offset: number("offset").unwrap_or(0),
+        limit: number("limit")
+            .filter(|l| *l > 0)
+            .unwrap_or(EXPAND_LIMIT)
+            .min(EXPAND_LIMIT),
+    };
+    let payload = query::expand_in(&s.snapshot.graph, &s.cache, &id, visible, page);
     ok(
-        &s,
+        s,
         "graph",
-        query::filter(
-            &s.snapshot.graph,
-            query::expand_in(&s.snapshot.graph, &s.cache, &id, &visible, EXPAND_LIMIT),
-            &filter_from(&p),
-        ),
+        query::cap_expanded(query::filter(&s.snapshot.graph, payload, &filter_from(p))),
     )
 }
 

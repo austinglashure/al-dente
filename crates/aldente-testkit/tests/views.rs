@@ -68,7 +68,7 @@ fn indexed_neighborhood_equals_the_payload_walk() {
 
 #[test]
 fn indexed_expand_equals_the_scanning_expand() {
-    use aldente_graph::query::{expand, expand_in};
+    use aldente_graph::query::{Page, expand, expand_in};
     use aldente_model::NodeKind;
     for fixture in ["clj-mini", "mono-mini"] {
         let g = analyze_fixture(&fixture_dir(fixture)).graph;
@@ -86,11 +86,12 @@ fn indexed_expand_equals_the_scanning_expand() {
                 .filter(|a| *a != id)
                 .map(|a| (*a).clone())
                 .collect();
-            for limit in [0, 2] {
+            for (offset, limit) in [(0, 0), (0, 2), (2, 2)] {
+                let page = Page { offset, limit };
                 assert_eq!(
-                    expand_in(&g, &cache, id, &visible, limit),
-                    expand(&g, id, &visible, limit),
-                    "{fixture} {id} limit {limit}"
+                    expand_in(&g, &cache, id, &visible, page),
+                    expand(&g, id, &visible, page),
+                    "{fixture} {id} {page:?}"
                 );
             }
         }

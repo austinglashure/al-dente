@@ -69,6 +69,7 @@ pub fn build_timed(units: &[UnitInfo], batches: Vec<FactBatch>, t: &mut Timings)
                 loc: None,
                 doc: None,
                 signature: None,
+                members: None,
             },
         );
     }
@@ -288,6 +289,7 @@ mod tests {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         }
     }
 

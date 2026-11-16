@@ -56,6 +56,11 @@ pub struct Node {
     pub doc: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<String>,
+    /// For an aggregate (unit, namespace) in a graph payload: how many
+    /// children it contains, which is what `/expand` pages through. Never
+    /// stored in a snapshot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub members: Option<u64>,
 }
 
 /// A graph edge. Distinct edges differ in `(from, to, kind, reason)`; call

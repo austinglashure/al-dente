@@ -132,7 +132,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/snapshot", get(api::snapshot))
         .route("/api/v1/graph", get(api::graph))
         .route("/api/v1/neighborhood", get(api::neighborhood))
-        .route("/api/v1/expand", get(api::expand))
+        .route("/api/v1/expand", get(api::expand).post(api::expand_post))
         .route("/api/v1/node", get(api::node))
         .route("/api/v1/source", get(api::source))
         .route("/api/v1/search", get(api::search))
@@ -153,7 +153,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/churn", get(api::churn))
         .route("/api/v1/subgraph", get(api::subgraph));
     #[cfg(test)]
-    let api = api.route("/api/v1/__panic", get(tests::panics));
+    let api = api
+        .route("/api/v1/__panic", get(tests::panics))
+        .layer(axum::middleware::from_fn(tests::cap_check));
     api.fallback(asset)
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -237,15 +239,26 @@ pub fn run(
         let listener =
             tokio::net::TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).await?;
         let port = listener.local_addr()?.port();
-        let state = make_state(port);
+        let state = Arc::new(make_state(port));
+        // Rollups are computed beside the first requests, not before the
+        // URL is printed; a request that needs one waits for it.
+        let _ = warm(Arc::clone(&state));
         let url = format!("http://127.0.0.1:{port}/?token={}", state.token);
         ready(&url);
-        axum::serve(listener, router(Arc::new(state)))
+        axum::serve(listener, router(state))
             .with_graceful_shutdown(async {
                 let _ = tokio::signal::ctrl_c().await;
             })
             .await
     })
+}
+
+/// Computes the namespace and unit rollups and the edge index on a thread
+/// of its own (`06-gui.md`: aggregated graphs are derived once at load).
+///
+/// Example: `warm(state.clone()).join()` returns once `state.cache.is_warm()`.
+pub fn warm(state: Arc<AppState>) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || state.cache.warm(&state.snapshot.graph))
 }
 
 /// Opens `url` in the default browser with the platform's opener, as an

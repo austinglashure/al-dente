@@ -32,6 +32,7 @@ fn node(s: &str) -> Node {
         loc: None,
         doc: None,
         signature: None,
+        members: None,
     }
 }
 

@@ -348,6 +348,7 @@ fn bare_node(id: &NodeId) -> Node {
         loc: None,
         doc: None,
         signature: None,
+        members: None,
     }
 }
 

@@ -142,6 +142,7 @@ mod tests {
             loc: None,
             doc: None,
             signature: None,
+            members: None,
         }
     }
 

@@ -238,7 +238,7 @@ pub fn tree_graph(graph: &Graph, tree: &TreeDir, collapsed: &BTreeSet<RepoPath>)
     for path in labels.keys() {
         ids.insert(NodeId::Dir(path.clone()));
     }
-    let nodes: Vec<Node> = ids
+    let mut nodes: Vec<Node> = ids
         .into_iter()
         .map(|id| match &id {
             NodeId::Dir(path) => {
@@ -247,6 +247,7 @@ pub fn tree_graph(graph: &Graph, tree: &TreeDir, collapsed: &BTreeSet<RepoPath>)
             _ => graph.group_node(&id),
         })
         .collect();
+    graph.set_members(&mut nodes);
     let mut edges = kept;
     edges.extend(
         members
@@ -278,5 +279,6 @@ fn dir_node(id: &NodeId, label: &str) -> Node {
         loc: None,
         doc: None,
         signature: None,
+        members: None,
     }
 }
