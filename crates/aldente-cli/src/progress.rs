@@ -3,7 +3,7 @@
 //! finish, and a "still working" line every so often during a long stage.
 
 use std::collections::BTreeMap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -36,7 +36,8 @@ struct State {
 #[derive(Debug)]
 pub struct StderrProgress {
     state: Arc<Mutex<State>>,
-    stop: Arc<AtomicBool>,
+    /// Dropping it wakes and ends the heartbeat thread at once.
+    stop: Option<Sender<()>>,
     heartbeat: Option<JoinHandle<()>>,
 }
 
@@ -54,17 +55,17 @@ impl StderrProgress {
             jobs: 0,
             last_done: None,
         }));
-        let stop = Arc::new(AtomicBool::new(false));
+        let (stop, stopped) = mpsc::channel();
         let heartbeat = {
-            let (state, stop) = (Arc::clone(&state), Arc::clone(&stop));
+            let state = Arc::clone(&state);
             std::thread::Builder::new()
                 .name("aldente-progress".into())
-                .spawn(move || beat(&state, &stop))
+                .spawn(move || beat(&state, &stopped))
                 .ok()
         };
         StderrProgress {
             state,
-            stop,
+            stop: Some(stop),
             heartbeat,
         }
     }
@@ -80,7 +81,7 @@ impl StderrProgress {
 
 impl Drop for StderrProgress {
     fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
+        drop(self.stop.take());
         if let Some(h) = self.heartbeat.take() {
             let _ = h.join();
         }
@@ -179,12 +180,12 @@ fn heartbeat_line(s: &State) -> String {
     format!("still working ({}): {what}", elapsed(s.started.elapsed()))
 }
 
-/// Every second, prints a heartbeat when nothing was printed for a while.
+/// Every 200 ms, prints a heartbeat when nothing was printed for a while.
 ///
-/// Example: runs on the `aldente-progress` thread until `stop` is set.
-fn beat(state: &Mutex<State>, stop: &AtomicBool) {
-    while !stop.load(Ordering::Relaxed) {
-        std::thread::sleep(Duration::from_millis(200));
+/// Example: runs on the `aldente-progress` thread until the `stop` sender is dropped.
+fn beat(state: &Mutex<State>, stopped: &mpsc::Receiver<()>) {
+    // Waiting on the channel, not sleeping, so a drop ends this at once.
+    while let Err(RecvTimeoutError::Timeout) = stopped.recv_timeout(Duration::from_millis(200)) {
         let mut s = lock(state);
         if s.last.elapsed() >= HEARTBEAT {
             eprintln!("aldente: {}", heartbeat_line(&s));
@@ -234,6 +235,24 @@ fn elapsed(d: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Dropping the reporter must not wait out the heartbeat's poll
+    /// interval: it used to sleep 200 ms per beat, so every analysis ended
+    /// on the next 200 ms tick.
+    #[test]
+    fn drop_does_not_wait_for_the_heartbeat_tick() {
+        for _ in 0..5 {
+            let p = StderrProgress::start();
+            std::thread::sleep(Duration::from_millis(20));
+            let t = Instant::now();
+            drop(p);
+            assert!(
+                t.elapsed() < Duration::from_millis(50),
+                "drop took {:?}",
+                t.elapsed()
+            );
+        }
+    }
 
     fn state() -> State {
         let now = Instant::now();
