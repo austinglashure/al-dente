@@ -12,6 +12,8 @@ aldente-adapter.workspace = true
 aldente-model.workspace = true
 # Units are analyzed in parallel (already used by aldente-clj).
 rayon.workspace = true
+# `find --regex` patterns (05-cli.md).
+regex.workspace = true
 # The snapshot store, SQLite compiled in (02-architecture.md, "Key dependencies").
 rusqlite.workspace = true
 serde.workspace = true

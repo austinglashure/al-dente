@@ -311,6 +311,31 @@ fn find_by_subkind_and_flag() {
     );
 }
 
+/// `find --regex`: the pattern is a regular expression over name or ID;
+/// an invalid one is a usage error (exit 2) with a `usage` envelope.
+#[test]
+fn find_regex() {
+    let env = Env::new("clj-mini", "find-regex");
+    let j = env.json(&["find", "--regex", r"shop\.pricing/half"]);
+    assert!(env.valid("find", &j["data"]), "{j:#}");
+    let ids: Vec<&str> = j["data"]["matches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["id"].as_str().unwrap())
+        .collect();
+    assert!(ids.contains(&"clj:.//shop.pricing/half-off"), "{ids:?}");
+    assert!(ids.iter().all(|id| id.starts_with("clj:.//shop.pricing/")));
+    let bad = env.run(&["find", "--regex", "(unclosed", "--json"]);
+    assert_eq!(bad.status.code(), Some(2));
+    let e: Value = serde_json::from_slice(&bad.stdout).unwrap();
+    assert_eq!(e["error"]["code"], "usage", "{e:#}");
+    assert_eq!(
+        env.run(&["find", "--regex", "(unclosed"]).status.code(),
+        Some(2)
+    );
+}
+
 /// `--timings` prints per-stage wall times to stderr: every stage on a cold
 /// run, only the lookup on a cache hit; stdout and JSON are unchanged.
 #[test]

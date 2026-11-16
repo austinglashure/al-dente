@@ -30,6 +30,8 @@ axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal"] }
 rust-embed = "8"
 toml = "1"
+# `find --regex` (05-cli.md); linear-time matching, so a hostile pattern cannot hang a search.
+regex = "1"
 rusqlite = { version = "0.42", features = ["bundled"] }
 tree-sitter = "0.26"
 tree-sitter-clojure-orchard = "0.2"

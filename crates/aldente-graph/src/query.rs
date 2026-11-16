@@ -90,6 +90,45 @@ impl SearchFilter {
     }
 }
 
+/// What a search matches against a node's name or ID.
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    /// Case-insensitive substring; held lowercased.
+    Substring(String),
+    /// Regular expression, unanchored and as written (case-sensitive unless
+    /// it says `(?i)`).
+    Regex(regex::Regex),
+}
+
+impl Pattern {
+    /// A case-insensitive substring pattern.
+    ///
+    /// Example: `Pattern::substring("Charge")` matches `billing.core/charge!`.
+    pub fn substring(s: &str) -> Pattern {
+        Pattern::Substring(s.to_lowercase())
+    }
+
+    /// A regular-expression pattern, or the parse error.
+    ///
+    /// Example: `Pattern::regex("^charge!$")` is `Ok`; `Pattern::regex("(")` is `Err`.
+    pub fn regex(s: &str) -> Result<Pattern, regex::Error> {
+        regex::Regex::new(s).map(Pattern::Regex)
+    }
+
+    /// Whether the node's name or full ID matches.
+    ///
+    /// Example: `Pattern::regex("^charge!$")` matches the node named `charge!`.
+    fn matches(&self, n: &Node) -> bool {
+        match self {
+            Pattern::Substring(needle) => {
+                n.name.to_lowercase().contains(needle)
+                    || n.id.to_string().to_lowercase().contains(needle)
+            }
+            Pattern::Regex(re) => re.is_match(&n.name) || re.is_match(&n.id.to_string()),
+        }
+    }
+}
+
 /// Nodes whose name or ID contains `pattern` (case-insensitive), of the
 /// given kinds (symbols, impls and namespaces when `kinds` is empty), sorted
 /// by ID, at most `limit` (0 = no limit). Returns whether more matched.
@@ -101,29 +140,24 @@ pub fn search(graph: &Graph, pattern: &str, kinds: &[NodeKind], limit: usize) ->
         kinds: kinds.to_vec(),
         ..SearchFilter::default()
     };
-    search_filtered(graph, pattern, &filter, limit)
+    search_filtered(graph, &Pattern::substring(pattern), &filter, limit)
 }
 
-/// [`search`] with subkind and flag filters. An empty pattern matches every
-/// node the filter keeps.
+/// [`search`] with any [`Pattern`] and with subkind and flag filters. An
+/// empty substring matches every node the filter keeps.
 ///
-/// Example: `search_filtered(g, "", &{flags: [entry-point]}, 0)` lists the
-/// entry points.
+/// Example: `search_filtered(g, &Pattern::substring(""), &{flags: [entry-point]}, 0)`
+/// lists the entry points.
 pub fn search_filtered(
     graph: &Graph,
-    pattern: &str,
+    pattern: &Pattern,
     filter: &SearchFilter,
     limit: usize,
 ) -> (Vec<Node>, bool) {
-    let needle = pattern.to_lowercase();
     let mut hits: Vec<Node> = graph
         .nodes
         .values()
-        .filter(|n| filter.keeps(n))
-        .filter(|n| {
-            n.name.to_lowercase().contains(&needle)
-                || n.id.to_string().to_lowercase().contains(&needle)
-        })
+        .filter(|n| filter.keeps(n) && pattern.matches(n))
         .cloned()
         .collect();
     let truncated = limit > 0 && hits.len() > limit;
@@ -835,6 +869,29 @@ mod tests {
         let (all, truncated) = search(&g, "charge", &[], 0);
         assert_eq!(all.len(), 2);
         assert!(!truncated);
+    }
+
+    #[test]
+    fn regex_search_matches_name_or_id_as_written() {
+        let g = graph();
+        let ids = |p: &Pattern| -> Vec<String> {
+            search_filtered(&g, p, &SearchFilter::default(), 0)
+                .0
+                .iter()
+                .map(|n| n.id.to_string())
+                .collect()
+        };
+        let charge = ids(&Pattern::regex("^charge!$").unwrap());
+        assert_eq!(charge.len(), 2, "{charge:?}");
+        assert!(charge.iter().all(|id| id.ends_with("/charge!")));
+        // Against the ID too, and case-sensitive unless the pattern says so.
+        assert_eq!(
+            ids(&Pattern::regex(r"orders\.core/charge").unwrap()).len(),
+            1
+        );
+        assert!(ids(&Pattern::regex("CHARGE").unwrap()).is_empty());
+        assert_eq!(ids(&Pattern::regex("(?i)^CHARGE!$").unwrap()).len(), 2);
+        assert!(Pattern::regex("(unclosed").is_err());
     }
 
     #[test]

@@ -1,19 +1,24 @@
 //! `aldente find <pattern> [TARGET]`: searches symbols, impls and namespaces.
 
-use aldente_graph::query::{SearchFilter, search_filtered};
+use aldente_graph::query::{Pattern, SearchFilter, search_filtered};
 use aldente_model::query::FindResult;
-use aldente_model::{Envelope, ExitCode, NodeKind, SymbolFlag, SymbolSubkind};
+use aldente_model::{Envelope, ErrorCode, ExitCode, NodeKind, SymbolFlag, SymbolSubkind};
 use clap::Args;
 
 use crate::commands::loaded::load;
-use crate::commands::target::TargetArgs;
+use crate::commands::target::{Failure, TargetArgs};
 use crate::output::{fail, print_json, print_lines, printable, token};
 
 /// Arguments for `aldente find`.
 #[derive(Debug, Args)]
 pub struct FindArgs {
     /// Substring of the name or ID (case-insensitive); `""` matches all.
+    /// With `--regex`, a regular expression (unanchored, case-sensitive
+    /// unless it starts with `(?i)`).
     pattern: String,
+    /// Treat the pattern as a regular expression.
+    #[arg(long)]
+    regex: bool,
     #[command(flatten)]
     target: TargetArgs,
     /// Only these node kinds or symbol subkinds (repeatable), e.g.
@@ -75,17 +80,33 @@ fn filter(args: &FindArgs) -> SearchFilter {
     f
 }
 
+/// The pattern the arguments ask for, or a usage failure for a bad regex.
+///
+/// Example: `find --regex "(" ` gives a usage failure; `find charge` gives
+/// `Pattern::Substring("charge")`.
+fn pattern(args: &FindArgs) -> Result<Pattern, Failure> {
+    if !args.regex {
+        return Ok(Pattern::substring(&args.pattern));
+    }
+    Pattern::regex(&args.pattern)
+        .map_err(|e| Failure::new(ErrorCode::Usage, format!("invalid --regex pattern: {e}")))
+}
+
 /// Prints matching nodes.
 ///
 /// Example: `aldente find charge` lists `clj:.//shop.payment/charge` and its impls.
 pub fn run(args: &FindArgs, json: bool) -> anyhow::Result<ExitCode> {
+    let pattern = match pattern(args) {
+        Ok(p) => p,
+        Err(f) => return fail(TAG, &f, json),
+    };
     let loaded = match load(&args.target, false) {
         Ok(l) => l,
         Err(f) => return fail(TAG, &f, json),
     };
     let (matches, truncated) = search_filtered(
         &loaded.outcome.snapshot.graph,
-        &args.pattern,
+        &pattern,
         &filter(args),
         args.limit,
     );
