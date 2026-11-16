@@ -103,6 +103,17 @@ jobs:
           npx playwright install --with-deps chromium
           npm run e2e
 
+      # WP5.2: scale acceptance on the synthetic corpus (ui/e2e/large.spec.ts).
+      # Runners draw WebGL in software (SwiftShader: about 4 frames a second
+      # locally, 35 on an integrated GPU), so time budgets are multiplied and
+      # the frame-rate floor divided by 10 here.
+      - name: UI scale test on the synthetic corpus (Linux, relaxed 10x)
+        if: runner.os == 'Linux'
+        working-directory: ui
+        run: |
+          cargo build --release -p aldente-cli -p bench
+          ALDENTE_E2E_LARGE=1 ALDENTE_E2E_RELAXED=10 ALDENTE_BIN=../target/release/aldente npx playwright test e2e/large.spec.ts
+
       # WP0.4: doctor must find the real git and clj-kondo (clj-kondo.exe on Windows).
       - name: doctor
         run: cargo run -q -p aldente-cli -- doctor

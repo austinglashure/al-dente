@@ -326,6 +326,30 @@ test.describe('requests', () => {
   });
 });
 
+test.describe('slow reports wait for the first view', () => {
+  test('hotspots and coverage start after the graph arrives; measures only when their panel opens', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      const order: string[] = [];
+      page.on('request', (r) => order.push(`start ${new URL(r.url()).pathname}`));
+      page.on('response', (r) => order.push(`done ${new URL(r.url()).pathname}`));
+      await page.goto(server.url);
+      await expect(listed(page, 'unit:services/orders')).toBeVisible();
+      await page.waitForTimeout(500);
+      const at = (e: string) => order.indexOf(e);
+      expect(at('done /api/v1/graph'), order.join('\n')).toBeGreaterThanOrEqual(0);
+      for (const slow of ['/api/v1/hotspots', '/api/v1/coverage']) {
+        expect(at(`start ${slow}`), order.join('\n')).toBeGreaterThan(at('done /api/v1/graph'));
+      }
+      expect(order.filter((e) => e.startsWith('start /api/v1/metrics'))).toHaveLength(0);
+      await page.getByTestId('measures-panel').locator('summary').click();
+      await expect.poll(() => order.filter((e) => e.startsWith('start /api/v1/metrics')).length).toBe(1);
+    } finally {
+      server.close();
+    }
+  });
+});
+
 test.describe('remembered view', () => {
   test('a reload reopens the namespace map with the chosen Top', async ({ page }) => {
     const server = await startServer('mono-mini');

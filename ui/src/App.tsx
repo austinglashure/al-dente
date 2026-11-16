@@ -18,6 +18,7 @@ import { LibraryPanel } from './Libraries';
 import { SourcePanel } from './SourcePanel';
 import { HelpDialog } from './HelpDialog';
 import { TraceDialog } from './TraceDialog';
+import { applyPage, batched, collapse, nextOffset, remaining, type Attachable, type Expansions } from './expansion';
 import { layout, layoutRuns } from './layout';
 import { edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { Splitter, usePanels } from './panels';
@@ -74,6 +75,11 @@ export function App() {
     collapsedRef.current = collapsed;
   }, [top, namespaceCount, collapsed]);
 
+  // End-to-end tests read node positions from here.
+  useEffect(() => {
+    (window as unknown as { aldenteCanvas?: unknown }).aldenteCanvas = graph;
+  }, [graph]);
+
   const redraw = useCallback(() => setVersion((v) => v + 1), []);
   // A ref, so callbacks that read the levels keep their identity and do not
   // re-trigger effects (such as the initial load) when a toggle changes.
@@ -86,8 +92,15 @@ export function App() {
     [graph, levelsRef],
   );
   const relayout = useCallback(() => layout(graph, redraw, edgeVisible), [graph, redraw, edgeVisible]);
+  // Aggregates expanded in place on the current canvas.
+  const expansions = useMemo<Expansions>(() => new Map(), []);
+  // The canvas renderer, detached while a batch of changes is applied.
+  const renderer = useRef<Attachable | null>(null);
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
-  const reports = useReports(api, overlay, sizeBy !== null || colorBy !== null, fail);
+  // Set once the first canvas is drawn; slow reports wait for it.
+  const [firstShown, setFirstShown] = useState(false);
+  const [measuresOpen, setMeasuresOpen] = useState(false);
+  const reports = useReports(api, overlay, sizeBy !== null || colorBy !== null, fail, firstShown);
 
   /** The two root views: units (the default) and every namespace at once. */
   const roots = useMemo(() => {
@@ -121,16 +134,20 @@ export function App() {
       crumb
         .load()
         .then((p) => {
-          graph.clear();
-          mergePayload(graph, p);
+          batched(renderer.current, graph, () => {
+            graph.clear();
+            expansions.clear();
+            mergePayload(graph, p);
+          });
           setCrumbs([...keep, crumb]);
+          setFirstShown(true);
           setError(null);
           relayout();
           redraw();
         })
         .catch(fail);
     },
-    [graph, relayout, redraw, fail],
+    [graph, expansions, relayout, redraw, fail],
   );
 
   useEffect(() => {
@@ -264,17 +281,41 @@ export function App() {
     [api, graph, crumbs, show, select, toggleDir],
   );
 
+  /** Expands an aggregate in place, or loads its next page if it is
+   *  expanded already; only the new nodes move. */
   const expandHere = useCallback(
-    (id: string) =>
-      api
-        .expand(id, graph.nodes())
+    (id: string) => {
+      if (!graph.hasNode(id)) {
+        return api
+          .expand(id, graph.nodes())
+          .then((p) => {
+            mergePayload(graph, p);
+            relayout();
+          })
+          .catch(fail);
+      }
+      return api
+        .expandPage(id, graph.nodes(), nextOffset(expansions, id))
         .then((p) => {
-          mergePayload(graph, p, id);
-          if (p.truncated) setNotice('Only the best-connected contents are shown.');
-          relayout();
+          let added: string[] = [];
+          batched(renderer.current, graph, () => {
+            added = applyPage(graph, expansions, id, p);
+          });
+          layout(graph, redraw, edgeVisible, new Set(added));
+          redraw();
         })
-        .catch(fail),
-    [api, graph, relayout, fail],
+        .catch(fail);
+    },
+    [api, graph, expansions, relayout, redraw, edgeVisible, fail],
+  );
+
+  /** Collapses an aggregate expanded in place back into one node. */
+  const collapseHere = useCallback(
+    (id: string) => {
+      batched(renderer.current, graph, () => collapse(graph, expansions, id));
+      redraw();
+    },
+    [graph, expansions, redraw],
   );
 
   const neighbors = useCallback(
@@ -309,7 +350,15 @@ export function App() {
     setCrater({ kind: 'seeds', ids: [n.id], label: labelFor(n), direction });
   }, []);
 
-  const tools: Tools = { open, expandHere: (id) => void expandHere(id), neighbors: (id) => void neighbors(id), focus, follow, crater: openCrater };
+  const tools: Tools = {
+    open,
+    expandHere: (id) => void expandHere(id),
+    collapse: collapseHere,
+    neighbors: (id) => void neighbors(id),
+    focus,
+    follow,
+    crater: openCrater,
+  };
 
   /** Selects a library: lists its call sites and highlights its users. */
   const pickLibrary = useCallback(
@@ -339,13 +388,19 @@ export function App() {
   const onDoubleClick = useCallback(
     (id: string) => {
       const n = graph.hasNode(id) ? graph.getNodeAttribute(id, 'node') : null;
-      if (n && isAggregate(n)) open(n);
-      else void neighbors(id);
+      if (n?.kind === 'directory') open(n);
+      else if (n && isAggregate(n)) {
+        if (expansions.has(id)) collapseHere(id);
+        else void expandHere(id);
+      } else void neighbors(id);
     },
-    [graph, open, neighbors],
+    [graph, expansions, open, neighbors, expandHere, collapseHere],
   );
 
-  const isHidden = useCallback((id: string) => graph.hasNode(id) && hidden(graph.getNodeAttribute(id, 'node'), hide), [graph, hide]);
+  const isHidden = useCallback(
+    (id: string) => graph.hasNode(id) && (graph.getNodeAttribute(id, 'expanded') === true || hidden(graph.getNodeAttribute(id, 'node'), hide)),
+    [graph, hide],
+  );
 
   const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
   const counts = { certain: 0, likely: 0, possible: 0 };
@@ -363,7 +418,8 @@ export function App() {
   }, [levels, relayout]);
 
   const visible = graph
-    .mapNodes((_id, a) => a.node)
+    .filterNodes((_id, a) => a.expanded !== true)
+    .map((id) => graph.getNodeAttribute(id, 'node'))
     .filter((n) => !hidden(n, hide))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
   const styleOf = useStyler(reports, overlay, sizeBy, colorBy, visible.map((n) => n.id));
@@ -454,7 +510,11 @@ export function App() {
           onDeselect={deselect}
           highlight={libHighlight}
           styleOf={styleOf}
-          data={{ overlay, 'styled-untested': styledUntested, 'layout-runs': layoutRuns() }}
+          semanticZoom
+          onRenderer={(s) => {
+            renderer.current = s;
+          }}
+          data={{ nodes: graph.order, overlay, 'styled-untested': styledUntested, 'layout-runs': layoutRuns() }}
         />
         </>
         )}
@@ -474,18 +534,24 @@ export function App() {
           />
         )}
         {details ? (
-          <Details d={details} unit={units.get(details.node.id)} tools={tools} onClose={deselect} />
+          <Details
+            d={details}
+            unit={units.get(details.node.id)}
+            tools={tools}
+            expansion={expansions.has(details.node.id) ? { left: remaining(expansions, details.node.id) } : null}
+            onClose={deselect}
+          />
         ) : (
           <div className="muted" data-testid="hint">
             <p>Click a node to see what it is, what it contains and what it is connected to.</p>
-            <p>Double-click a unit or namespace (or use Open) to show only its contents; the bar above the canvas takes you back.</p>
+            <p>Double-click a unit or namespace to expand it in place, and again to collapse it. Open shows only its contents; the bar above the canvas takes you back.</p>
             <p>A unit is a directory with its own build file (deps.edn, project.clj, shadow-cljs.edn, bb.edn). Callers, callees and source appear once you select a function.</p>
           </div>
         )}
         {source && <SourcePanel key={selected ?? ''} source={source} />}
-        <details className="measures-panel" data-testid="measures-panel">
+        <details className="measures-panel" data-testid="measures-panel" onToggle={(e) => setMeasuresOpen(e.currentTarget.open)}>
           <summary>Measures</summary>
-          <MeasuresTable api={api} selected={measureSel} onSelected={setMeasureSel} onFollow={follow} onError={fail} />
+          <MeasuresTable api={api} selected={measureSel} onSelected={setMeasureSel} onFollow={follow} onError={fail} active={measuresOpen} />
         </details>
       </aside>
       )}

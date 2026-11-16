@@ -7,7 +7,10 @@ import type { Child, GNode, Neighbor, ShowResult, UnitInfo } from './types';
 /** Actions the panel offers; which ones appear depends on the node kind. */
 export interface Tools {
   open: (n: GNode) => void;
+  /** Expands an aggregate in place, or loads its next page. */
   expandHere: (id: string) => void;
+  /** Collapses an aggregate expanded in place. */
+  collapse: (id: string) => void;
   neighbors: (id: string) => void;
   focus: (id: string) => void;
   follow: (id: string) => void;
@@ -30,7 +33,20 @@ function childNoun(kind: string): string {
 
 /** The details panel with its tools.
  *  Example: `<Details d={show} unit={info} tools={tools} />`. */
-export function Details({ d, unit, tools, onClose }: { d: ShowResult; unit: UnitInfo | undefined; tools: Tools; onClose: () => void }) {
+export function Details({
+  d,
+  unit,
+  tools,
+  expansion = null,
+  onClose,
+}: {
+  d: ShowResult;
+  unit: UnitInfo | undefined;
+  tools: Tools;
+  /** Set when the node is expanded in place: how many children are not shown yet. */
+  expansion?: { left: number } | null;
+  onClose: () => void;
+}) {
   const n = d.node;
   const aggregate = n.kind === 'unit' || n.kind === 'namespace' || n.kind === 'directory';
   const directory = n.kind === 'directory';
@@ -54,9 +70,19 @@ export function Details({ d, unit, tools, onClose }: { d: ShowResult; unit: Unit
             {directory ? 'Expand' : 'Open'}
           </button>
         )}
-        {aggregate && !directory && (
-          <button type="button" data-action="expand" onClick={() => tools.expandHere(n.id)} title="Add its contents to the canvas">
+        {aggregate && !directory && expansion === null && (
+          <button type="button" data-action="expand" onClick={() => tools.expandHere(n.id)} title="Add its contents to the canvas, best-connected first (or double-click it)">
             Expand here
+          </button>
+        )}
+        {expansion !== null && expansion.left > 0 && (
+          <button type="button" data-action="show-more" onClick={() => tools.expandHere(n.id)} title="Add the next best-connected contents">
+            Show more ({expansion.left.toLocaleString('en-US')} left)
+          </button>
+        )}
+        {expansion !== null && (
+          <button type="button" data-action="collapse" onClick={() => tools.collapse(n.id)} title="Fold its contents back into it (or double-click it)">
+            Collapse
           </button>
         )}
         {!aggregate && (

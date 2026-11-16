@@ -53,3 +53,29 @@ export function startServerOn(source: string): Promise<Server> {
     child.on('exit', (code) => reject(new Error(`aldente serve exited with ${code}`)));
   });
 }
+
+/** Runs `aldente serve --snapshot FILE` (no target, no copy) and resolves
+ *  once it prints its URL.
+ *  Example: `await startSnapshotServer('target/bench/synthetic.db')`. */
+export function startSnapshotServer(file: string): Promise<Server> {
+  const dir = mkdtempSync(join(tmpdir(), 'aldente-e2e-'));
+  const child: ChildProcess = spawn(binary, ['serve', '--no-open', '--json', '--snapshot', file], {
+    env: { ...process.env, ALDENTE_CACHE_DIR: join(dir, 'cache') },
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  const close = () => {
+    child.kill();
+    rmSync(dir, { recursive: true, force: true });
+  };
+  return new Promise((resolvePromise, reject) => {
+    let out = '';
+    child.stdout?.on('data', (chunk: Buffer) => {
+      out += chunk.toString();
+      if (out.includes('\n}\n')) {
+        const env = JSON.parse(out.slice(0, out.indexOf('\n}\n') + 2)) as { data: { url: string } };
+        resolvePromise({ url: env.data.url, close });
+      }
+    });
+    child.on('exit', (code) => reject(new Error(`aldente serve exited with ${code}`)));
+  });
+}

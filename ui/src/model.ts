@@ -11,6 +11,8 @@ export interface NodeAttrs {
   size: number;
   color: string;
   node: GNode;
+  /** An aggregate expanded in place with nothing left to show: hidden. */
+  expanded?: boolean;
 }
 
 export interface EdgeAttrs {
@@ -127,7 +129,7 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
       label: labelFor(n),
       x: base.x + (random() - 0.5) * 10,
       y: base.y + (random() - 0.5) * 10,
-      size: n.kind === 'unit' || n.kind === 'directory' ? 9 : n.kind === 'namespace' ? 8 : n.kind === 'hole' ? 7 : 4,
+      size: clusterSize(n),
       color: kindColor(n.kind),
       node: n,
     });
@@ -144,6 +146,15 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
     });
   }
   return added;
+}
+
+/** Drawn size of a node: aggregates grow with the log of their member
+ *  count (capped), everything else by kind.
+ *  Example: `clusterSize({kind: 'namespace', members: 0})` is 8; a symbol is 4. */
+export function clusterSize(n: GNode): number {
+  const base = n.kind === 'unit' || n.kind === 'directory' ? 9 : n.kind === 'namespace' ? 8 : n.kind === 'hole' ? 7 : 4;
+  if (n.members === undefined || !isAggregate(n)) return base;
+  return Math.min(base + 1.5 * Math.log2(1 + n.members), 24);
 }
 
 /** Removes nodes (and their edges) from the canvas.

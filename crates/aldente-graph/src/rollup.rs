@@ -58,41 +58,56 @@ impl Graph {
         level: AggregationLevel,
         group: impl Fn(&Graph, &NodeId) -> Option<NodeId>,
     ) -> GraphPayload {
-        // Hash maps while grouping; nodes and edges are sorted once at the
-        // end, in the order ordered maps would have given.
-        let mut nodes: HashMap<NodeId, Node> = HashMap::new();
-        let mut members: HashMap<(NodeId, NodeId, EdgeKind), Vec<&Edge>> = HashMap::new();
+        // Groups are interned as indices: an edge's group key is two
+        // integers, not two cloned IDs (2,000,000 edges made that the cost).
+        let mut ids: Vec<NodeId> = Vec::new();
+        let mut index: HashMap<NodeId, u32> = HashMap::new();
+        let mut group_of: HashMap<&NodeId, Option<u32>> = HashMap::new();
+        let mut intern = |g: Option<NodeId>| -> Option<u32> {
+            let g = g?;
+            Some(*index.entry(g).or_insert_with_key(|g| {
+                ids.push(g.clone());
+                (ids.len() - 1) as u32
+            }))
+        };
+        let mut members: HashMap<(u32, u32, EdgeKind), Vec<&Edge>> = HashMap::new();
         let mut kept: Vec<Edge> = Vec::new();
-        // Each node's group, computed once (edges share endpoints).
-        let mut groups: HashMap<&NodeId, Option<NodeId>> = HashMap::new();
+        let mut used: Vec<bool> = Vec::new();
         for edge in &self.edges {
-            let from = groups
+            let requires = edge.kind == EdgeKind::Requires && level == AggregationLevel::Namespace;
+            if !requires && !INVOCATION.contains(&edge.kind) {
+                continue;
+            }
+            let from = *group_of
                 .entry(&edge.from)
-                .or_insert_with(|| group(self, &edge.from))
-                .clone();
-            let to = groups
+                .or_insert_with(|| intern(group(self, &edge.from)));
+            let to = *group_of
                 .entry(&edge.to)
-                .or_insert_with(|| group(self, &edge.to))
-                .clone();
+                .or_insert_with(|| intern(group(self, &edge.to)));
             let (Some(from), Some(to)) = (from, to) else {
                 continue;
             };
-            if edge.kind == EdgeKind::Requires && level == AggregationLevel::Namespace {
+            if requires {
                 kept.push(edge.clone());
-            } else if INVOCATION.contains(&edge.kind) && from != to {
-                members
-                    .entry((from.clone(), to.clone(), edge.kind))
-                    .or_default()
-                    .push(edge);
+            } else if from != to {
+                members.entry((from, to, edge.kind)).or_default().push(edge);
             } else {
                 continue;
             }
-            for id in [from, to] {
-                if !nodes.contains_key(&id) {
-                    nodes.insert(id.clone(), self.group_node(&id));
+            for i in [from, to] {
+                let i = i as usize;
+                if used.len() <= i {
+                    used.resize(i + 1, false);
                 }
+                used[i] = true;
             }
         }
+        let mut nodes: HashMap<NodeId, Node> = ids
+            .iter()
+            .zip(used.iter().chain(std::iter::repeat(&false)))
+            .filter(|(_, u)| **u)
+            .map(|(id, _)| (id.clone(), self.group_node(id)))
+            .collect();
         for node in self.nodes.values() {
             let wanted = match level {
                 AggregationLevel::Namespace => node.kind == NodeKind::Namespace,
@@ -103,11 +118,14 @@ impl Graph {
             }
         }
         let mut edges: Vec<Edge> = kept;
-        edges.extend(
-            members
-                .into_iter()
-                .map(|((from, to, kind), es)| roll(from, to, kind, &es)),
-        );
+        edges.extend(members.into_iter().map(|((from, to, kind), es)| {
+            roll(
+                ids[from as usize].clone(),
+                ids[to as usize].clone(),
+                kind,
+                &es,
+            )
+        }));
         edges.sort_by(|a, b| (&a.from, &a.to, a.kind).cmp(&(&b.from, &b.to, b.kind)));
         let mut nodes: Vec<Node> = nodes.into_values().collect();
         self.set_members(&mut nodes);
@@ -133,7 +151,17 @@ impl Graph {
             NodeId::External(ext) => ExternalId::namespace(ext.lang(), ext.ns())
                 .ok()
                 .map(NodeId::External),
-            NodeId::Symbol(_) | NodeId::Impl(_) => {
+            // A symbol's namespace is in its ID: no lookup in the node map,
+            // which dominated rollups on big graphs (pinned to the stored
+            // fields by a test). An impl's ID names the method's namespace,
+            // not the one its `defmethod` is in, so impls are looked up.
+            NodeId::Symbol(s) => {
+                let ns = s.namespace();
+                NamespaceId::new(Lang::Clj, ns.unit().clone(), ns.ns())
+                    .ok()
+                    .map(NodeId::Namespace)
+            }
+            NodeId::Impl(_) => {
                 let node = self.nodes.get(id)?;
                 let NodeId::Unit(dir) = node.unit.as_ref()? else {
                     return None;
@@ -152,6 +180,10 @@ impl Graph {
     pub fn unit_of(&self, id: &NodeId) -> Option<NodeId> {
         match id {
             NodeId::Unit(_) => Some(id.clone()),
+            // Read from the ID, as in `namespace_of` (edge ends are always
+            // nodes; a test pins both).
+            NodeId::Namespace(ns) => Some(NodeId::Unit(ns.unit().clone())),
+            NodeId::Symbol(s) => Some(NodeId::Unit(s.namespace().unit().clone())),
             _ => self.nodes.get(id)?.unit.clone(),
         }
     }

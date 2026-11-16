@@ -35,13 +35,15 @@ impl Cache {
         }
     }
 
-    /// Computes every view now (the server does this at load).
+    /// Computes every view now (the server does this at load): the unit
+    /// rollup first (the first view of a multi-unit repository), then the
+    /// edge index (expand), then the namespace rollup (the slowest).
     ///
     /// Example: after `cache.warm(g)`, `cache.is_warm()` is true.
     pub fn warm(&self, graph: &Graph) {
-        let _ = self.payload(graph, AggregationLevel::Namespace);
         let _ = self.payload(graph, AggregationLevel::Unit);
         let _ = self.adjacency(graph);
+        let _ = self.payload(graph, AggregationLevel::Namespace);
     }
 
     /// Whether every view is computed.

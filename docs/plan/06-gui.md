@@ -13,9 +13,9 @@ Every response uses the CLI's JSON envelope and the same `data` shapes, so the s
 | Endpoint | Returns |
 |---|---|
 | `GET /snapshot` | repository, revision, counts, units, blind-spot summary |
-| `GET /graph?level=&unit=&min_certainty=&kinds=` | an aggregated graph that fits the payload cap |
+| `GET /graph?level=&unit=&min_certainty=&kinds=` | an aggregated graph that fits the payload cap; `level=auto` is the finest level that fits |
 | `GET /neighborhood?id=&depth=&direction=&min_certainty=` | nodes and edges around one node |
-| `GET /expand?id=` | the children of an aggregate (unit → namespaces, namespace → symbols) and edges to what is already on screen (`&visible=` list) |
+| `GET /expand?id=` | the children of an aggregate (unit → namespaces, namespace → symbols) and edges to what is already on screen (`&visible=` list); one page at a time (`offset`, `limit` ≤ 200), the aggregate itself standing for children not loaded yet; `POST` with the visible IDs as a JSON array for screens too big for a URL |
 | `GET /node?id=` | full details for the side panel |
 | `GET /source?id=&context=` | the source text for a node or site, as plain text |
 | `GET /search?q=&kind=&limit=` | ranked matches |

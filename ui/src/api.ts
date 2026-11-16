@@ -117,6 +117,9 @@ export class Api {
   unitGraph = (unit: string) => this.envelope<Payload>('graph', { level: 'namespace', unit });
   neighborhood = (id: string) => this.json<Payload>('neighborhood', { id, depth: 1 });
   expand = (id: string, visible: string[]) => this.json<Payload>('expand', { id, visible });
+  /** One page of an aggregate's children; the visible IDs go in the body
+   *  (a full canvas does not fit in a URL). */
+  expandPage = (id: string, visible: string[], offset: number) => this.post<Payload>('expand', { id, offset }, JSON.stringify(visible));
   node = (id: string) => this.json<ShowResult>('node', { id });
   search = (q: string) => this.json<FindResult>('search', { q, limit: 20 });
   source = (id: string) => this.text('source', { id, context: 2 });

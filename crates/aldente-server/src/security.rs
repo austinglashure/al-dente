@@ -17,8 +17,9 @@ pub const TOKEN_HEADER: &str = "x-aldente-token";
 pub const CSP: &str = "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
 
 /// Rejects requests with a foreign `Host` (DNS rebinding) or `Origin` (403)
-/// and API requests without the token (401); runs the handler in its own
-/// task so a panic becomes a 500; adds security headers to every response.
+/// and API requests without the token (401); runs the handler on a thread
+/// of its own so a panic becomes a 500 and a slow handler blocks nothing
+/// else; adds security headers to every response.
 ///
 /// Example: `GET /api/v1/snapshot` with `Host: evil.example` gives 403.
 pub async fn guard(State(state): State<Arc<AppState>>, req: Request, next: Next) -> Response {
@@ -31,10 +32,16 @@ pub async fn guard(State(state): State<Arc<AppState>>, req: Request, next: Next)
         .unwrap_or_default();
     let mut res = match check(&state, req.headers(), req.uri().path()) {
         Err(status) => (status, status.canonical_reason().unwrap_or("refused")).into_response(),
-        Ok(()) => match tokio::spawn(next.run(req)).await {
-            Ok(res) => res,
-            Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal error").into_response(),
-        },
+        // Handlers compute without yielding (measures on a big graph take
+        // minutes), so each runs on a blocking-pool thread of its own: the
+        // async workers stay free, and a request is never stuck behind one.
+        Ok(()) => {
+            let rt = tokio::runtime::Handle::current();
+            match tokio::task::spawn_blocking(move || rt.block_on(next.run(req))).await {
+                Ok(res) => res,
+                Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal error").into_response(),
+            }
+        }
     };
     let headers = res.headers_mut();
     headers.insert(

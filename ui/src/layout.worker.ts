@@ -5,7 +5,8 @@ import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 
 export interface LayoutRequest {
-  nodes: { id: string; x: number; y: number }[];
+  /** `fixed` nodes keep their position (ForceAtlas2 honors the attribute). */
+  nodes: { id: string; x: number; y: number; fixed: boolean }[];
   edges: [string, string][];
   iterations: number;
 }
@@ -14,7 +15,7 @@ export type LayoutResponse = Record<string, { x: number; y: number }>;
 
 self.onmessage = (ev: MessageEvent<LayoutRequest>) => {
   const g = new Graph({ type: 'directed', multi: true });
-  for (const n of ev.data.nodes) g.addNode(n.id, { x: n.x, y: n.y });
+  for (const n of ev.data.nodes) g.addNode(n.id, { x: n.x, y: n.y, fixed: n.fixed });
   for (const [a, b] of ev.data.edges) if (g.hasNode(a) && g.hasNode(b)) g.addEdge(a, b);
   const settings = { ...forceAtlas2.inferSettings(g), barnesHutOptimize: g.order > 500 };
   const positions: LayoutResponse = forceAtlas2(g, { iterations: ev.data.iterations, settings });

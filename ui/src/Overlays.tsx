@@ -16,22 +16,24 @@ export interface Reports {
 }
 
 /** Loads the reports an overlay needs, lazily (churn and metrics only when
- *  asked for). Errors go to `onError`.
- *  Example: `const reports = useReports(api, overlay, needMetrics, fail)`. */
-export function useReports(api: Api, overlay: OverlayKind, needMetrics: boolean, onError: (e: unknown) => void): Reports {
+ *  asked for), and nothing until `enabled` (after the first canvas, so slow
+ *  reports never hold up the first view). Errors go to `onError`.
+ *  Example: `const reports = useReports(api, overlay, needMetrics, fail, shown)`. */
+export function useReports(api: Api, overlay: OverlayKind, needMetrics: boolean, onError: (e: unknown) => void, enabled: boolean): Reports {
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [hotspots, setHotspots] = useState<HotspotsReport | null>(null);
   const [churn, setChurn] = useState<ChurnReport | null>(null);
   const [metrics, setMetrics] = useState<MetricsReport | null>(null);
   useEffect(() => {
+    if (!enabled) return;
     api.hotspots().then(setHotspots).catch(onError);
     api.coverage().then(setCoverage).catch(onError);
-  }, [api, onError]);
+  }, [api, onError, enabled]);
   useEffect(() => {
-    if (overlay === 'churn' && churn === null) api.churn().then(setChurn).catch(onError);
-  }, [api, overlay, churn, onError]);
+    if (enabled && overlay === 'churn' && churn === null) api.churn().then(setChurn).catch(onError);
+  }, [api, overlay, churn, onError, enabled]);
   useEffect(() => {
-    if (!needMetrics || metrics !== null) return;
+    if (!enabled || !needMetrics || metrics !== null) return;
     Promise.all((['symbol', 'namespace', 'unit'] as const).map((l) => api.metrics(l)))
       .then((rs) =>
         setMetrics({
@@ -40,7 +42,7 @@ export function useReports(api: Api, overlay: OverlayKind, needMetrics: boolean,
         }),
       )
       .catch(onError);
-  }, [api, needMetrics, metrics, onError]);
+  }, [api, needMetrics, metrics, onError, enabled]);
   return { coverage, hotspots, churn, metrics };
 }
 

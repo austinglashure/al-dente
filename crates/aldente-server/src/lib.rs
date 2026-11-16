@@ -155,6 +155,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     #[cfg(test)]
     let api = api
         .route("/api/v1/__panic", get(tests::panics))
+        .route("/api/v1/__busy", get(tests::busy))
         .layer(axum::middleware::from_fn(tests::cap_check));
     api.fallback(asset)
         .layer(axum::middleware::from_fn_with_state(

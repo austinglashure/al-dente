@@ -27,6 +27,8 @@ export interface GNode {
   loc?: Loc;
   doc?: string;
   signature?: string;
+  /** Aggregates in graph payloads: how many children they contain. */
+  members?: number;
 }
 
 export interface GEdge {

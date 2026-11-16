@@ -14,20 +14,22 @@ export function layoutRuns(): number {
 
 /** Lays out `g` in a worker using only the edges `edgeFilter` keeps (hidden
  *  certainty levels do not pull nodes together); calls `done` afterwards.
- *  Example: `layout(graph, () => sigma.refresh(), (k) => shown(k))`. */
-export function layout(g: CanvasGraph, done: () => void, edgeFilter: (key: string) => boolean = () => true): void {
+ *  With `free`, only those nodes move: the rest stay where they are, so the
+ *  picture does not jump when nodes are added.
+ *  Example: `layout(graph, () => sigma.refresh(), (k) => shown(k), new Set(added))`. */
+export function layout(g: CanvasGraph, done: () => void, edgeFilter: (key: string) => boolean = () => true, free?: Set<string>): void {
   runs += 1;
   worker?.terminate();
   worker = new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' });
   const req: LayoutRequest = {
-    nodes: g.mapNodes((id, a) => ({ id, x: a.x, y: a.y })),
+    nodes: g.mapNodes((id, a) => ({ id, x: a.x, y: a.y, fixed: free !== undefined && !free.has(id) })),
     edges: g.filterEdges((k) => edgeFilter(k)).map((k) => [g.source(k), g.target(k)] as [string, string]),
     iterations: g.order > 1000 ? 60 : 200,
   };
   worker.onmessage = (ev: MessageEvent<LayoutResponse>) => {
-    for (const [id, p] of Object.entries(ev.data)) {
-      if (g.hasNode(id)) g.mergeNodeAttributes(id, p);
-    }
+    // One bulk update (one renderer refresh), not one event per node.
+    const moved = ev.data;
+    g.updateEachNodeAttributes((id, a) => (moved[id] ? { ...a, x: moved[id].x, y: moved[id].y } : a), { attributes: ['x', 'y'] });
     done();
   };
   worker.postMessage(req);

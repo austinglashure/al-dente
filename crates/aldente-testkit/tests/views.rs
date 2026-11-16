@@ -97,3 +97,54 @@ fn indexed_expand_equals_the_scanning_expand() {
         }
     }
 }
+
+/// WP5.2: `unit_of` and `namespace_of` read a namespace, symbol or impl ID
+/// instead of looking the node up; on every fixture that must equal what
+/// the node itself says.
+#[test]
+fn groups_read_from_ids_equal_the_stored_node_fields() {
+    use aldente_model::{Lang, NamespaceId};
+    for fixture in ["clj-mini", "mono-mini", "clj-rules"] {
+        let g = analyze_fixture(&fixture_dir(fixture)).graph;
+        // Edge ends with a unit in their ID are nodes of the graph, so
+        // reading the unit from the ID never invents one.
+        for e in &g.edges {
+            for end in [&e.from, &e.to] {
+                if matches!(
+                    end,
+                    NodeId::Namespace(_) | NodeId::Symbol(_) | NodeId::Impl(_)
+                ) {
+                    assert!(g.nodes.contains_key(end), "{fixture}: {end} is not a node");
+                }
+            }
+        }
+        for n in g.nodes.values() {
+            if !matches!(
+                n.id,
+                NodeId::Namespace(_) | NodeId::Symbol(_) | NodeId::Impl(_)
+            ) {
+                continue;
+            }
+            assert_eq!(
+                g.unit_of(&n.id),
+                n.unit.clone(),
+                "{fixture} unit of {}",
+                n.id
+            );
+            if matches!(n.id, NodeId::Symbol(_) | NodeId::Impl(_)) {
+                let NodeId::Unit(dir) = n.unit.clone().unwrap() else {
+                    panic!("{} has no unit", n.id);
+                };
+                let stored = NamespaceId::new(Lang::Clj, dir, n.namespace.as_deref().unwrap())
+                    .map(NodeId::Namespace)
+                    .ok();
+                assert_eq!(
+                    g.namespace_of(&n.id),
+                    stored,
+                    "{fixture} namespace of {}",
+                    n.id
+                );
+            }
+        }
+    }
+}

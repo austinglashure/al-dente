@@ -21,6 +21,47 @@ pub(crate) async fn panics() -> &'static str {
     panic!("handler panic for tests")
 }
 
+/// A handler that computes for two seconds without yielding, as the
+/// measure handlers do on a big graph. Mounted only in tests.
+///
+/// Example: `GET /api/v1/__busy` answers after 2 s.
+pub(crate) async fn busy() -> &'static str {
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    "done"
+}
+
+/// More slow requests than worker threads must not stop a cheap one: the
+/// GUI's first view hung behind `/hotspots` and `/coverage` on a big graph.
+#[test]
+fn slow_handlers_do_not_starve_other_requests() {
+    let s = start("busy");
+    let workers = std::thread::available_parallelism().map_or(4, |n| n.get());
+    let port = s.port;
+    let headers = s.good();
+    let slow: Vec<_> = (0..workers + 4)
+        .map(|_| {
+            let h = headers.clone();
+            std::thread::spawn(move || {
+                let refs: Vec<(&str, &str)> =
+                    h.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+                get(port, "/api/v1/__busy", &refs)
+            })
+        })
+        .collect();
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let t = std::time::Instant::now();
+    let (status, _, _) = s.ok_get("/api/v1/snapshot");
+    assert_eq!(status, 200);
+    assert!(
+        t.elapsed() < std::time::Duration::from_millis(1000),
+        "{:?}",
+        t.elapsed()
+    );
+    for h in slow {
+        assert_eq!(h.join().unwrap().0, 200);
+    }
+}
+
 /// Test-only middleware: a graph envelope over the payload cap becomes a
 /// 500 naming the overflow, so any test that reaches it fails.
 ///

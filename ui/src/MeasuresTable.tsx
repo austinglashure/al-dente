@@ -52,11 +52,13 @@ interface Props {
   onSelected: (ids: Set<string>) => void;
   onFollow: (id: string) => void;
   onError: (e: unknown) => void;
+  /** Load only once the panel is open: measures are slow on big graphs. */
+  active: boolean;
 }
 
 /** The measures table panel.
  *  Example: `<MeasuresTable api={api} selected={sel} onSelected={setSel} … />`. */
-export function MeasuresTable({ api, selected, onSelected, onFollow, onError }: Props) {
+export function MeasuresTable({ api, selected, onSelected, onFollow, onError, active }: Props) {
   const [level, setLevel] = useState<'symbol' | 'namespace' | 'unit'>('symbol');
   const [byLevel, setByLevel] = useState<Partial<Record<typeof level, MetricsReport>>>({});
   const report = byLevel[level] ?? null;
@@ -64,12 +66,12 @@ export function MeasuresTable({ api, selected, onSelected, onFollow, onError }: 
   const [scroll, setScroll] = useState(0);
   const loaded = report !== null;
   useEffect(() => {
-    if (loaded) return;
+    if (loaded || !active) return;
     api
       .metrics(level)
       .then((r) => setByLevel((m) => ({ ...m, [level]: r })))
       .catch(onError);
-  }, [api, level, loaded, onError]);
+  }, [api, level, loaded, active, onError]);
   const rows = useMemo(() => (report ? measureRows(report, sort) : []), [report, sort]);
   const { start, end } = windowOf(rows.length, scroll);
   const toggle = (id: string, add: boolean) => {
