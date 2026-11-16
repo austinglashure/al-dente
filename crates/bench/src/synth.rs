@@ -511,6 +511,7 @@ fn symbol_node(
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 
@@ -541,6 +542,7 @@ fn namespace_node(id: NamespaceId, ns: &NsPlan, unit: &UnitPlan) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 
@@ -565,6 +567,7 @@ fn unit_node(unit: &UnitPlan) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 
@@ -592,6 +595,7 @@ fn external_node(id: NodeId) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 

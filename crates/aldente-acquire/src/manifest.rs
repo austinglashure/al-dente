@@ -141,6 +141,10 @@ fn deps_map(deps: Option<&Edn>) -> Vec<DeclaredDep> {
                     .get_kw("mvn/version")
                     .and_then(Edn::as_str)
                     .map(str::to_owned),
+                local: v
+                    .get_kw("local/root")
+                    .and_then(Edn::as_str)
+                    .map(str::to_owned),
             }),
             _ => None,
         })
@@ -158,6 +162,7 @@ fn deps_vector(deps: Option<&Edn>) -> Vec<DeclaredDep> {
             [Edn::Symbol(name), rest @ ..] => Some(DeclaredDep {
                 coord: coordinate(name),
                 version: rest.first().and_then(Edn::as_str).map(str::to_owned),
+                local: None,
             }),
             _ => None,
         })
@@ -566,7 +571,34 @@ mod tests {
         DeclaredDep {
             coord: coord.into(),
             version: version.map(Into::into),
+            local: None,
         }
+    }
+
+    /// WP5.5: a `:local/root` dependency keeps its path as written.
+    #[test]
+    fn deps_edn_local_roots() {
+        let info = parse(
+            Manifest::DepsEdn,
+            r#"{:deps {mono/common {:local/root "../../libs/common"}
+                       reagent {:mvn/version "1.2.0"}}}"#,
+        )
+        .unwrap();
+        let local: Vec<(String, Option<String>)> = info
+            .deps
+            .iter()
+            .map(|d| (d.coord.clone(), d.local.clone()))
+            .collect();
+        assert_eq!(
+            local,
+            [
+                (
+                    "mono/common".to_owned(),
+                    Some("../../libs/common".to_owned())
+                ),
+                ("reagent/reagent".to_owned(), None),
+            ]
+        );
     }
 
     #[test]

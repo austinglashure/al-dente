@@ -56,6 +56,10 @@ pub struct DeclaredDep {
     /// `:mvn/version` or the Leiningen version string; null for git and
     /// local dependencies.
     pub version: Option<String>,
+    /// A deps.edn `:local/root` path as written, relative to the manifest's
+    /// directory (`../../libs/common`); null otherwise.
+    #[serde(default)]
+    pub local: Option<String>,
 }
 
 /// A source or test root of a unit.

@@ -163,6 +163,28 @@ fn expand_page(s: &crate::AppState, p: &Params, visible: &[NodeId]) -> Response 
     )
 }
 
+/// `GET /unit-links?id=`: what a unit uses from each other unit and what
+/// each uses from it (the service overview's details).
+///
+/// Example: `?id=unit:services/orders` in mono-mini lists `unit:libs/common`.
+pub async fn unit_links(State(s): St, RawQuery(q): RawQuery) -> Response {
+    let p = Params::parse(q.as_deref());
+    let id = match resolve_id(&s, "unit-links", p.get("id")) {
+        Ok(id) => id,
+        Err(res) => return *res,
+    };
+    if !matches!(id, NodeId::Unit(_)) {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "unit-links",
+            ErrorCode::Usage,
+            "unit-links takes a unit ID",
+            None,
+        );
+    }
+    ok(&s, "unit-links", query::unit_links(&s.snapshot.graph, &id))
+}
+
 /// `GET /node?id=`: details for the side panel (the CLI's `show`).
 ///
 /// Example: `?id=checkout` gives its node, callers and callees.

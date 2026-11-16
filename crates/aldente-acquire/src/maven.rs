@@ -270,6 +270,7 @@ mod tests {
         let dep = |c: &str, v: Option<&str>| DeclaredDep {
             coord: c.into(),
             version: v.map(Into::into),
+            local: None,
         };
         let map = jar_namespaces(
             &repo,

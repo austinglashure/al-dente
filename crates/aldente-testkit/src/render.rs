@@ -143,6 +143,7 @@ mod tests {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         }
     }
 

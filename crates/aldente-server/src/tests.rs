@@ -147,6 +147,7 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
                 doc: Some("<script>alert(1)</script>".into()),
                 signature: None,
                 members: None,
+                symbols: None,
             },
         );
     }
@@ -173,6 +174,7 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         },
     );
     for child in ["clj:.//a/f", "clj:.//a/g"] {
@@ -224,6 +226,7 @@ fn fixture(name: &str) -> (PathBuf, Snapshot) {
                     doc: None,
                     signature: None,
                     members: None,
+                    symbols: None,
                 },
             );
         }

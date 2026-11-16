@@ -77,3 +77,12 @@ describe('nodeMeasures', () => {
     expect(nodeMeasures(report, 'b')).toEqual([]);
   });
 });
+
+describe('rollUp to units', () => {
+  it('adds each symbol to its namespace and to its unit', () => {
+    const up = rollUp(new Map([['clj:services/orders//o.core/a', 2], ['clj:services/orders//o.util/b', 5], ['clj:.//x/c', 1]]), 'max');
+    expect(up.get('clj:services/orders//o.core')).toBe(2);
+    expect(up.get('unit:services/orders')).toBe(5);
+    expect(up.get('unit:.')).toBe(1);
+  });
+});

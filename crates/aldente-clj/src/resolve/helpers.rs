@@ -253,5 +253,6 @@ pub(super) fn platform_node(id: &NodeId, name: &str) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }

@@ -6,7 +6,7 @@ use aldente_adapter::{FactBatch, LiteralFact};
 use aldente_model::timing::Timings;
 use aldente_model::{
     BlindSpot, Certainty, Diagnostic, Edge, EdgeKind, Lang, NamespaceId, Node, NodeId, NodeKind,
-    Reason, SymbolFlag, SymbolId, UnitInfo,
+    Reason, RepoPath, SymbolFlag, SymbolId, UnitInfo,
 };
 
 /// The whole repository's graph. Nodes are keyed and sorted by ID; edges,
@@ -22,6 +22,68 @@ pub struct Graph {
 
 /// The key that keeps edges distinct (`03-graph-model.md`), plus language.
 type EdgeKey = (NodeId, NodeId, EdgeKind, Option<Reason>, Option<Lang>);
+
+/// `unit -depends-> unit` for each deps.edn `:local/root` that names
+/// another unit's directory (WP5.5: the service overview's declared links).
+///
+/// Example: `services/orders` with `{:local/root "../../libs/common"}` gives
+/// `unit:services/orders -depends-> unit:libs/common`.
+fn local_root_links(units: &[UnitInfo]) -> Vec<Edge> {
+    let dirs: HashSet<&RepoPath> = units.iter().map(|u| &u.dir).collect();
+    let mut out = Vec::new();
+    for u in units {
+        for local in u.deps.iter().filter_map(|d| d.local.as_deref()) {
+            let Some(target) = resolve_local(&u.dir, local) else {
+                continue;
+            };
+            if target != u.dir && dirs.contains(&target) {
+                out.push(Edge {
+                    from: NodeId::Unit(u.dir.clone()),
+                    to: NodeId::Unit(target),
+                    kind: EdgeKind::Depends,
+                    certainty: None,
+                    reason: None,
+                    lang: None,
+                    sites: Vec::new(),
+                    count: None,
+                    by_certainty: None,
+                });
+            }
+        }
+    }
+    out
+}
+
+/// A `:local/root` path from a unit directory, as a repository path; `None`
+/// if it leaves the repository or is absolute.
+///
+/// Example: `resolve_local("services/orders", "../../libs/common")` is
+/// `libs/common`; `resolve_local(".", "../x")` is `None`.
+fn resolve_local(dir: &RepoPath, local: &str) -> Option<RepoPath> {
+    if local.starts_with('/') || local.contains(':') || local.contains('\\') {
+        return None;
+    }
+    let mut parts: Vec<&str> = dir
+        .as_str()
+        .split('/')
+        .filter(|p| !p.is_empty() && *p != ".")
+        .collect();
+    for part in local.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            p => parts.push(p),
+        }
+    }
+    RepoPath::parse(&if parts.is_empty() {
+        ".".to_owned()
+    } else {
+        parts.join("/")
+    })
+    .ok()
+}
 
 /// Builds the graph: unit nodes (`service` flag from discovery), `unit
 /// contains namespace`, node merging across batches, and cross-unit linking
@@ -70,12 +132,16 @@ pub fn build_timed(units: &[UnitInfo], batches: Vec<FactBatch>, t: &mut Timings)
                 doc: None,
                 signature: None,
                 members: None,
+                symbols: None,
             },
         );
     }
     // Hash maps while merging; the edges are sorted once at the end, by the
     // same key a BTreeMap would have used, so the output is unchanged.
     let mut edges: HashMap<EdgeKey, Edge> = HashMap::new();
+    for e in local_root_links(units) {
+        add_edge(&mut edges, e);
+    }
     for batch in batches {
         for node in batch.nodes {
             merge_node(&mut g.nodes, node);
@@ -290,6 +356,7 @@ mod tests {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         }
     }
 

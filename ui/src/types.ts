@@ -29,6 +29,8 @@ export interface GNode {
   signature?: string;
   /** Aggregates in graph payloads: how many children they contain. */
   members?: number;
+  /** Units in graph payloads: how many symbols they have. */
+  symbols?: number;
 }
 
 export interface GEdge {
@@ -383,4 +385,19 @@ export interface OpenResult {
   opened: boolean;
   /** `path:line:col`. */
   location: string;
+}
+
+/** One unit-to-unit link (`/unit-links`). */
+export interface UnitLink {
+  unit: string;
+  symbols: number;
+  calls: number;
+  depends: boolean;
+}
+
+/** What a unit uses from the other units and what they use from it. */
+export interface UnitLinks {
+  unit: string;
+  uses: UnitLink[];
+  used_by: UnitLink[];
 }

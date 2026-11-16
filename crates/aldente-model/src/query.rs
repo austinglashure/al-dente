@@ -67,6 +67,32 @@ pub struct BlindspotReport {
     pub diagnostics: Vec<Diagnostic>,
 }
 
+/// How a unit is linked to the other units (WP5.5): what it uses from each,
+/// and what each uses from it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct UnitLinks {
+    pub unit: NodeId,
+    /// Units this one calls into or declares (`:local/root`), most symbols first.
+    pub uses: Vec<UnitLink>,
+    /// Units that call into this one or declare it, most symbols first.
+    pub used_by: Vec<UnitLink>,
+}
+
+/// One unit-to-unit link.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct UnitLink {
+    pub unit: NodeId,
+    /// Distinct symbols on the other side: used from it (in `uses`), or
+    /// using this unit (in `used_by`).
+    pub symbols: u64,
+    /// Invocation edges across the link.
+    pub calls: u64,
+    /// Declared by a `:local/root` dependency.
+    pub depends: bool,
+}
+
 /// What `POST /open` did: ran the user's editor on the location, or (with
 /// no editor configured) only says where the code is, for copying.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

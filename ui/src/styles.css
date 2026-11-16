@@ -168,3 +168,18 @@ pre.source .ln { display: inline-block; min-width: 3em; padding-right: 8px; colo
 .neighbor-group h4 { margin: 6px 0 2px; font-size: 0.8rem; font-weight: normal; }
 details.sites { display: inline-block; margin-left: 4px; }
 details.sites button { display: block; }
+
+/* WP5.5: the service overview's note on network links. */
+.network-note {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: 60%;
+  margin: 0;
+  z-index: 2;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}

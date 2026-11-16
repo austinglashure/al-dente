@@ -38,6 +38,7 @@ fn node_in(ns: &str, name: &str) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 

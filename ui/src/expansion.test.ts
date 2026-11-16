@@ -115,3 +115,11 @@ describe('batched', () => {
     expect(seen.at(-1)).toBe('ran without a renderer');
   });
 });
+
+describe('service overview sizes (WP5.5)', () => {
+  it('sizes units by their symbol count when known, else by members', () => {
+    const small = clusterSize(node('unit:a', 'unit', { members: 50, symbols: 10 }));
+    const big = clusterSize(node('unit:b', 'unit', { members: 5, symbols: 4000 }));
+    expect(big).toBeGreaterThan(small);
+  });
+});

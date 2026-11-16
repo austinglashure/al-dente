@@ -280,5 +280,6 @@ fn dir_node(id: &NodeId, label: &str) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }

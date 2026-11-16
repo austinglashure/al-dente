@@ -74,7 +74,11 @@ impl Graph {
         let mut kept: Vec<Edge> = Vec::new();
         let mut used: Vec<bool> = Vec::new();
         for edge in &self.edges {
-            let requires = edge.kind == EdgeKind::Requires && level == AggregationLevel::Namespace;
+            // Kept as stored: `requires` between namespaces, and between
+            // units the `:local/root` links (`depends`).
+            let requires = (edge.kind == EdgeKind::Requires
+                && level == AggregationLevel::Namespace)
+                || (edge.kind == EdgeKind::Depends && level == AggregationLevel::Unit);
             if !requires && !INVOCATION.contains(&edge.kind) {
                 continue;
             }
@@ -197,9 +201,25 @@ impl Graph {
         for e in self.edges.iter().filter(|e| e.kind == EdgeKind::Contains) {
             *contained.entry(&e.from).or_default() += 1;
         }
+        let units = nodes.iter().any(|n| n.kind == NodeKind::Unit);
+        let mut symbols: HashMap<NodeId, u64> = HashMap::new();
+        if units {
+            for n in self
+                .nodes
+                .values()
+                .filter(|n| matches!(n.kind, NodeKind::Symbol | NodeKind::Impl))
+            {
+                if let Some(u) = self.unit_of(&n.id) {
+                    *symbols.entry(u).or_default() += 1;
+                }
+            }
+        }
         for n in nodes {
             if matches!(n.kind, NodeKind::Namespace | NodeKind::Unit) {
                 n.members = Some(contained.get(&n.id).copied().unwrap_or(0));
+            }
+            if n.kind == NodeKind::Unit {
+                n.symbols = Some(symbols.get(&n.id).copied().unwrap_or(0));
             }
         }
     }
@@ -225,6 +245,7 @@ impl Graph {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         })
     }
 }
@@ -285,6 +306,7 @@ mod tests {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         }
     }
 

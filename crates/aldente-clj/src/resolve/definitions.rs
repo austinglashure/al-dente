@@ -28,6 +28,7 @@ impl<'a> Resolver<'a> {
                 doc: def.doc.clone(),
                 signature: None,
                 members: None,
+                symbols: None,
             });
             node.langs.insert(lang);
             if is_test {
@@ -68,6 +69,7 @@ impl<'a> Resolver<'a> {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         });
         node.langs.extend(langs);
     }
@@ -130,6 +132,7 @@ impl<'a> Resolver<'a> {
                 doc: def.doc.clone(),
                 signature: def.arglist_strs.as_ref().map(|a| a.join(" ")),
                 members: None,
+                symbols: None,
             });
             node.langs.insert(lang);
             node.flags.extend(flags);
@@ -278,6 +281,7 @@ impl<'a> Resolver<'a> {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         });
         self.edge(
             id,

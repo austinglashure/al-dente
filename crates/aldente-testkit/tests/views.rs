@@ -148,3 +148,43 @@ fn groups_read_from_ids_equal_the_stored_node_fields() {
         }
     }
 }
+
+/// WP5.5: `:local/root` links units (`depends`), the unit view keeps those
+/// links and says how many symbols each unit has, and a unit's links say
+/// how many symbols it uses from each other unit.
+#[test]
+fn units_link_by_local_root_and_by_calls() {
+    use aldente_graph::query::unit_links;
+    use aldente_model::EdgeKind;
+    let g = analyze_fixture(&fixture_dir("mono-mini")).graph;
+    let orders: NodeId = "unit:services/orders".parse().unwrap();
+    let common: NodeId = "unit:libs/common".parse().unwrap();
+    let depends = |p: &[aldente_model::Edge]| {
+        p.iter()
+            .any(|e| e.kind == EdgeKind::Depends && e.from == orders && e.to == common)
+    };
+    assert!(
+        depends(&g.edges),
+        "the stored graph has orders -depends-> common"
+    );
+    let cache = Cache::default();
+    let units = cache.payload(&g, AggregationLevel::Unit);
+    assert!(depends(&units.edges), "the unit view keeps it");
+    for n in &units.nodes {
+        assert!(
+            n.symbols.is_some_and(|c| c > 0),
+            "{} has a symbol count",
+            n.id
+        );
+    }
+    let links = unit_links(&g, &orders);
+    let to_common = links
+        .uses
+        .iter()
+        .find(|l| l.unit == common)
+        .expect("orders uses common");
+    assert!(to_common.depends);
+    assert!(to_common.symbols >= 1 && to_common.calls >= to_common.symbols);
+    let back = unit_links(&g, &common);
+    assert!(back.used_by.iter().any(|l| l.unit == orders));
+}

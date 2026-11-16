@@ -143,7 +143,8 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
     if (g.hasEdge(key)) continue;
     g.addDirectedEdgeWithKey(key, e.from, e.to, {
       size: certaintyWidth(e.certainty) * (e.count ? Math.min(1 + Math.log2(e.count), 5) : 1),
-      color: certaintyColor(e.certainty),
+      // `:local/root` links between units have their own colour.
+      color: e.kind === 'depends' ? '#d94801' : certaintyColor(e.certainty),
       edge: e,
     });
   }
@@ -155,8 +156,9 @@ export function mergePayload(g: CanvasGraph, p: Payload, anchor?: string, random
  *  Example: `clusterSize({kind: 'namespace', members: 0})` is 8; a symbol is 4. */
 export function clusterSize(n: GNode): number {
   const base = n.kind === 'unit' || n.kind === 'directory' ? 9 : n.kind === 'namespace' ? 8 : n.kind === 'hole' ? 7 : 4;
-  if (n.members === undefined || !isAggregate(n)) return base;
-  return Math.min(base + 1.5 * Math.log2(1 + n.members), 24);
+  const count = n.kind === 'unit' && n.symbols !== undefined ? n.symbols : n.members;
+  if (count === undefined || !isAggregate(n)) return base;
+  return Math.min(base + 1.5 * Math.log2(1 + count), 24);
 }
 
 /** Removes nodes (and their edges) from the canvas.

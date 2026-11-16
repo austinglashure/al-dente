@@ -76,12 +76,20 @@ export function overlayData(coverage: CoverageReport | null, hotspots: HotspotsR
 export function rollUp(values: Map<string, number>, how: 'max' | 'sum'): Map<string, number> {
   const out = new Map<string, number>();
   for (const [id, v] of values) {
-    const ns = namespaceOf(id);
-    if (!ns) continue;
-    const prev = out.get(ns) ?? 0;
-    out.set(ns, how === 'max' ? Math.max(prev, v) : prev + v);
+    for (const group of [namespaceOf(id), unitOf(id)]) {
+      if (!group) continue;
+      const prev = out.get(group) ?? 0;
+      out.set(group, how === 'max' ? Math.max(prev, v) : prev + v);
+    }
   }
   return out;
+}
+
+/** The unit of a namespace, symbol or impl ID, read from the ID.
+ *  Example: `unitOf('clj:services/orders//o.core/a')` is `'unit:services/orders'`. */
+export function unitOf(id: string): string | null {
+  const m = /^[a-z]+:(.*?)\/\//.exec(id);
+  return m && !id.startsWith('ext:') ? `unit:${m[1] || '.'}` : null;
 }
 
 /** A styler for one overlay: node ID → style, or null for "no change".

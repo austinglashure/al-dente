@@ -16,7 +16,7 @@ use thiserror::Error;
 use crate::build::Graph;
 
 /// Bump when the tables or the meaning of stored data change.
-pub const SCHEMA_VERSION: &str = "3";
+pub const SCHEMA_VERSION: &str = "4";
 
 /// A stored analysis.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -531,6 +531,7 @@ mod tests {
                     doc: Some("doc with 'quotes' and \u{1b}".into()),
                     signature: None,
                     members: None,
+                    symbols: None,
                 },
             );
         }

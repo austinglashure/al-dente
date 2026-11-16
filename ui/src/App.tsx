@@ -29,7 +29,7 @@ import { layout, layoutPending, layoutRuns } from './layout';
 import { dropNodes, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
-import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
+import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo, UnitLinks } from './types';
 import { dirChildren, findDir } from './tree';
 import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
@@ -65,6 +65,7 @@ export function App() {
   const [edgeSel, setEdgeSel] = useState<string | null>(null);
   const [editorNote, setEditorNote] = useState<string | null>(null);
   const [wantMetrics, setWantMetrics] = useState(false);
+  const [unitLinks, setUnitLinks] = useState<UnitLinks | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [hide, setHide] = useState<HideOptions>({ hideTests: false, hideExternals: true, hideInterop: false, hideCore: false });
@@ -232,6 +233,8 @@ export function App() {
       setSiteView(null);
       setEdgeSel(null);
       setEditorNote(null);
+      setUnitLinks(null);
+      if (id.startsWith('unit:')) api.unitLinks(id).then(setUnitLinks).catch(fail);
       if (id.startsWith('dir:')) {
         // Directories are not stored: describe one from the tree and the
         // edges on the canvas.
@@ -747,6 +750,11 @@ export function App() {
           panels={panels}
           setPanels={setPanels}
         />
+        {crumbs.length === 1 && view === 'units' && units.size > 1 && (
+          <p className="network-note" data-testid="network-note">
+            Links between units are code-level: calls into another unit&apos;s namespaces and <code>:local/root</code> dependencies (orange). Network links between services (HTTP, queues, databases) are added in the surface view (Phase 6).
+          </p>
+        )}
         {marked.size > 0 && (
           <div className="selection-bar" data-testid="selection-bar">
             {marked.size} selected{' '}
@@ -810,6 +818,7 @@ export function App() {
             expansion={expansions.has(details.node.id) ? { left: remaining(expansions, details.node.id) } : null}
             facts={facts}
             editorNote={editorNote}
+            unitLinks={unitLinks?.unit === details.node.id ? unitLinks : null}
             onClose={deselect}
           />
         ) : (

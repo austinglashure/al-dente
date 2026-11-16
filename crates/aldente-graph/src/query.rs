@@ -293,6 +293,70 @@ pub fn children(graph: &Graph, id: &NodeId) -> Vec<Child> {
     out
 }
 
+/// A unit's links to the other units: distinct symbols and invocation edges
+/// across each link, and whether a `:local/root` declares it. One pass over
+/// the edges (unit ends are read from the IDs).
+///
+/// Example: in mono-mini, `unit:services/orders` uses `unit:libs/common`
+/// (`depends: true`, at least one symbol).
+pub fn unit_links(graph: &Graph, unit: &NodeId) -> aldente_model::query::UnitLinks {
+    use aldente_model::query::{UnitLink, UnitLinks};
+    #[derive(Default)]
+    struct Acc<'g> {
+        symbols: BTreeSet<&'g NodeId>,
+        calls: u64,
+        depends: bool,
+    }
+    let mut uses: BTreeMap<NodeId, Acc> = BTreeMap::new();
+    let mut used_by: BTreeMap<NodeId, Acc> = BTreeMap::new();
+    for e in &graph.edges {
+        if e.kind == EdgeKind::Depends {
+            if &e.from == unit {
+                uses.entry(e.to.clone()).or_default().depends = true;
+            } else if &e.to == unit {
+                used_by.entry(e.from.clone()).or_default().depends = true;
+            }
+            continue;
+        }
+        if !INVOCATION.contains(&e.kind) {
+            continue;
+        }
+        let (Some(a), Some(b)) = (graph.unit_of(&e.from), graph.unit_of(&e.to)) else {
+            continue;
+        };
+        if a == b {
+            continue;
+        }
+        if &a == unit {
+            let acc = uses.entry(b).or_default();
+            acc.symbols.insert(&e.to);
+            acc.calls += 1;
+        } else if &b == unit {
+            let acc = used_by.entry(a).or_default();
+            acc.symbols.insert(&e.from);
+            acc.calls += 1;
+        }
+    }
+    let list = |m: BTreeMap<NodeId, Acc>| {
+        let mut v: Vec<UnitLink> = m
+            .into_iter()
+            .map(|(unit, a)| UnitLink {
+                unit,
+                symbols: a.symbols.len() as u64,
+                calls: a.calls,
+                depends: a.depends,
+            })
+            .collect();
+        v.sort_by(|x, y| y.symbols.cmp(&x.symbols).then_with(|| x.unit.cmp(&y.unit)));
+        v
+    };
+    UnitLinks {
+        unit: unit.clone(),
+        uses: list(uses),
+        used_by: list(used_by),
+    }
+}
+
 /// Which way to walk from a focus node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
@@ -935,6 +999,7 @@ mod tests {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         }
     }
 

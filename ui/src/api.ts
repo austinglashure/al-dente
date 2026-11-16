@@ -18,6 +18,7 @@ import type {
   LibraryUsage,
   OpenResult,
   Payload,
+  UnitLinks,
   ShowResult,
   SnapshotOverview,
   TraceReport,
@@ -133,6 +134,8 @@ export class Api {
    *  (a full canvas does not fit in a URL). */
   expandPage = (id: string, visible: string[], offset: number) => this.post<Payload>('expand', { id, offset }, JSON.stringify(visible));
   node = (id: string) => this.json<ShowResult>('node', { id });
+  /** What a unit uses from the other units and what they use from it. */
+  unitLinks = (id: string) => this.json<UnitLinks>('unit-links', { id });
   search = (q: string) => this.json<FindResult>('search', { q, limit: 20 });
   source = (id: string) => this.text('source', { id, context: 2 });
   /** A node's source and the line it starts at. */

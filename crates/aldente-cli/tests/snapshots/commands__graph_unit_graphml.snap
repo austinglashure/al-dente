@@ -1,6 +1,5 @@
 ---
 source: crates/aldente-cli/tests/commands.rs
-assertion_line: 141
 expression: "env.text(&[\"graph\", \"--level\", \"unit\", \"--format\", \"graphml\"])"
 ---
 <?xml version="1.0" encoding="UTF-8"?>
@@ -16,5 +15,6 @@ expression: "env.text(&[\"graph\", \"--level\", \"unit\", \"--format\", \"graphm
     <node id="unit:services/billing"><data key="name">services/billing</data><data key="nkind">unit</data></node>
     <node id="unit:services/orders"><data key="name">services/orders</data><data key="nkind">unit</data></node>
     <edge source="unit:services/orders" target="unit:libs/common"><data key="ekind">calls</data><data key="certainty">certain</data><data key="reason">direct</data><data key="count">2</data></edge>
+    <edge source="unit:services/orders" target="unit:libs/common"><data key="ekind">depends</data></edge>
   </graph>
 </graphml>

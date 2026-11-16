@@ -134,6 +134,7 @@ impl<'a> Resolver<'a> {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         });
         self.edge(
             id,

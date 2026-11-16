@@ -121,6 +121,7 @@ fn tiny_snapshot(path: &Path) {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         },
     );
     let snap = Snapshot {

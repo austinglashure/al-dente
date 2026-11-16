@@ -61,6 +61,10 @@ pub struct Node {
     /// stored in a snapshot.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub members: Option<u64>,
+    /// For a unit in a graph payload: how many symbols and impls it has
+    /// (the service overview sizes units by it). Never stored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbols: Option<u64>,
 }
 
 /// A graph edge. Distinct edges differ in `(from, to, kind, reason)`; call

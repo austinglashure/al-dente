@@ -23,7 +23,7 @@ mod open;
 pub use crater::{checklist, crater, crater_trace, trace_normalize};
 pub use graph::{
     blindspots, expand, expand_post, graph, neighborhood, node, search, snapshot, source, tree,
-    tree_graph,
+    tree_graph, unit_links,
 };
 pub use libs::{lib, libs};
 pub use measures::{churn, coverage, cycles, defaults, hotspots, metrics, subgraph};

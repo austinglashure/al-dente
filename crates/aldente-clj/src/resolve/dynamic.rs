@@ -110,6 +110,7 @@ impl<'a> Resolver<'a> {
             doc: None,
             signature: None,
             members: None,
+            symbols: None,
         });
         node.langs.insert(lang);
         self.blindspots.push(BlindSpot {

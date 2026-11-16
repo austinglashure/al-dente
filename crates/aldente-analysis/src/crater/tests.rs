@@ -33,6 +33,7 @@ fn node(s: &str) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 

@@ -2,7 +2,7 @@
 // relations. Every repository string is rendered as React text.
 
 import { labelFor } from './model';
-import type { Child, Finding, GNode, Neighbor, ShowResult, Site, SymbolCoverage, UnitInfo } from './types';
+import type { Child, Finding, GNode, Neighbor, ShowResult, Site, SymbolCoverage, UnitInfo, UnitLink, UnitLinks } from './types';
 
 /** Actions the panel offers; which ones appear depends on the node kind. */
 export interface Tools {
@@ -61,6 +61,7 @@ export function Details({
   expansion = null,
   facts = null,
   editorNote = null,
+  unitLinks = null,
   onClose,
 }: {
   d: ShowResult;
@@ -71,6 +72,8 @@ export function Details({
   facts?: NodeFacts | null;
   /** What the last "Open in editor" did, shown under the location. */
   editorNote?: string | null;
+  /** For a unit: its links to the other units. */
+  unitLinks?: UnitLinks | null;
   onClose: () => void;
 }) {
   const n = d.node;
@@ -149,6 +152,12 @@ export function Details({
       </div>
       <p className="id">{n.id}</p>
       {unit && <UnitFacts u={unit} />}
+      {unitLinks && (
+        <>
+          <UnitLinkList title="Uses" verb="uses" list={unitLinks.uses} testid="unit-uses" onFollow={tools.follow} />
+          <UnitLinkList title="Used by" verb="used by" list={unitLinks.used_by} testid="unit-used-by" onFollow={tools.follow} />
+        </>
+      )}
       {n.loc && (
         <p data-testid="location">
           {where(n)}{' '}
@@ -188,6 +197,35 @@ export function Details({
       <NeighborList title={relations[1] ?? ''} list={d.callees} testid="callee" onFollow={tools.follow} onSite={tools.site} />
       {facts && <Facts facts={facts} onFollow={tools.follow} />}
     </section>
+  );
+}
+
+/** A unit's links to other units: "uses 14 symbols from shared/auth".
+ *  Example: `<UnitLinkList title="Uses" verb="uses" list={links.uses} … />`. */
+function UnitLinkList({ title, verb, list, testid, onFollow }: { title: string; verb: string; list: UnitLink[]; testid: string; onFollow: (id: string) => void }) {
+  return (
+    <>
+      <h3>
+        {title} ({list.length})
+      </h3>
+      <ul className="neighbors" data-testid={testid}>
+        {list.map((l) => (
+          <li key={l.unit}>
+            <button type="button" data-node-id={l.unit} onClick={() => onFollow(l.unit)} title={l.unit}>
+              {l.unit.replace(/^unit:/, '')}
+            </button>{' '}
+            <span className="muted">
+              {l.symbols > 0
+                ? verb === 'uses'
+                  ? `uses ${l.symbols} symbol${l.symbols === 1 ? '' : 's'} from it (${l.calls} call${l.calls === 1 ? '' : 's'})`
+                  : `${l.symbols} of its symbol${l.symbols === 1 ? '' : 's'} use this unit (${l.calls} call${l.calls === 1 ? '' : 's'})`
+                : 'no calls yet'}
+              {l.depends ? ' · :local/root' : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

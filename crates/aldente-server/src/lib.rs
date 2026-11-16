@@ -156,7 +156,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/cycles", get(api::cycles))
         .route("/api/v1/churn", get(api::churn))
         .route("/api/v1/subgraph", get(api::subgraph))
-        .route("/api/v1/open", post(api::open));
+        .route("/api/v1/open", post(api::open))
+        .route("/api/v1/unit-links", get(api::unit_links));
     #[cfg(test)]
     let api = api
         .route("/api/v1/__panic", get(tests::panics))

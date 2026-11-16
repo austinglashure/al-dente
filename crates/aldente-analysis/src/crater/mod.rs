@@ -349,6 +349,7 @@ fn bare_node(id: &NodeId) -> Node {
         doc: None,
         signature: None,
         members: None,
+        symbols: None,
     }
 }
 
