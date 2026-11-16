@@ -51,6 +51,8 @@ interface Props {
   overlays?: ReactNode;
   /** Hotspots and cycles, above the libraries. */
   views?: ReactNode;
+  /** Undo, redo, saved workspaces and filters, under the search box. */
+  workspace?: ReactNode;
 }
 
 /** The left panel.
@@ -59,6 +61,7 @@ export function LeftPanel(p: Props) {
   return (
     <aside className="left">
       <SearchBox api={p.api} onError={p.onError} onFollow={p.onFollow} />
+      {p.workspace}
       {HIDE_TOGGLES.map((t) => (
         <label key={t.key} title={t.title}>
           <input type="checkbox" data-testid={t.testId} checked={!!p.hide[t.key]} onChange={(e) => p.onHide({ ...p.hide, [t.key]: e.target.checked })} />{' '}

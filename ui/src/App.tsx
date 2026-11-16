@@ -19,8 +19,14 @@ import { SourcePanel } from './SourcePanel';
 import { HelpDialog } from './HelpDialog';
 import { TraceDialog } from './TraceDialog';
 import { applyPage, batched, collapse, nextOffset, remaining, type Attachable, type Expansions } from './expansion';
-import { layout, layoutRuns } from './layout';
-import { edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
+import { FilterPanel } from './FilterPanel';
+import { NO_FILTERS, passes, type Filters } from './filters';
+import { useWorkspace } from './useWorkspace';
+import type { Op } from './workspace';
+import { WorkspacePanel } from './WorkspacePanel';
+import { layout, layoutPending, layoutRuns } from './layout';
+import { dropNodes, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
+import { metricValues } from './overlay';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
 import { dirChildren, findDir } from './tree';
@@ -37,7 +43,17 @@ export function App() {
   const api = useMemo(() => new Api(initToken()), []);
   const graph = useMemo(() => newGraph(), []);
   const [version, setVersion] = useState(0);
-  const [crumbs, setCrumbs] = useState<Crumb[]>([]);
+  const [crumbs, setCrumbState] = useState<Crumb[]>([]);
+  // The breadcrumb as of the last change, read by steps replayed back to back
+  // (before React re-renders); `crumbs` mirrors it for drawing.
+  const crumbsRef = useRef<Crumb[]>([]);
+  const setCrumbs = useCallback((c: Crumb[]) => {
+    crumbsRef.current = c;
+    setCrumbState(c);
+  }, []);
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  // Nodes marked by box select, for Hide and Keep only.
+  const [marked, setMarked] = useState<Set<string>>(() => new Set());
   const [units, setUnits] = useState<Map<string, UnitInfo>>(new Map());
   const [selected, setSelected] = useState<string | null>(null);
   const [details, setDetails] = useState<ShowResult | null>(null);
@@ -100,7 +116,13 @@ export function App() {
   // Set once the first canvas is drawn; slow reports wait for it.
   const [firstShown, setFirstShown] = useState(false);
   const [measuresOpen, setMeasuresOpen] = useState(false);
-  const reports = useReports(api, overlay, sizeBy !== null || colorBy !== null, fail, firstShown);
+  const reports = useReports(api, overlay, sizeBy !== null || colorBy !== null || filters.measures.length > 0, fail, firstShown);
+  /** A node's value for a measure, for the filter panel's minimums. */
+  const measureOf = useMemo(() => {
+    const { metrics } = reports;
+    const byMetric = new Map(filters.measures.map((m) => [m.metric, metrics ? metricValues(metrics, m.metric as Metric) : new Map<string, number>()]));
+    return (metric: string, id: string): number | undefined => byMetric.get(metric)?.get(id);
+  }, [reports, filters.measures]);
 
   /** The two root views: units (the default) and every namespace at once. */
   const roots = useMemo(() => {
@@ -130,7 +152,7 @@ export function App() {
 
   /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
   const show = useCallback(
-    (crumb: Crumb, keep: Crumb[]) => {
+    (crumb: Crumb, keep: Crumb[]): Promise<void> =>
       crumb
         .load()
         .then((p) => {
@@ -145,9 +167,8 @@ export function App() {
           relayout();
           redraw();
         })
-        .catch(fail);
-    },
-    [graph, expansions, relayout, redraw, fail],
+        .catch(fail),
+    [graph, expansions, setCrumbs, relayout, redraw, fail],
   );
 
   useEffect(() => {
@@ -166,8 +187,7 @@ export function App() {
       .libs()
       .then((r) => setLibs(r.libraries))
       .catch(fail);
-    show(roots[initialPrefs.view], []);
-  }, [api, show, fail, roots, initialPrefs]);
+  }, [api, fail]);
 
   // A new Top value or a folded/unfolded directory reloads the namespace
   // map; not on the first render, which the first-view effect loads.
@@ -177,7 +197,7 @@ export function App() {
       mounted.current = true;
       return;
     }
-    if (view === 'namespaces') show(roots.namespaces, []);
+    if (view === 'namespaces') void show(roots.namespaces, []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [top, collapsed]);
 
@@ -196,15 +216,6 @@ export function App() {
     });
   }, []);
 
-  /** Switches the canvas to the unit overview or the global namespace map. */
-  const switchView = useCallback(
-    (next: 'units' | 'namespaces') => {
-      setView(next);
-      setNotice(null);
-      show(roots[next], []);
-    },
-    [roots, show],
-  );
 
   const select = useCallback(
     (id: string) => {
@@ -258,12 +269,9 @@ export function App() {
 
   /** Opens a unit (its namespaces) or a namespace (its functions, with the
    *  namespaces it talks to as context) on a canvas of its own. */
-  const open = useCallback(
-    (n: GNode) => {
-      if (n.kind === 'directory') {
-        toggleDir(n.id);
-        return;
-      }
+  const openOnCanvas = useCallback(
+    (id: string): Promise<void> => {
+      const n: GNode = graph.hasNode(id) ? graph.getNodeAttribute(id, 'node') : { id, kind: id.startsWith('unit:') ? 'unit' : 'namespace', name: id.split('//').pop() ?? id };
       let load: () => Promise<Payload>;
       if (n.kind === 'unit') {
         load = () => api.unitGraph(n.id).then((r) => r.data);
@@ -275,16 +283,20 @@ export function App() {
             return { ...p, nodes: [...p.nodes, ...context.filter((c) => ends.has(c.id))] };
           });
       }
-      show({ label: labelFor(n), load }, crumbs);
-      select(n.id);
+      return show({ label: labelFor(n), load }, crumbsRef.current);
     },
-    [api, graph, crumbs, show, select, toggleDir],
+    [api, graph, show],
   );
+
+  // Aggregates with a page request in flight: a second click meanwhile is
+  // ignored instead of asking for the same page again.
+  const expanding = useRef(new Set<string>());
 
   /** Expands an aggregate in place, or loads its next page if it is
    *  expanded already; only the new nodes move. */
   const expandHere = useCallback(
-    (id: string) => {
+    (id: string): Promise<void> => {
+      if (expanding.current.has(id)) return Promise.resolve();
       if (!graph.hasNode(id)) {
         return api
           .expand(id, graph.nodes())
@@ -294,6 +306,7 @@ export function App() {
           })
           .catch(fail);
       }
+      expanding.current.add(id);
       return api
         .expandPage(id, graph.nodes(), nextOffset(expansions, id))
         .then((p) => {
@@ -304,7 +317,8 @@ export function App() {
           layout(graph, redraw, edgeVisible, new Set(added));
           redraw();
         })
-        .catch(fail);
+        .catch(fail)
+        .finally(() => expanding.current.delete(id));
     },
     [api, graph, expansions, relayout, redraw, edgeVisible, fail],
   );
@@ -316,6 +330,15 @@ export function App() {
       redraw();
     },
     [graph, expansions, redraw],
+  );
+
+  /** Removes nodes from the canvas in one batch. */
+  const drop = useCallback(
+    (ids: string[]) => {
+      batched(renderer.current, graph, () => dropNodes(graph, ids));
+      redraw();
+    },
+    [graph, redraw],
   );
 
   const neighbors = useCallback(
@@ -330,20 +353,118 @@ export function App() {
     [api, graph, relayout, fail],
   );
 
-  const focus = useCallback(
-    (id: string) => {
+  const focusOn = useCallback(
+    (id: string): Promise<void> => {
       const label = graph.hasNode(id) ? labelFor(graph.getNodeAttribute(id, 'node')) : id;
-      show({ label: `${label} (focus)`, load: () => api.neighborhood(id) }, crumbs);
+      return show({ label: `${label} (focus)`, load: () => api.neighborhood(id) }, crumbsRef.current);
     },
-    [api, graph, crumbs, show],
+    [api, graph, show],
+  );
+
+  /** Performs one workspace step on the canvas (the workspace logs it). */
+  const apply = useCallback(
+    async (op: Op): Promise<void> => {
+      switch (op.op) {
+        case 'view':
+          setView(op.view);
+          setNotice(null);
+          return show(roots[op.view], []);
+        case 'open':
+          return openOnCanvas(op.id);
+        case 'focus':
+          return focusOn(op.id);
+        case 'expand':
+          return expandHere(op.id);
+        case 'collapse':
+          return collapseHere(op.id);
+        case 'neighbors':
+          return neighbors(op.id);
+        case 'hide':
+          return drop(op.ids);
+        case 'keep': {
+          const keep = new Set(op.ids);
+          return drop(graph.filterNodes((id) => !keep.has(id)));
+        }
+        case 'pin':
+          if (graph.hasNode(op.id)) graph.setNodeAttribute(op.id, 'pinned', op.on);
+          redraw();
+          return;
+        case 'filters':
+          setFilters(op.filters);
+          redraw();
+          return;
+        case 'quick':
+          setHide(op.hide);
+          redraw();
+          return;
+        case 'back': {
+          const c = crumbsRef.current[op.to];
+          return c ? show(c, crumbsRef.current.slice(0, op.to)) : undefined;
+        }
+        case 'cycle':
+          return show({ label: `cycle of ${op.ids.length}`, load: () => api.subgraph(op.ids) }, crumbsRef.current);
+      }
+    },
+    [api, graph, roots, show, openOnCanvas, focusOn, expandHere, collapseHere, neighbors, drop, redraw],
+  );
+
+  const ws = useWorkspace({
+    graph,
+    expansions,
+    renderer,
+    apply,
+    capture: () => ({ crumbs: crumbsRef.current, filters, hide, view }),
+    restore: (e: { crumbs: Crumb[]; filters: Filters; hide: HideOptions; view: 'units' | 'namespaces' }) => {
+      setCrumbs(e.crumbs);
+      setFilters(e.filters);
+      setHide(e.hide);
+      setView(e.view);
+    },
+    redraw,
+    onNotice: setNotice,
+    version,
+  });
+  const run = ws.run;
+  const startWorkspace = ws.start;
+  const fromUrl = ws.fromUrl;
+
+  // The first view: the workspace in the URL if there is one, else the
+  // remembered root view.
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void fromUrl().then((found) => {
+      if (!found) return show(roots[initialPrefs.view], []).then(() => startWorkspace({ op: 'view', view: initialPrefs.view }));
+    });
+  }, [fromUrl, show, roots, initialPrefs, startWorkspace]);
+
+  const open = useCallback(
+    (n: GNode) => {
+      if (n.kind === 'directory') {
+        toggleDir(n.id);
+        return;
+      }
+      void run({ op: 'open', id: n.id }).then(() => select(n.id));
+    },
+    [run, select, toggleDir],
   );
 
   const follow = useCallback(
     (id: string) => {
-      const go = graph.hasNode(id) ? Promise.resolve() : neighbors(id);
+      const go = graph.hasNode(id) ? Promise.resolve() : run({ op: 'neighbors', id });
       void go.then(() => select(id));
     },
-    [graph, neighbors, select],
+    [graph, run, select],
+  );
+
+  /** Every other node of the same kind and subkind on the canvas. */
+  const othersLike = useCallback(
+    (id: string) => {
+      const n = graph.getNodeAttribute(id, 'node');
+      return graph.filterNodes((o, a) => o !== id && a.node.kind === n.kind && a.node.subkind === n.subkind);
+    },
+    [graph],
   );
 
   const openCrater = useCallback((n: GNode, direction: 'forward' | 'reverse') => {
@@ -352,12 +473,19 @@ export function App() {
 
   const tools: Tools = {
     open,
-    expandHere: (id) => void expandHere(id),
-    collapse: collapseHere,
-    neighbors: (id) => void neighbors(id),
-    focus,
+    expandHere: (id) => void run({ op: 'expand', id }),
+    collapse: (id) => void run({ op: 'collapse', id }),
+    neighbors: (id) => void run({ op: 'neighbors', id }),
+    focus: (id) => void run({ op: 'focus', id }),
     follow,
     crater: openCrater,
+    hide: (id) => {
+      deselect();
+      void run({ op: 'hide', ids: [id] });
+    },
+    hideLike: (id) => void run({ op: 'hide', ids: othersLike(id) }),
+    pin: (id) => void run({ op: 'pin', id, on: !(graph.hasNode(id) && graph.getNodeAttribute(id, 'pinned') === true) }),
+    keepOnly: (id) => void run({ op: 'keep', ids: [...new Set([id, ...marked])] }),
   };
 
   /** Selects a library: lists its call sites and highlights its users. */
@@ -389,17 +517,19 @@ export function App() {
     (id: string) => {
       const n = graph.hasNode(id) ? graph.getNodeAttribute(id, 'node') : null;
       if (n?.kind === 'directory') open(n);
-      else if (n && isAggregate(n)) {
-        if (expansions.has(id)) collapseHere(id);
-        else void expandHere(id);
-      } else void neighbors(id);
+      else if (n && isAggregate(n)) void run({ op: expansions.has(id) ? 'collapse' : 'expand', id });
+      else void run({ op: 'neighbors', id });
     },
-    [graph, expansions, open, neighbors, expandHere, collapseHere],
+    [graph, expansions, open, run],
   );
 
   const isHidden = useCallback(
-    (id: string) => graph.hasNode(id) && (graph.getNodeAttribute(id, 'expanded') === true || hidden(graph.getNodeAttribute(id, 'node'), hide)),
-    [graph, hide],
+    (id: string) => {
+      if (!graph.hasNode(id)) return false;
+      const a = graph.getNodeAttributes(id);
+      return a.expanded === true || hidden(a.node, hide) || !passes(a.node, filters, measureOf);
+    },
+    [graph, hide, filters, measureOf],
   );
 
   const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
@@ -418,16 +548,31 @@ export function App() {
   }, [levels, relayout]);
 
   const visible = graph
-    .filterNodes((_id, a) => a.expanded !== true)
+    .filterNodes((id) => !isHidden(id))
     .map((id) => graph.getNodeAttribute(id, 'node'))
-    .filter((n) => !hidden(n, hide))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
   const styleOf = useStyler(reports, overlay, sizeBy, colorBy, visible.map((n) => n.id));
   const styledUntested = visible.filter((n) => {
     const tag = styleOf(n.id)?.tag;
     return tag === 'untested' || tag === 'risky-untested';
   }).length;
-  const showCycle = (c: { nodes: string[]; size: number }) => show({ label: `cycle of ${c.size}`, load: () => api.subgraph(c.nodes) }, crumbs);
+  const showCycle = (c: { nodes: string[]; size: number }) => void run({ op: 'cycle', ids: c.nodes });
+
+  // Undo and redo from the keyboard (not while typing).
+  const { undo, redo } = ws;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+      if (typing || !(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) undo();
+      else if ((key === 'z' && e.shiftKey) || key === 'y') redo();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
 
   return (
     <div
@@ -440,10 +585,7 @@ export function App() {
         <LeftPanel
           api={api}
           hide={hide}
-          onHide={(next) => {
-            setHide(next);
-            redraw();
-          }}
+          onHide={(next) => void run({ op: 'quick', hide: next })}
           levels={levels}
           counts={counts}
           onLevel={setLevel}
@@ -466,6 +608,21 @@ export function App() {
           overlays={
             <OverlayControls overlay={overlay} onOverlay={setOverlay} sizeBy={sizeBy} onSizeBy={setSizeBy} colorBy={colorBy} onColorBy={setColorBy} />
           }
+          workspace={
+            <>
+              <WorkspacePanel
+                canUndo={ws.canUndo}
+                canRedo={ws.canRedo}
+                onUndo={ws.undo}
+                onRedo={ws.redo}
+                saved={ws.saved}
+                onSave={(name) => void ws.save(name)}
+                onLoad={(name) => void ws.load(name)}
+                onRemove={ws.remove}
+              />
+              <FilterPanel filters={filters} units={[...units.values()]} onChange={(f) => void run({ op: 'filters', filters: f })} />
+            </>
+          }
           views={
             <>
               <HotspotList report={reports.hotspots} onFollow={follow} />
@@ -483,11 +640,10 @@ export function App() {
         <CanvasBar
           crumbs={crumbs}
           onCrumb={(i) => {
-            const c = crumbs[i];
-            if (c) show(c, crumbs.slice(0, i));
+            if (crumbs[i]) void run({ op: 'back', to: i });
           }}
           view={view}
-          onView={switchView}
+          onView={(next) => void run({ op: 'view', view: next })}
           top={top}
           onTop={(n) => {
             setTop(n);
@@ -498,8 +654,23 @@ export function App() {
           panels={panels}
           setPanels={setPanels}
         />
+        {marked.size > 0 && (
+          <div className="selection-bar" data-testid="selection-bar">
+            {marked.size} selected{' '}
+            <button type="button" data-action="hide-marked" onClick={() => void run({ op: 'hide', ids: [...marked] }).then(() => setMarked(new Set()))}>
+              Hide
+            </button>{' '}
+            <button type="button" data-action="keep-marked" onClick={() => void run({ op: 'keep', ids: [...marked] }).then(() => setMarked(new Set()))}>
+              Keep only
+            </button>{' '}
+            <button type="button" data-action="clear-marked" onClick={() => setMarked(new Set())}>
+              Clear
+            </button>
+          </div>
+        )}
         <GraphView
           graph={graph}
+          onBoxSelect={(ids) => setMarked(new Set(ids))}
           version={version}
           selected={selected}
           isHidden={isHidden}
@@ -508,13 +679,13 @@ export function App() {
           onSelect={select}
           onDoubleClick={onDoubleClick}
           onDeselect={deselect}
-          highlight={libHighlight}
+          highlight={marked.size > 0 ? { nodes: marked, edges: new Set<string>() } : libHighlight}
           styleOf={styleOf}
           semanticZoom
           onRenderer={(s) => {
             renderer.current = s;
           }}
-          data={{ nodes: graph.order, overlay, 'styled-untested': styledUntested, 'layout-runs': layoutRuns() }}
+          data={{ nodes: graph.order, 'layout-pending': layoutPending() ? 1 : 0, overlay, 'styled-untested': styledUntested, 'layout-runs': layoutRuns() }}
         />
         </>
         )}

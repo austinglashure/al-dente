@@ -16,6 +16,14 @@ export interface Tools {
   follow: (id: string) => void;
   /** Opens the crater view seeded at a node. */
   crater: (n: GNode, direction: 'forward' | 'reverse') => void;
+  /** Removes a node from the canvas. */
+  hide: (id: string) => void;
+  /** Removes every other node of the same kind and subkind. */
+  hideLike: (id: string) => void;
+  /** Pins or unpins a node (layouts never move a pinned node). */
+  pin: (id: string) => void;
+  /** Keeps only this node and the box-selected ones. */
+  keepOnly: (id: string) => void;
 }
 
 /** The location of a node as `file:line:col`.
@@ -105,6 +113,18 @@ export function Details({
             Crater reverse
           </button>
         )}
+        <button type="button" data-action="hide" onClick={() => tools.hide(n.id)} title="Remove it from the canvas">
+          Hide
+        </button>
+        <button type="button" data-action="hide-like" onClick={() => tools.hideLike(n.id)} title={`Remove every other ${n.subkind ?? n.kind} from the canvas`}>
+          Hide others like this
+        </button>
+        <button type="button" data-action="pin" onClick={() => tools.pin(n.id)} title="Pinned nodes stay where they are when the layout runs">
+          Pin / unpin
+        </button>
+        <button type="button" data-action="keep-only" onClick={() => tools.keepOnly(n.id)} title="Remove everything else (keeps box-selected nodes too)">
+          Keep only
+        </button>
         <button type="button" data-action="copy" onClick={() => void navigator.clipboard?.writeText(n.id)} title="Copy the full ID">
           Copy ID
         </button>

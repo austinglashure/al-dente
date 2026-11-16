@@ -4,6 +4,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type Graph from 'graphology';
 import Sigma from 'sigma';
+import { inBox, normalize, type Point } from './boxSelect';
 import { edgeHiddenAtZoom, labelHiddenAtZoom, zoomLevel } from './expansion';
 import type { EdgeAttrs, NodeAttrs } from './model';
 import type { NodeStyle } from './overlay';
@@ -39,6 +40,8 @@ interface Props<N extends NodeAttrs, E extends EdgeAttrs> {
   styleOf?: ((id: string) => NodeStyle | null) | null;
   /** Hide light edges and function labels when zoomed out (the main canvas). */
   semanticZoom?: boolean;
+  /** Called with the visible nodes inside a Shift-drag box. */
+  onBoxSelect?: (ids: string[]) => void;
   /** Receives the renderer when it starts and `null` when it stops (for batched changes). */
   onRenderer?: (s: Sigma<N, E> | null) => void;
   testId?: string;
@@ -67,6 +70,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
   styleOf = null,
   semanticZoom = false,
   onRenderer,
+  onBoxSelect,
   testId = 'canvas',
   data = {},
 }: Props<N, E>) {
@@ -77,8 +81,10 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
     handlers.current = { onSelect, onDoubleClick, onDeselect, onHover, isHidden, isEdgeHidden, selected, highlight, styleOf, semanticZoom };
   });
   const rendererCallback = useRef(onRenderer);
+  const boxCallback = useRef(onBoxSelect);
   useLayoutEffect(() => {
     rendererCallback.current = onRenderer;
+    boxCallback.current = onBoxSelect;
   });
   // The semantic zoom level; the reducers read it, and crossing a level redraws.
   const zoom = useRef<0 | 1 | 2>(0);
@@ -100,6 +106,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
           ...(st?.color ? { color: st.color } : {}),
           ...(st?.size ? { size: st.size } : {}),
           ...(st?.mark ? { label: `${st.mark}${attrs.label}` } : {}),
+          ...(attrs.pinned ? { label: `📌 ${attrs.label}` } : {}),
           ...(quiet ? { label: '' } : {}),
           hidden: h.isHidden(id),
           highlighted: id === h.selected || ((h.highlight?.strongNodes ?? h.highlight?.nodes)?.has(id) ?? false),
@@ -136,6 +143,12 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
     s.on('clickStage', () => handlers.current.onDeselect());
     s.on('enterNode', ({ node }) => handlers.current.onHover?.(node));
     s.on('leaveNode', () => handlers.current.onHover?.(null));
+    // Shift-drag draws a selection box instead of moving the camera.
+    const box = boxSelect(container.current, (a, b) => {
+      const rect = normalize(a, b);
+      const points = graph.filterNodes((id) => !handlers.current.isHidden(id)).map((id) => ({ id, ...s.graphToViewport(graph.getNodeAttributes(id)) }));
+      boxCallback.current?.(inBox(points, rect));
+    });
     // Panels can be resized or hidden, which changes the canvas size.
     const observer = new ResizeObserver(() => {
       s.resize();
@@ -145,6 +158,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
     sigma.current = s;
     rendererCallback.current?.(s);
     return () => {
+      box();
       observer.disconnect();
       rendererCallback.current?.(null);
       s.kill();
@@ -167,4 +181,44 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
       {...Object.fromEntries(Object.entries(data).map(([k, v]) => [`data-${k}`, v]))}
     />
   );
+}
+
+/** Turns Shift-drag on `el` into a selection box: draws it, and calls
+ *  `done` with the two corners (relative to `el`) on release. The camera
+ *  never sees these drags. Returns the function that removes the listeners.
+ *  Example: `const stop = boxSelect(div, (a, b) => …)`. */
+function boxSelect(el: HTMLElement, done: (a: Point, b: Point) => void): () => void {
+  let start: Point | null = null;
+  let drawn: HTMLDivElement | null = null;
+  const at = (e: MouseEvent): Point => {
+    const r = el.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const move = (e: MouseEvent) => {
+    if (!start || !drawn) return;
+    const b = normalize(start, at(e));
+    Object.assign(drawn.style, { left: `${b.left}px`, top: `${b.top}px`, width: `${b.right - b.left}px`, height: `${b.bottom - b.top}px` });
+  };
+  const up = (e: MouseEvent) => {
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+    drawn?.remove();
+    drawn = null;
+    if (start) done(start, at(e));
+    start = null;
+  };
+  const down = (e: MouseEvent) => {
+    if (!e.shiftKey || e.button !== 0) return;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    start = at(e);
+    drawn = document.createElement('div');
+    drawn.className = 'box-select';
+    drawn.dataset.testid = 'box-select';
+    el.appendChild(drawn);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+  el.addEventListener('mousedown', down, true);
+  return () => el.removeEventListener('mousedown', down, true);
 }

@@ -129,3 +129,29 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .guide-figure svg { width: 100%; height: auto; display: block; }
 @media (max-width: 640px) { .guide-row { grid-template-columns: 1fr; } }
 .help-button { margin-left: 6px; }
+
+/* WP5.3: box select, the selection bar and the filter panel. */
+.box-select {
+  position: absolute;
+  border: 1px dashed #08519c;
+  background: rgba(8, 81, 156, 0.08);
+  pointer-events: none;
+  z-index: 5;
+}
+.selection-bar {
+  position: absolute;
+  top: 40px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 8px;
+  background: #fff7bc;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.filters .filter-group label {
+  display: inline-block;
+  margin-right: 8px;
+}
+.workspace form {
+  margin-top: 4px;
+}

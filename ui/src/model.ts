@@ -13,6 +13,8 @@ export interface NodeAttrs {
   node: GNode;
   /** An aggregate expanded in place with nothing left to show: hidden. */
   expanded?: boolean;
+  /** Pinned by the user: layouts never move it. */
+  pinned?: boolean;
 }
 
 export interface EdgeAttrs {

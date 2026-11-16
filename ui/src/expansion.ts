@@ -136,3 +136,9 @@ export function batched(renderer: Attachable | null, g: CanvasGraph, change: () 
     renderer.setGraph(g);
   }
 }
+
+/** A copy of the expansion state that later changes do not touch (undo).
+ *  Example: `cloneExpansions(ex).get(id) !== ex.get(id)`. */
+export function cloneExpansions(ex: Expansions): Expansions {
+  return new Map([...ex].map(([k, r]) => [k, { ...r, loaded: [...r.loaded], extras: [...r.extras], stash: [...r.stash] }]));
+}
