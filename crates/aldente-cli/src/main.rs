@@ -1,6 +1,7 @@
 //! The `aldente` command-line binary.
 
 mod commands;
+mod config;
 mod formats;
 mod output;
 mod progress;

@@ -57,6 +57,9 @@ pub struct AppState {
     pub git: Option<aldente_acquire::remote::Git>,
     /// The churn report, read on first use.
     pub churn: std::sync::OnceLock<(aldente_model::churn::ChurnReport, Vec<String>)>,
+    /// The editor command from the user's config (`06-gui.md`, "Source and
+    /// editor links"); `None` means `/open` only returns the location.
+    pub editor: Option<Vec<String>>,
 }
 
 impl AppState {
@@ -99,6 +102,7 @@ impl AppState {
             hotspots: std::sync::OnceLock::new(),
             git: None,
             churn: std::sync::OnceLock::new(),
+            editor: None,
         }
     }
 
@@ -151,7 +155,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/defaults", get(api::defaults))
         .route("/api/v1/cycles", get(api::cycles))
         .route("/api/v1/churn", get(api::churn))
-        .route("/api/v1/subgraph", get(api::subgraph));
+        .route("/api/v1/subgraph", get(api::subgraph))
+        .route("/api/v1/open", post(api::open));
     #[cfg(test)]
     let api = api
         .route("/api/v1/__panic", get(tests::panics))

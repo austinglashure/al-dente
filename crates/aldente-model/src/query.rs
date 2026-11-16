@@ -66,3 +66,13 @@ pub struct BlindspotReport {
     pub blindspots: Vec<BlindSpot>,
     pub diagnostics: Vec<Diagnostic>,
 }
+
+/// What `POST /open` did: ran the user's editor on the location, or (with
+/// no editor configured) only says where the code is, for copying.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct OpenResult {
+    pub opened: bool,
+    /// `path:line:col`, repository-relative.
+    pub location: String,
+}

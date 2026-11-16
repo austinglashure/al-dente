@@ -387,12 +387,7 @@ pub enum ReadError {
 /// Example: `read_inside(root, "deps.edn", 2_097_152)` gives its bytes; a path
 /// that resolves through a symlink to `/etc/passwd` gives `Err(Outside)`.
 pub fn read_inside(root: &Path, path: &RepoPath, max_bytes: u64) -> Result<Vec<u8>, ReadError> {
-    let real = native_path(root, path)
-        .canonicalize()
-        .map_err(|e| ReadError::Io(e.kind()))?;
-    if !real.starts_with(root) {
-        return Err(ReadError::Outside);
-    }
+    let real = inside_path(root, path)?;
     let file = File::open(&real).map_err(|e| ReadError::Io(e.kind()))?;
     let mut bytes = Vec::new();
     file.take(max_bytes + 1)
@@ -402,6 +397,22 @@ pub fn read_inside(root: &Path, path: &RepoPath, max_bytes: u64) -> Result<Vec<u
         return Err(ReadError::TooLarge);
     }
     Ok(bytes)
+}
+
+/// The canonical path of `root/path` if it exists and is still inside
+/// `root` (which must itself be canonical); symlinks out of the tree fail.
+///
+/// Example: `inside_path(root, "src/a.clj")` gives `/repo/src/a.clj`; a
+/// symlink to `/etc/passwd` gives `Err(Outside)`.
+pub fn inside_path(root: &Path, path: &RepoPath) -> Result<PathBuf, ReadError> {
+    let real = native_path(root, path)
+        .canonicalize()
+        .map_err(|e| ReadError::Io(e.kind()))?;
+    if real.starts_with(root) {
+        Ok(real)
+    } else {
+        Err(ReadError::Outside)
+    }
 }
 
 /// The native path of `path` under `root`.

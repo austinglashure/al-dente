@@ -155,3 +155,16 @@ pre { background: #f6f6f6; padding: 8px; overflow: auto; font-size: 0.8rem; }
 .workspace form {
   margin-top: 4px;
 }
+
+/* WP5.4: source lines, highlighting, call sites. */
+pre.source .line { display: block; }
+pre.source .line.marked { background: #fff7bc; }
+pre.source .ln { display: inline-block; min-width: 3em; padding-right: 8px; color: #999; text-align: right; user-select: none; }
+.tok-comment { color: #888; font-style: italic; }
+.tok-string { color: #a50f15; }
+.tok-keyword { color: #6a51a3; }
+.tok-number { color: #08519c; }
+.tok-bracket { color: #999; }
+.neighbor-group h4 { margin: 6px 0 2px; font-size: 0.8rem; font-weight: normal; }
+details.sites { display: inline-block; margin-left: 4px; }
+details.sites button { display: block; }

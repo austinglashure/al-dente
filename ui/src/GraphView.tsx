@@ -40,6 +40,8 @@ interface Props<N extends NodeAttrs, E extends EdgeAttrs> {
   styleOf?: ((id: string) => NodeStyle | null) | null;
   /** Hide light edges and function labels when zoomed out (the main canvas). */
   semanticZoom?: boolean;
+  /** Called with an edge's key when it is clicked. */
+  onEdgeClick?: (key: string) => void;
   /** Called with the visible nodes inside a Shift-drag box. */
   onBoxSelect?: (ids: string[]) => void;
   /** Receives the renderer when it starts and `null` when it stops (for batched changes). */
@@ -71,6 +73,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
   semanticZoom = false,
   onRenderer,
   onBoxSelect,
+  onEdgeClick,
   testId = 'canvas',
   data = {},
 }: Props<N, E>) {
@@ -82,9 +85,11 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
   });
   const rendererCallback = useRef(onRenderer);
   const boxCallback = useRef(onBoxSelect);
+  const edgeCallback = useRef(onEdgeClick);
   useLayoutEffect(() => {
     rendererCallback.current = onRenderer;
     boxCallback.current = onBoxSelect;
+    edgeCallback.current = onEdgeClick;
   });
   // The semantic zoom level; the reducers read it, and crossing a level redraws.
   const zoom = useRef<0 | 1 | 2>(0);
@@ -94,6 +99,8 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
     const s = new Sigma<N, E>(graph, container.current, {
       allowInvalidContainer: true,
       renderEdgeLabels: false,
+      // Edges are clickable when someone listens (their call sites).
+      enableEdgeEvents: edgeCallback.current !== undefined,
       defaultEdgeType: 'arrow',
       labelRenderedSizeThreshold: 6,
       nodeReducer: (id, attrs) => {
@@ -136,6 +143,7 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
       if (handlers.current.semanticZoom) s.refresh();
     });
     s.on('clickNode', ({ node }) => handlers.current.onSelect(node));
+    s.on('clickEdge', ({ edge }) => edgeCallback.current?.(edge));
     s.on('doubleClickNode', (e) => {
       e.preventSigmaDefault();
       handlers.current.onDoubleClick(e.node);

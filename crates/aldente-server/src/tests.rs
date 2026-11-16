@@ -931,3 +931,182 @@ fn rollups_are_warmed_at_start() {
     warm(Arc::clone(&state)).join().unwrap();
     assert!(state.cache.is_warm());
 }
+
+/// WP5.4: `/source?file=&line=` serves the lines around a call site of a
+/// snapshot file; both forms say which line the text starts at.
+#[test]
+fn source_serves_sites_and_says_where_it_starts() {
+    let s = start("site-source");
+    let (status, head, body) = s.ok_get("/api/v1/source?file=src/a.clj&line=6&context=1");
+    assert_eq!(status, 200, "{body}");
+    assert!(head.contains("x-aldente-first-line: 5"), "{head}");
+    assert_eq!(body, "  [x]\n  (g x))\n\n");
+    let (_, head, _) = s.ok_get("/api/v1/source?id=g&context=0");
+    assert!(head.contains("x-aldente-first-line: 8"), "{head}");
+    for bad in [
+        "file=secret.txt&line=1",
+        "file=../etc/passwd&line=1",
+        "file=src/a.clj",
+    ] {
+        let (status, _, _) = s.ok_get(&format!("/api/v1/source?{bad}"));
+        assert!(status == 404 || status == 400, "{bad}: {status}");
+    }
+}
+
+/// The stand-in editor for `/open` (any OS, no shell): run as a program
+/// with an `ALDENTE_ARGV_OUT=<path>` argument (to the test harness just
+/// another name filter), it writes its arguments to that path. In a normal
+/// test run it does nothing.
+#[test]
+fn argv_recorder() {
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(out) = args
+        .iter()
+        .find_map(|a| a.strip_prefix("ALDENTE_ARGV_OUT="))
+    {
+        std::fs::write(out, serde_json::to_string(&args).unwrap()).unwrap();
+    }
+}
+
+/// A server whose snapshot has a file named with spaces (and quotes where
+/// the OS allows), a symbol in it, and a symbol in a file the snapshot does
+/// not list; `editor` as given.
+fn open_server(name: &str, editor: Option<Vec<String>>) -> (Running, PathBuf) {
+    let (root, mut snap) = fixture(name);
+    let file_name = if cfg!(windows) {
+        "it's a file.clj"
+    } else {
+        "it's a \"file\".clj"
+    };
+    std::fs::write(
+        root.join("src").join(file_name),
+        "(ns odd)\n(defn h [] 1)\n",
+    )
+    .unwrap();
+    let rel = RepoPath::parse(&format!("src/{file_name}")).unwrap();
+    snap.files.push((
+        rel.clone(),
+        blake3::hash(b"(ns odd)\n(defn h [] 1)\n")
+            .to_hex()
+            .to_string(),
+    ));
+    let mut add = |id: &str, file: RepoPath| {
+        let id = NodeId::from_str(id).unwrap();
+        let mut n = snap.graph.nodes.values().next().unwrap().clone();
+        n.id = id.clone();
+        n.name = id.to_string().rsplit('/').next().unwrap().into();
+        n.loc = Some(Location {
+            file,
+            line: 2,
+            col: 1,
+            end_line: 2,
+            end_col: 14,
+        });
+        snap.graph.nodes.insert(id, n);
+    };
+    add("clj:.//odd/h", rel);
+    add(
+        "clj:.//odd/unlisted",
+        RepoPath::parse("secret.txt").unwrap(),
+    );
+    let info = SnapshotInfo {
+        key: snap.key.clone(),
+        repo: snap.repo.clone(),
+        rev: None,
+        dirty: false,
+        analyzer: "test".into(),
+    };
+    let (tx, rx) = std::sync::mpsc::channel();
+    let r = root.clone();
+    std::thread::spawn(move || {
+        let _ = run(
+            move |port| AppState {
+                editor,
+                ..AppState::new(snap, r, info, &[], "t0k3n".to_owned(), port)
+            },
+            0,
+            |url| {
+                let port: u16 = url
+                    .trim_start_matches("http://127.0.0.1:")
+                    .split('/')
+                    .next()
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                tx.send(port).unwrap();
+            },
+        );
+    });
+    let port = rx.recv_timeout(std::time::Duration::from_secs(10)).unwrap();
+    (
+        Running {
+            port,
+            token: "t0k3n".into(),
+        },
+        root,
+    )
+}
+
+/// WP5.4: with no editor configured, `/open` only says where the code is.
+#[test]
+fn open_without_an_editor_gives_the_location() {
+    let (s, _) = open_server("open-none", None);
+    let (status, body) = s.ok_post("/api/v1/open", r#"{"id": "clj:.//a/f"}"#);
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["opened"], false);
+    assert_eq!(env["data"]["location"], "src/a.clj:3:1");
+    assert!(schema_ok("open", &env["data"]), "{env:#}");
+}
+
+/// WP5.4: the editor command comes only from the user's config; the request
+/// can name a node or a site, nothing else; files outside the snapshot are
+/// refused; the file name is one argument, never parsed by a shell.
+#[test]
+fn open_runs_only_the_configured_editor_with_plain_arguments() {
+    let out = std::env::temp_dir().join(format!("aldente-argv-{}.json", std::process::id()));
+    let _ = std::fs::remove_file(&out);
+    let editor = vec![
+        std::env::current_exe()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned(),
+        "--exact".into(),
+        "tests::argv_recorder".into(),
+        format!("ALDENTE_ARGV_OUT={}", out.display()),
+        "{file}".into(),
+        "+{line}:{col}".into(),
+    ];
+    let (s, root) = open_server("open-run", Some(editor));
+    for refused in [
+        r#"{"id": "clj:.//odd/h", "editor": ["sh", "-c", "touch /tmp/pwned"]}"#,
+        r#"{"command": "rm -rf /"}"#,
+        r#"{"id": "clj:.//odd/unlisted"}"#,
+        r#"{"file": "../outside.clj", "line": 1}"#,
+        "not json",
+    ] {
+        let (status, body) = s.ok_post("/api/v1/open", refused);
+        assert!(status == 400 || status == 404, "{refused}: {status} {body}");
+    }
+    assert!(!out.exists(), "nothing ran for a refused request");
+    let (status, body) = s.ok_post("/api/v1/open", r#"{"id": "clj:.//odd/h"}"#);
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["data"]["opened"], true, "{env:#}");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !out.exists() && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    let args: Vec<String> = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    let file_name = if cfg!(windows) {
+        "it's a file.clj"
+    } else {
+        "it's a \"file\".clj"
+    };
+    let expected = root
+        .join("src")
+        .join(file_name)
+        .to_string_lossy()
+        .into_owned();
+    assert_eq!(args[4..], [expected, "+2:1".to_owned()], "{args:?}");
+}

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Api, initToken } from './api';
 import { libraryHighlight } from './crater';
 import { CraterView, type CraterRequest } from './CraterView';
-import { Details, type Tools } from './Details';
+import { Details, type NodeFacts, type Tools } from './Details';
 import { GraphView } from './GraphView';
 import { CycleList, HotspotList } from './Hotspots';
 import { MeasuresTable } from './MeasuresTable';
@@ -15,6 +15,7 @@ import type { Metric, OverlayKind } from './overlay';
 import { CanvasBar } from './CanvasBar';
 import { LeftPanel } from './LeftPanel';
 import { LibraryPanel } from './Libraries';
+import { EdgeSites } from './EdgeSites';
 import { SourcePanel } from './SourcePanel';
 import { HelpDialog } from './HelpDialog';
 import { TraceDialog } from './TraceDialog';
@@ -26,7 +27,7 @@ import type { Op } from './workspace';
 import { WorkspacePanel } from './WorkspacePanel';
 import { layout, layoutPending, layoutRuns } from './layout';
 import { dropNodes, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
-import { metricValues } from './overlay';
+import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo } from './types';
 import { dirChildren, findDir } from './tree';
@@ -57,7 +58,13 @@ export function App() {
   const [units, setUnits] = useState<Map<string, UnitInfo>>(new Map());
   const [selected, setSelected] = useState<string | null>(null);
   const [details, setDetails] = useState<ShowResult | null>(null);
-  const [source, setSource] = useState<string | null>(null);
+  const [source, setSource] = useState<{ text: string; first: number } | null>(null);
+  // A call site's line in context, an edge's sites, and what "Open in
+  // editor" did last.
+  const [siteView, setSiteView] = useState<{ file: string; line: number; text: string; first: number } | null>(null);
+  const [edgeSel, setEdgeSel] = useState<string | null>(null);
+  const [editorNote, setEditorNote] = useState<string | null>(null);
+  const [wantMetrics, setWantMetrics] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [hide, setHide] = useState<HideOptions>({ hideTests: false, hideExternals: true, hideInterop: false, hideCore: false });
@@ -116,7 +123,7 @@ export function App() {
   // Set once the first canvas is drawn; slow reports wait for it.
   const [firstShown, setFirstShown] = useState(false);
   const [measuresOpen, setMeasuresOpen] = useState(false);
-  const reports = useReports(api, overlay, sizeBy !== null || colorBy !== null || filters.measures.length > 0, fail, firstShown);
+  const reports = useReports(api, overlay, wantMetrics || sizeBy !== null || colorBy !== null || filters.measures.length > 0, fail, firstShown);
   /** A node's value for a measure, for the filter panel's minimums. */
   const measureOf = useMemo(() => {
     const { metrics } = reports;
@@ -222,6 +229,9 @@ export function App() {
       setSelected(id);
       setDetails(null);
       setSource(null);
+      setSiteView(null);
+      setEdgeSel(null);
+      setEditorNote(null);
       if (id.startsWith('dir:')) {
         // Directories are not stored: describe one from the tree and the
         // edges on the canvas.
@@ -245,9 +255,9 @@ export function App() {
       api.node(id).then(setDetails).catch(fail);
       if (hasSource(id)) {
         api
-          .source(id)
+          .sourceAt(id)
           .then(setSource)
-          .catch(() => setSource(''));
+          .catch(() => setSource({ text: '', first: 1 }));
       }
     },
     [api, fail, graph, tree],
@@ -257,6 +267,8 @@ export function App() {
     setSelected(null);
     setDetails(null);
     setSource(null);
+    setSiteView(null);
+    setEdgeSel(null);
   }, []);
 
   useEffect(() => {
@@ -458,6 +470,16 @@ export function App() {
     [graph, run, select],
   );
 
+  /** Shows a call site's line in context. */
+  const showSite = useCallback(
+    (site: { file: string; line: number }) =>
+      void api
+        .siteSource(site.file, site.line)
+        .then((r) => setSiteView({ file: site.file, line: site.line, ...r }))
+        .catch(fail),
+    [api, fail],
+  );
+
   /** Every other node of the same kind and subkind on the canvas. */
   const othersLike = useCallback(
     (id: string) => {
@@ -486,6 +508,18 @@ export function App() {
     hideLike: (id) => void run({ op: 'hide', ids: othersLike(id) }),
     pin: (id) => void run({ op: 'pin', id, on: !(graph.hasNode(id) && graph.getNodeAttribute(id, 'pinned') === true) }),
     keepOnly: (id) => void run({ op: 'keep', ids: [...new Set([id, ...marked])] }),
+    openEditor: (n) =>
+      void api
+        .openInEditor({ id: n.id })
+        .then((r) => {
+          if (r.opened) setEditorNote(`Opened ${r.location} in your editor.`);
+          else {
+            void navigator.clipboard?.writeText(r.location).catch(() => undefined);
+            setEditorNote(`No editor is set (add editor = […] to config.toml); copied ${r.location}.`);
+          }
+        })
+        .catch(fail),
+    site: showSite,
   };
 
   /** Selects a library: lists its call sites and highlights its users. */
@@ -512,6 +546,65 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [libUsage, measureSel, graph, version],
   );
+
+  /** What the coverage, hotspot and measure reports say about the selection. */
+  const facts: NodeFacts | null = useMemo(() => {
+    const id = details?.node.id;
+    if (!id) return null;
+    return {
+      coverage: reports.coverage?.symbols.find((c) => c.id === id) ?? null,
+      findings: reports.hotspots?.findings.filter((f) => f.subject === id || f.nodes.includes(id)) ?? [],
+      measures: reports.metrics ? nodeMeasures(reports.metrics, id) : null,
+      onLoadMeasures: () => setWantMetrics(true),
+    };
+  }, [details, reports]);
+
+  // Keyboard navigation (06-gui): ← caller, → callee (strongest first), e
+  // expand or collapse, h hide, f focus, c crater, / search. Not while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+      if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('[data-testid="search"]')?.focus();
+        return;
+      }
+      const d = details;
+      if (!d) return;
+      const id = d.node.id;
+      const go = (list: Neighbor[]) => {
+        const next = list[0];
+        if (next) follow(next.id);
+      };
+      switch (e.key) {
+        case 'ArrowLeft':
+          go(d.callers);
+          break;
+        case 'ArrowRight':
+          go(d.callees);
+          break;
+        case 'e':
+          if (isAggregate(d.node)) void run({ op: expansions.has(id) ? 'collapse' : 'expand', id });
+          break;
+        case 'h':
+          deselect();
+          void run({ op: 'hide', ids: [id] });
+          break;
+        case 'f':
+          void run({ op: 'focus', id });
+          break;
+        case 'c':
+          openCrater(d.node, 'forward');
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [details, follow, run, expansions, deselect, openCrater]);
 
   const onDoubleClick = useCallback(
     (id: string) => {
@@ -678,6 +771,10 @@ export function App() {
           visibleEdges={visibleEdges}
           onSelect={select}
           onDoubleClick={onDoubleClick}
+          onEdgeClick={(key) => {
+            setEdgeSel(key);
+            setSiteView(null);
+          }}
           onDeselect={deselect}
           highlight={marked.size > 0 ? { nodes: marked, edges: new Set<string>() } : libHighlight}
           styleOf={styleOf}
@@ -704,12 +801,15 @@ export function App() {
             onFollow={follow}
           />
         )}
+        {edgeSel && graph.hasEdge(edgeSel) && <EdgeSites edge={graph.getEdgeAttribute(edgeSel, 'edge')} onSite={showSite} onClose={() => setEdgeSel(null)} />}
         {details ? (
           <Details
             d={details}
             unit={units.get(details.node.id)}
             tools={tools}
             expansion={expansions.has(details.node.id) ? { left: remaining(expansions, details.node.id) } : null}
+            facts={facts}
+            editorNote={editorNote}
             onClose={deselect}
           />
         ) : (
@@ -719,7 +819,17 @@ export function App() {
             <p>A unit is a directory with its own build file (deps.edn, project.clj, shadow-cljs.edn, bb.edn). Callers, callees and source appear once you select a function.</p>
           </div>
         )}
-        {source && <SourcePanel key={selected ?? ''} source={source} />}
+        {source && <SourcePanel key={selected ?? ''} source={source.text} first={source.first} />}
+        {siteView && (
+          <SourcePanel
+            key={`${siteView.file}:${siteView.line}`}
+            title={`${siteView.file}:${siteView.line}`}
+            source={siteView.text}
+            first={siteView.first}
+            mark={siteView.line}
+            testId="site-source"
+          />
+        )}
         <details className="measures-panel" data-testid="measures-panel" onToggle={(e) => setMeasuresOpen(e.currentTarget.open)}>
           <summary>Measures</summary>
           <MeasuresTable api={api} selected={measureSel} onSelected={setMeasureSel} onFollow={follow} onError={fail} active={measuresOpen} />

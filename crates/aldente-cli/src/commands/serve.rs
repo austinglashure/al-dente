@@ -59,6 +59,16 @@ pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
         Err(f) => return fail(TAG, &f, json),
     };
     let timings = args.target.timings;
+    let editor = match crate::config::editor() {
+        Ok(e) => e,
+        Err(e) => {
+            let f = crate::commands::target::Failure::new(
+                aldente_model::ErrorCode::Usage,
+                format!("config: {e}"),
+            );
+            return fail(TAG, &f, json);
+        }
+    };
     let token = new_token();
     let state_info = info.clone();
     let no_open = args.no_open;
@@ -66,6 +76,7 @@ pub fn run(args: &ServeArgs, json: bool) -> anyhow::Result<ExitCode> {
         move |port| AppState {
             timings,
             git: crate::commands::crater_diff::hardened_git().ok(),
+            editor,
             ..AppState::new(snapshot, root, state_info, &extra, token, port)
         },
         args.port,

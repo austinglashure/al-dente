@@ -198,45 +198,55 @@ pub async fn node(State(s): St, RawQuery(q): RawQuery) -> Response {
     )
 }
 
-/// `GET /source?id=&context=`: the definition text of a node as plain text,
-/// with `context` lines around it (default 3, at most 50). Only files the
-/// snapshot analyzed are served, and only if unchanged since; IDs are never
-/// treated as paths.
+/// `GET /source?id=&context=` or `GET /source?file=&line=&context=`: the
+/// definition text of a node, or the lines around a call site, as plain
+/// text with `context` lines around it (default 3, at most 50); the
+/// `x-aldente-first-line` header says which line it starts at. Only files
+/// the snapshot analyzed are served, and only if unchanged since; IDs are
+/// never treated as paths.
 ///
 /// Example: `?id=clj:.//shop.core/checkout` gives lines 9–23 of `src/shop/core.clj`.
 pub async fn source(State(s): St, RawQuery(q): RawQuery) -> Response {
     let p = Params::parse(q.as_deref());
-    let id = match resolve_id(&s, "source", p.get("id")) {
-        Ok(id) => id,
-        Err(res) => return *res,
-    };
-    let Some(loc) = s.snapshot.graph.nodes.get(&id).and_then(|n| n.loc.clone()) else {
-        return err(
+    let missing = |m: &str| {
+        err(
             StatusCode::NOT_FOUND,
             "source",
             ErrorCode::UnknownSymbol,
-            "this node has no source location",
+            m,
             None,
-        );
+        )
     };
-    let Some((_, hash)) = s.snapshot.files.iter().find(|(f, _)| f == &loc.file) else {
-        return err(
-            StatusCode::NOT_FOUND,
-            "source",
-            ErrorCode::UnknownSymbol,
-            "the file is not part of the snapshot",
-            None,
-        );
+    let (file, from, to) = if let Some(file) = p.get("file") {
+        let (Ok(file), Some(line)) = (
+            aldente_model::RepoPath::parse(file),
+            p.get("line").and_then(|l| l.parse::<u32>().ok()),
+        ) else {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "source",
+                ErrorCode::Usage,
+                "a site needs file and line",
+                None,
+            );
+        };
+        (file, line, line)
+    } else {
+        let id = match resolve_id(&s, "source", p.get("id")) {
+            Ok(id) => id,
+            Err(res) => return *res,
+        };
+        let Some(loc) = s.snapshot.graph.nodes.get(&id).and_then(|n| n.loc.clone()) else {
+            return missing("this node has no source location");
+        };
+        (loc.file, loc.line, loc.end_line)
+    };
+    let Some((_, hash)) = s.snapshot.files.iter().find(|(f, _)| f == &file) else {
+        return missing("the file is not part of the snapshot");
     };
     let max = aldente_acquire::walk::Limits::default().max_file_bytes;
-    let Ok(bytes) = aldente_acquire::walk::read_inside(&s.root, &loc.file, max) else {
-        return err(
-            StatusCode::NOT_FOUND,
-            "source",
-            ErrorCode::UnknownSymbol,
-            "the file cannot be read",
-            None,
-        );
+    let Ok(bytes) = aldente_acquire::walk::read_inside(&s.root, &file, max) else {
+        return missing("the file cannot be read");
     };
     if blake3::hash(&bytes).to_hex().as_str() != hash {
         return err(
@@ -253,15 +263,25 @@ pub async fn source(State(s): St, RawQuery(q): RawQuery) -> Response {
         .unwrap_or(3usize)
         .min(50);
     let text = String::from_utf8_lossy(&bytes);
-    let first = (loc.line as usize).saturating_sub(context + 1);
-    let last = loc.end_line as usize + context;
+    let first = (from as usize).saturating_sub(context + 1);
+    let last = to as usize + context;
     let body: String = text
         .lines()
         .skip(first)
         .take(last.saturating_sub(first))
         .map(|l| format!("{l}\n"))
         .collect();
-    ([(header::CONTENT_TYPE, "text/plain; charset=utf-8")], body).into_response()
+    (
+        [
+            (header::CONTENT_TYPE, "text/plain; charset=utf-8".to_owned()),
+            (
+                header::HeaderName::from_static("x-aldente-first-line"),
+                (first + 1).to_string(),
+            ),
+        ],
+        body,
+    )
+        .into_response()
 }
 
 /// `GET /search?q=&kind=&limit=`: matches by name or ID (the CLI's `find`).

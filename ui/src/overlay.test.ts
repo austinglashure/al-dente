@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COVERAGE_COLORS, bind, heat, metricValues, namespaceOf, overlayData, rollUp, styler } from './overlay';
+import { COVERAGE_COLORS, bind, heat, metricValues, namespaceOf, nodeMeasures, overlayData, rollUp, styler } from './overlay';
 import type { CoverageReport, HotspotsReport, MetricsReport } from './types';
 
 const coverage: CoverageReport = {
@@ -59,5 +59,21 @@ describe('overlays', () => {
     expect(sized('n1')).toEqual({ color: 'red', tag: 't', size: 18 });
     const colored = bind(() => null, null, metricValues(report, 'pagerank'), ['n1']);
     expect(colored('n1')?.color).toBe(heat(1));
+  });
+});
+
+describe('nodeMeasures', () => {
+  it('lists one node’s measures in METRICS order from both report parts', () => {
+    const report = {
+      first: { nodes: [{ id: 'a', fan_in: 3, fan_out: 1, pagerank: 0.5 }], components: [] },
+      second: { nodes: [{ id: 'a', betweenness: 2 }], sampling: { approximate: false, pivots: 0 } },
+    } as unknown as MetricsReport;
+    expect(nodeMeasures(report, 'a')).toEqual([
+      { name: 'fan_in', value: 3 },
+      { name: 'fan_out', value: 1 },
+      { name: 'pagerank', value: 0.5 },
+      { name: 'betweenness', value: 2 },
+    ]);
+    expect(nodeMeasures(report, 'b')).toEqual([]);
   });
 });

@@ -34,7 +34,7 @@ export function startServerOn(source: string): Promise<Server> {
   const dir = mkdtempSync(join(tmpdir(), 'aldente-e2e-'));
   cpSync(source, join(dir, 'repo'), { recursive: true });
   const child: ChildProcess = spawn(binary, ['serve', '--no-open', '--json', join(dir, 'repo')], {
-    env: { ...process.env, ALDENTE_CACHE_DIR: join(dir, 'cache') },
+    env: { ...process.env, ALDENTE_CACHE_DIR: join(dir, 'cache'), ALDENTE_CONFIG_DIR: join(dir, 'config') },
     stdio: ['ignore', 'pipe', 'inherit'],
   });
   const close = () => {
@@ -60,7 +60,7 @@ export function startServerOn(source: string): Promise<Server> {
 export function startSnapshotServer(file: string): Promise<Server> {
   const dir = mkdtempSync(join(tmpdir(), 'aldente-e2e-'));
   const child: ChildProcess = spawn(binary, ['serve', '--no-open', '--json', '--snapshot', file], {
-    env: { ...process.env, ALDENTE_CACHE_DIR: join(dir, 'cache') },
+    env: { ...process.env, ALDENTE_CACHE_DIR: join(dir, 'cache'), ALDENTE_CONFIG_DIR: join(dir, 'config') },
     stdio: ['ignore', 'pipe', 'inherit'],
   });
   const close = () => {

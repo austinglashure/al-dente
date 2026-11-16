@@ -11,6 +11,9 @@ name = "aldente"
 path = "src/main.rs"
 
 [dependencies]
+# The user config file, `<config dir>/aldente/config.toml` (02-architecture.md, "Configuration").
+dirs.workspace = true
+toml.workspace = true
 aldente-acquire.workspace = true
 aldente-adapter.workspace = true
 aldente-analysis.workspace = true

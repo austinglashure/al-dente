@@ -388,7 +388,12 @@ test.describe('source', () => {
       await page.getByTestId('copy-source').click();
       await expect(page.getByTestId('copy-source')).toHaveText('Copied');
       const copied = await page.evaluate(() => navigator.clipboard.readText());
-      expect(copied).toBe(await page.getByTestId('source').innerText());
+      // The code as shown, without the line-number gutter (WP5.4).
+      const code = await page
+        .getByTestId('source')
+        .locator('.line')
+        .evaluateAll((lines) => lines.map((l) => [...l.childNodes].filter((c) => !(c instanceof HTMLElement && c.classList.contains('ln'))).map((c) => c.textContent).join('')).join(''));
+      expect(copied).toBe(code);
       expect(copied).toContain('(defn checkout');
     } finally {
       server.close();

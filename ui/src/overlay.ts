@@ -182,3 +182,13 @@ export function bind(
     return st;
   };
 }
+
+/** One node's measures, in `METRICS` order, from both parts of a report.
+ *  Example: `nodeMeasures(report, id)` is `[{ name: 'fan_in', value: 3 }, …]`. */
+export function nodeMeasures(report: MetricsReport, id: string): { name: string; value: number }[] {
+  const rows = [...report.first.nodes, ...report.second.nodes].filter((n) => n.id === id) as unknown as Record<string, unknown>[];
+  return METRICS.flatMap((m) => {
+    const v = rows.map((r) => r[m]).find((x) => typeof x === 'number');
+    return typeof v === 'number' ? [{ name: m, value: v }] : [];
+  });
+}

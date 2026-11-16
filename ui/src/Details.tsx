@@ -2,7 +2,7 @@
 // relations. Every repository string is rendered as React text.
 
 import { labelFor } from './model';
-import type { Child, GNode, Neighbor, ShowResult, UnitInfo } from './types';
+import type { Child, Finding, GNode, Neighbor, ShowResult, Site, SymbolCoverage, UnitInfo } from './types';
 
 /** Actions the panel offers; which ones appear depends on the node kind. */
 export interface Tools {
@@ -24,6 +24,19 @@ export interface Tools {
   pin: (id: string) => void;
   /** Keeps only this node and the box-selected ones. */
   keepOnly: (id: string) => void;
+  /** Opens the node in the configured editor, or copies `path:line:col`. */
+  openEditor: (n: GNode) => void;
+  /** Shows a call site's line in context. */
+  site: (s: Site) => void;
+}
+
+/** What other reports say about the selected node. */
+export interface NodeFacts {
+  coverage: SymbolCoverage | null;
+  findings: Finding[];
+  /** Measure name and value, or null until the measures are loaded. */
+  measures: { name: string; value: number }[] | null;
+  onLoadMeasures: () => void;
 }
 
 /** The location of a node as `file:line:col`.
@@ -46,6 +59,8 @@ export function Details({
   unit,
   tools,
   expansion = null,
+  facts = null,
+  editorNote = null,
   onClose,
 }: {
   d: ShowResult;
@@ -53,6 +68,9 @@ export function Details({
   tools: Tools;
   /** Set when the node is expanded in place: how many children are not shown yet. */
   expansion?: { left: number } | null;
+  facts?: NodeFacts | null;
+  /** What the last "Open in editor" did, shown under the location. */
+  editorNote?: string | null;
   onClose: () => void;
 }) {
   const n = d.node;
@@ -131,7 +149,27 @@ export function Details({
       </div>
       <p className="id">{n.id}</p>
       {unit && <UnitFacts u={unit} />}
-      {n.loc && <p data-testid="location">{where(n)}</p>}
+      {n.loc && (
+        <p data-testid="location">
+          {where(n)}{' '}
+          <button type="button" className="small" data-action="open-editor" onClick={() => tools.openEditor(n)} title="Open in your editor (set `editor` in config.toml), or copy path:line:col">
+            open in editor
+          </button>
+        </p>
+      )}
+      {editorNote && (
+        <p className="muted" data-testid="editor-note">
+          {editorNote}
+        </p>
+      )}
+      {n.kind === 'impl' && (
+        <p>
+          Implements{' '}
+          <button type="button" data-testid="implements" data-node-id={n.id.split('@')[0]} onClick={() => tools.follow(n.id.split('@')[0] ?? n.id)}>
+            {(n.id.split('@')[0] ?? '').split('/').pop()}
+          </button>
+        </p>
+      )}
       {n.signature && <p className="mono">{n.signature}</p>}
       {n.doc && (
         <p className="doc" data-testid="doc">
@@ -139,10 +177,16 @@ export function Details({
         </p>
       )}
       {d.children.length > 0 && (
-        <Children title={`Contains (${d.children.length})`} noun={childNoun(n.kind)} list={d.children} tools={tools} />
+        <Children
+          title={`${n.subkind === 'multimethod' || n.subkind === 'protocol-method' ? 'Implementations' : 'Contains'} (${d.children.length})`}
+          noun={childNoun(n.kind)}
+          list={d.children}
+          tools={tools}
+        />
       )}
-      <NeighborList title={relations[0] ?? ''} list={d.callers} testid="caller" onFollow={tools.follow} />
-      <NeighborList title={relations[1] ?? ''} list={d.callees} testid="callee" onFollow={tools.follow} />
+      <NeighborList title={relations[0] ?? ''} list={d.callers} testid="caller" onFollow={tools.follow} onSite={tools.site} />
+      <NeighborList title={relations[1] ?? ''} list={d.callees} testid="callee" onFollow={tools.follow} onSite={tools.site} />
+      {facts && <Facts facts={facts} onFollow={tools.follow} />}
     </section>
   );
 }
@@ -200,29 +244,112 @@ function Children({ title, noun, list, tools }: { title: string; noun: string; l
   );
 }
 
-/** A list of neighbor links, strongest certainty first.
+/** Neighbor links grouped by certainty and reason (strongest first), each
+ *  with its call sites.
  *  Example: `<NeighborList title="Callees" list={d.callees} … />`. */
-function NeighborList({ title, list, testid, onFollow }: { title: string; list: Neighbor[]; testid: string; onFollow: (id: string) => void }) {
+function NeighborList({ title, list, testid, onFollow, onSite }: { title: string; list: Neighbor[]; testid: string; onFollow: (id: string) => void; onSite: (s: Site) => void }) {
+  const groups: { label: string; items: Neighbor[] }[] = [];
+  for (const x of list) {
+    const label = [x.certainty ?? x.kind, x.reason ?? (x.certainty ? x.kind : null)].filter(Boolean).join(' · ');
+    const g = groups.find((y) => y.label === label);
+    if (g) g.items.push(x);
+    else groups.push({ label, items: [x] });
+  }
   return (
     <>
       <h3>
         {title} ({list.length})
       </h3>
-      <ul className="neighbors">
-        {list.map((x) => (
-          <li key={`${x.id}|${x.kind}|${x.reason ?? ''}`}>
-            <button type="button" data-testid={testid} data-node-id={x.id} onClick={() => onFollow(x.id)} title={x.id}>
-              {x.name}
-            </button>{' '}
-            <span className={`muted cert-${x.certainty ?? 'none'}`}>
-              {x.kind}
-              {x.certainty ? ` · ${x.certainty}` : ''}
-              {x.reason ? ` · ${x.reason}` : ''}
-              {x.count ? ` · ×${x.count}` : ''}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {groups.map((g) => (
+        <div key={g.label} className="neighbor-group" data-group={g.label}>
+          <h4 className={`muted cert-${g.items[0]?.certainty ?? 'none'}`}>
+            {g.label} ({g.items.length})
+          </h4>
+          <ul className="neighbors">
+            {g.items.map((x) => (
+              <li key={`${x.id}|${x.kind}|${x.reason ?? ''}`}>
+                <button type="button" data-testid={testid} data-node-id={x.id} onClick={() => onFollow(x.id)} title={x.id}>
+                  {x.name}
+                </button>{' '}
+                <span className="muted">
+                  {x.kind}
+                  {x.count ? ` ×${x.count}` : ''}
+                </span>
+                {x.sites.length > 0 && (
+                  <details className="sites">
+                    <summary>
+                      {x.sites.length} site{x.sites.length === 1 ? '' : 's'}
+                    </summary>
+                    {x.sites.map((site) => (
+                      <button type="button" key={`${site.file}:${site.line}:${site.col}`} className="small mono" data-testid="site" onClick={() => onSite(site)}>
+                        {site.file}:{site.line}:{site.col}
+                      </button>
+                    ))}
+                  </details>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** Tests that reach the node, its measures and its findings, each a link.
+ *  Example: `<Facts facts={facts} onFollow={follow} />`. */
+function Facts({ facts, onFollow }: { facts: NodeFacts; onFollow: (id: string) => void }) {
+  const { coverage, findings, measures } = facts;
+  return (
+    <>
+      {coverage && (
+        <>
+          <h3>Tests that reach it ({coverage.test_count})</h3>
+          <p className="muted" data-testid="coverage-status">
+            {coverage.status}
+            {coverage.distance !== null ? `, ${coverage.distance} call${coverage.distance === 1 ? '' : 's'} from the nearest test` : ''}
+          </p>
+          <ul className="neighbors" data-testid="covering-tests">
+            {coverage.tests.map((t) => (
+              <li key={t}>
+                <button type="button" data-testid="covering-test" data-node-id={t} onClick={() => onFollow(t)} title={t}>
+                  {t.split('/').pop()}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <h3>Measures</h3>
+      {measures === null ? (
+        <button type="button" className="small" data-action="load-measures" onClick={facts.onLoadMeasures}>
+          Load measures
+        </button>
+      ) : (
+        <dl className="facts" data-testid="node-measures">
+          {measures.map((m) => (
+            <div key={m.name} style={{ display: 'contents' }}>
+              <dt>{m.name.replace(/_/g, ' ')}</dt>
+              <dd>{Number.isInteger(m.value) ? m.value : m.value.toFixed(4)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {findings.length > 0 && (
+        <>
+          <h3>Findings ({findings.length})</h3>
+          <ul className="neighbors" data-testid="node-findings">
+            {findings.map((f) => (
+              <li key={`${f.kind}|${f.subject}`}>
+                <button type="button" data-node-id={f.subject} onClick={() => onFollow(f.subject)} title={f.reason}>
+                  {f.kind}
+                </button>{' '}
+                <span className="muted">{f.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   );
 }

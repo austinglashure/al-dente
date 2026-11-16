@@ -18,6 +18,7 @@ mod crater;
 mod graph;
 mod libs;
 mod measures;
+mod open;
 
 pub use crater::{checklist, crater, crater_trace, trace_normalize};
 pub use graph::{
@@ -26,6 +27,7 @@ pub use graph::{
 };
 pub use libs::{lib, libs};
 pub use measures::{churn, coverage, cycles, defaults, hotspots, metrics, subgraph};
+pub use open::open;
 
 type St = State<Arc<AppState>>;
 

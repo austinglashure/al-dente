@@ -377,3 +377,10 @@ export interface ChurnReport {
   files: { path: string; commits: number }[];
   symbols: { id: string; commits: number }[];
 }
+
+/** What `POST /open` did. */
+export interface OpenResult {
+  opened: boolean;
+  /** `path:line:col`. */
+  location: string;
+}

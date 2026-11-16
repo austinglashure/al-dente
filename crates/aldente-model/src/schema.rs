@@ -11,7 +11,7 @@ use crate::doctor::DoctorReport;
 use crate::envelope::Envelope;
 use crate::graph::GraphPayload;
 use crate::libraries::{LibrariesReport, LibraryUsage};
-use crate::query::{BlindspotReport, FindResult, ShowResult};
+use crate::query::{BlindspotReport, FindResult, OpenResult, ShowResult};
 use crate::trace::TraceReport;
 use crate::units::UnitsReport;
 
@@ -36,6 +36,7 @@ pub const SCHEMA_NAMES: &[&str] = &[
     "lib-usage",
     "libs",
     "metrics",
+    "open",
     "serve",
     "show",
     "snapshot",
@@ -74,6 +75,7 @@ pub fn schema_by_name(name: &str) -> Option<Value> {
         "analyze" => Some(schemars::schema_for!(AnalyzeSummary).to_value()),
         "blindspots" => Some(schemars::schema_for!(BlindspotReport).to_value()),
         "find" => Some(schemars::schema_for!(FindResult).to_value()),
+        "open" => Some(schemars::schema_for!(OpenResult).to_value()),
         "graph" => Some(schemars::schema_for!(GraphPayload).to_value()),
         "serve" => Some(schemars::schema_for!(ServeInfo).to_value()),
         "show" => Some(schemars::schema_for!(ShowResult).to_value()),

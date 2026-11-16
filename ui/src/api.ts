@@ -16,6 +16,7 @@ import type {
   FindResult,
   LibrariesReport,
   LibraryUsage,
+  OpenResult,
   Payload,
   ShowResult,
   SnapshotOverview,
@@ -92,6 +93,17 @@ export class Api {
     return res.text();
   }
 
+  /** GETs plain text and the `x-aldente-first-line` header.
+   *  Example: `await api.textAt('source', { id })` is `{ text: '(defn …', first: 12 }`. */
+  async textAt(endpoint: string, params: Record<string, string | number | undefined>): Promise<{ text: string; first: number }> {
+    const res = await fetch(apiPath(endpoint, params), { headers: { 'x-aldente-token': this.token } });
+    if (!res.ok) {
+      const env = (await res.json().catch(() => null)) as Envelope<unknown> | null;
+      throw new Error(env?.error?.message ?? `request failed (${res.status})`);
+    }
+    return { text: await res.text(), first: Number(res.headers.get('x-aldente-first-line') ?? '1') };
+  }
+
   /** POSTs `body` as text and returns the envelope's data, or throws its error message.
    *  Example: `await api.post<TraceReport>('trace/normalize', {}, traceText)`. */
   async post<T>(endpoint: string, params: Record<string, string | number | undefined>, body: string): Promise<T> {
@@ -123,6 +135,13 @@ export class Api {
   node = (id: string) => this.json<ShowResult>('node', { id });
   search = (q: string) => this.json<FindResult>('search', { q, limit: 20 });
   source = (id: string) => this.text('source', { id, context: 2 });
+  /** A node's source and the line it starts at. */
+  sourceAt = (id: string) => this.textAt('source', { id, context: 2 });
+  /** The lines around a call site and the line they start at. */
+  siteSource = (file: string, line: number) => this.textAt('source', { file, line, context: 4 });
+  /** Opens a node or site in the configured editor, or says where it is. */
+  openInEditor = (target: { id: string } | { file: string; line: number; col: number }) =>
+    this.post<OpenResult>('open', {}, JSON.stringify(target));
   blindspots = () => this.json<BlindspotReport>('blindspots');
   crater = (q: CraterQuery) => this.json<CraterResult>('crater', craterParams(q));
   checklist = (q: CraterQuery) => this.json<Checklist>('checklist', craterParams(q));

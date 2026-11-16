@@ -94,10 +94,12 @@ dependencies = [
  "anyhow",
  "blake3",
  "clap",
+ "dirs",
  "insta",
  "jsonschema",
  "serde",
  "serde_json",
+ "toml",
 ]
 
 [[package]]
