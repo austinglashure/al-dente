@@ -378,6 +378,8 @@ fn fetch_into(
         path: dir.display().to_string(),
         message: e.to_string(),
     };
+    let _held = EntryLock::acquire(dir).map_err(io)?;
+    clear_stale_git_locks(&dir.join(".git")).map_err(io)?;
     if !dir.join(".git").is_dir() {
         fs::create_dir_all(dir).map_err(io)?;
         let template = format!("--template={}", git.empty.template.display());
@@ -426,6 +428,12 @@ pub fn deepen(git: &Git, dir: &Path, url: &RemoteUrl, commits: usize) -> Result<
 ///
 /// Example: see [`deepen`].
 fn deepen_from(git: &Git, dir: &Path, url: &str, commits: usize) -> Result<(), AcquireError> {
+    let io = |e: std::io::Error| AcquireError::Io {
+        path: dir.display().to_string(),
+        message: e.to_string(),
+    };
+    let _held = EntryLock::acquire(dir).map_err(io)?;
+    clear_stale_git_locks(&dir.join(".git")).map_err(io)?;
     let head = crate::local_git::head_rev(git, dir).ok_or_else(|| AcquireError::Git {
         step: "rev-parse".into(),
         message: "the clone has no HEAD".into(),
@@ -476,9 +484,70 @@ fn submodules(dir: &Path) -> Vec<Diagnostic> {
     out
 }
 
+/// Exclusive hold on one clone in the cache, across Al Dente processes.
+/// Released when dropped (the OS also releases it if the process dies, so a
+/// crash cannot leave it stuck).
+#[derive(Debug)]
+pub struct EntryLock {
+    _file: fs::File,
+}
+
+impl EntryLock {
+    /// Blocks until this process holds the clone at `dir`. The lock is a file
+    /// beside the clone, `<name>@aldente.lock`: outside the working tree, and
+    /// `@` cannot appear in a URL segment, so no repository's directory can
+    /// collide with it.
+    ///
+    /// Example: `EntryLock::acquire(Path::new("/c/repos/github.com/penpot/penpot"))`
+    /// locks `/c/repos/github.com/penpot/penpot@aldente.lock`.
+    pub fn acquire(dir: &Path) -> std::io::Result<EntryLock> {
+        let name = dir.file_name().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "clone dir has no name")
+        })?;
+        let mut lock_name = name.to_os_string();
+        lock_name.push("@aldente.lock");
+        let parent = dir.parent().unwrap_or(Path::new("."));
+        fs::create_dir_all(parent)?;
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(parent.join(lock_name))?;
+        file.lock()?;
+        Ok(EntryLock { _file: file })
+    }
+}
+
+/// Removes every `*.lock` file under `dot_git`. Only call while holding the
+/// clone's [`EntryLock`]: then no git of ours is running in it, and any lock
+/// file is one a killed git (our timeout) left behind. Symlinks are neither
+/// followed nor removed.
+///
+/// Example: a `.git` holding `shallow.lock` and `refs/heads/x.lock` has
+/// neither afterwards; `HEAD` and `config` are untouched.
+fn clear_stale_git_locks(dot_git: &Path) -> std::io::Result<()> {
+    let entries = match fs::read_dir(dot_git) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e),
+    };
+    for entry in entries {
+        let entry = entry?;
+        let kind = entry.file_type()?;
+        let path = entry.path();
+        if kind.is_dir() {
+            clear_stale_git_locks(&path)?;
+        } else if kind.is_file() && path.extension().is_some_and(|e| e == "lock") {
+            fs::remove_file(&path)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::thread;
 
     #[test]
     fn accepts_the_three_url_forms() {
@@ -757,6 +826,70 @@ mod tests {
         assert!(dir.join("two.clj").exists());
         fetch_into(&git, url, &dir, Some(first.trim())).unwrap();
         assert!(!dir.join("two.clj").exists(), "a commit id works too");
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    /// A one-commit repository to fetch from, at `base/src`.
+    fn simple_src(base: &Path) -> PathBuf {
+        let src = base.join("src");
+        fs::create_dir_all(&src).unwrap();
+        plain_git(&src, &["init", "-q", "-b", "main"], &[]);
+        fs::write(src.join("a.clj"), "1").unwrap();
+        plain_git(&src, &["add", "."], &[]);
+        plain_git(&src, &["commit", "-q", "-m", "one"], &[]);
+        src
+    }
+
+    /// A git killed mid-fetch (our timeout) leaves its lock files behind;
+    /// the next fetch must not fail on them.
+    #[test]
+    fn locks_left_by_a_killed_git_do_not_wedge_the_next_fetch() {
+        let base = scratch("stale-locks");
+        let src = simple_src(&base);
+        let url = src.to_str().unwrap();
+        let git = test_git(&base, Vec::new());
+        let dir = base.join("clone");
+        fetch_into(&git, url, &dir, None).unwrap();
+        let dot_git = dir.join(".git");
+        let stale = [
+            dot_git.join("shallow.lock"),
+            dot_git.join("index.lock"),
+            dot_git.join("HEAD.lock"),
+            dot_git.join("refs").join("heads").join("x.lock"),
+        ];
+        for lock in &stale {
+            fs::create_dir_all(lock.parent().unwrap()).unwrap();
+            fs::write(lock, "").unwrap();
+        }
+        fetch_into(&git, url, &dir, None).unwrap();
+        for lock in &stale {
+            assert!(!lock.exists(), "{} still there", lock.display());
+        }
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    /// While another Al Dente process holds a clone, a fetch waits for it
+    /// instead of clearing locks that may belong to a live git.
+    #[test]
+    fn a_fetch_waits_for_another_holder_of_the_clone() {
+        let base = scratch("entry-lock");
+        let src = simple_src(&base);
+        let url = src.to_str().unwrap().to_owned();
+        let git = test_git(&base, Vec::new());
+        let dir = base.join("clone");
+        fetch_into(&git, &url, &dir, None).unwrap();
+        let live = dir.join(".git").join("shallow.lock");
+
+        let held = EntryLock::acquire(&dir).unwrap();
+        fs::write(&live, "").unwrap();
+        let (git2, dir2) = (git.clone(), dir.clone());
+        let fetch = thread::spawn(move || fetch_into(&git2, &url, &dir2, None).map(|_| ()));
+        thread::sleep(Duration::from_millis(300));
+        assert!(!fetch.is_finished(), "fetch did not wait for the holder");
+        assert!(live.exists(), "a live lock was removed");
+        fs::remove_file(&live).unwrap();
+        drop(held);
+        fetch.join().unwrap().unwrap();
         fs::remove_dir_all(base).unwrap();
     }
 
