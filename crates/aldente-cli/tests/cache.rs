@@ -85,6 +85,23 @@ fn clear_and_gc_remove_only_cache_contents() {
 }
 
 #[test]
+fn fetch_timeout_applies_to_url_targets_only() {
+    let cache = cache_dir("fetch-timeout");
+    let out = run(&cache, &["units", "--json", "--fetch-timeout", "60", "."]);
+    assert_eq!(out.status.code(), Some(2), "{out:?}");
+    let env = json(&out);
+    assert_eq!(env["error"]["code"], "usage");
+    assert!(
+        env["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("--fetch-timeout applies to URL targets only"),
+        "{env:#}"
+    );
+    fs::remove_dir_all(cache).unwrap();
+}
+
+#[test]
 fn dangerous_urls_are_usage_errors_before_git_runs() {
     let cache = cache_dir("urls");
     for url in [

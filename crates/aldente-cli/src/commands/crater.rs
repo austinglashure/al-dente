@@ -63,6 +63,10 @@ pub struct CraterArgs {
     /// Branch, tag or commit to check out (URL targets only).
     #[arg(long = "ref", value_name = "REV")]
     git_ref: Option<String>,
+    /// Seconds a fetch may take before it is stopped (URL targets only;
+    /// default 600).
+    #[arg(long, value_name = "SECS", value_parser = clap::value_parser!(u64).range(1..))]
+    fetch_timeout: Option<u64>,
     /// Print wall time per pipeline stage to stderr.
     #[arg(long)]
     timings: bool,
@@ -128,6 +132,7 @@ pub fn run(args: &CraterArgs, json: bool) -> anyhow::Result<ExitCode> {
     let target = TargetArgs {
         target: args.target.clone(),
         git_ref: args.git_ref.clone(),
+        fetch_timeout: args.fetch_timeout,
         timings: args.timings,
     };
     let loaded = match load(&target, false) {

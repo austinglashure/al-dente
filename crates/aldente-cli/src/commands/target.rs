@@ -2,9 +2,12 @@
 //! path, or a URL cloned with the hardened git into the cache.
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use aldente_acquire::cache::{Layout, default_dir};
-use aldente_acquire::remote::{AcquireError, EmptyDirs, Git, acquire, looks_like_url, parse_url};
+use aldente_acquire::remote::{
+    AcquireError, DEFAULT_FETCH_TIMEOUT, EmptyDirs, Git, acquire, looks_like_url, parse_url,
+};
 use aldente_acquire::target::resolve;
 use aldente_acquire::tools;
 use aldente_model::{Diagnostic, ErrorCode};
@@ -20,6 +23,10 @@ pub struct TargetArgs {
     /// Branch, tag or commit to check out (URL targets only).
     #[arg(long = "ref", value_name = "REV")]
     pub git_ref: Option<String>,
+    /// Seconds a fetch may take before it is stopped (URL targets only;
+    /// default 600).
+    #[arg(long, value_name = "SECS", value_parser = clap::value_parser!(u64).range(1..))]
+    pub fetch_timeout: Option<u64>,
     /// Print wall time per pipeline stage to stderr (and, for `serve`, per
     /// request).
     #[arg(long)]
@@ -67,12 +74,21 @@ impl Failure {
 /// the current repository's root; `target: "file:///x"` gives a usage failure.
 pub fn open(args: &TargetArgs) -> Result<Opened, Failure> {
     if looks_like_url(&args.target) || args.target.starts_with('-') {
-        return open_remote(&args.target, args.git_ref.as_deref());
+        let fetch_timeout = args
+            .fetch_timeout
+            .map_or(DEFAULT_FETCH_TIMEOUT, Duration::from_secs);
+        return open_remote(&args.target, args.git_ref.as_deref(), fetch_timeout);
     }
     if args.git_ref.is_some() {
         return Err(Failure::new(
             ErrorCode::Usage,
             "--ref applies to URL targets only",
+        ));
+    }
+    if args.fetch_timeout.is_some() {
+        return Err(Failure::new(
+            ErrorCode::Usage,
+            "--fetch-timeout applies to URL targets only",
         ));
     }
     let target =
@@ -88,11 +104,32 @@ pub fn open(args: &TargetArgs) -> Result<Opened, Failure> {
     })
 }
 
+/// The CLI's failure for an acquisition error; a fetch timeout also names
+/// the flag that allows more time.
+///
+/// Example: `AcquireError::FetchTimeout { url, after: 600s }` gives an internal
+/// failure ending "… run Al Dente on the local clone (or allow more time with
+/// --fetch-timeout SECS)".
+fn acquire_failure(e: AcquireError) -> Failure {
+    match e {
+        AcquireError::Url(u) => Failure::new(ErrorCode::Usage, u.to_string()),
+        e @ AcquireError::FetchTimeout { .. } => Failure::new(
+            ErrorCode::Internal,
+            format!("{e} (or allow more time with --fetch-timeout SECS)"),
+        ),
+        other => Failure::new(ErrorCode::Internal, other.to_string()),
+    }
+}
+
 /// Validates the URL (before anything runs), then clones it.
 ///
-/// Example: `open_remote("https://github.com/metosin/reitit", None)` clones into
+/// Example: `open_remote("https://github.com/metosin/reitit", None, 600s)` clones into
 /// `<cache>/repos/github.com/metosin/reitit` and opens it.
-fn open_remote(url: &str, git_ref: Option<&str>) -> Result<Opened, Failure> {
+fn open_remote(
+    url: &str,
+    git_ref: Option<&str>,
+    fetch_timeout: Duration,
+) -> Result<Opened, Failure> {
     let url = parse_url(url).map_err(|e| Failure::new(ErrorCode::Usage, e.to_string()))?;
     if let Some(r) = git_ref {
         aldente_acquire::remote::check_ref(r)
@@ -110,11 +147,8 @@ fn open_remote(url: &str, git_ref: Option<&str>) -> Result<Opened, Failure> {
     let empty = EmptyDirs::prepare(&layout.tmp)
         .map_err(|e| internal(format!("cannot prepare git: {e}")))?;
     eprintln!("aldente: fetching {}", url.url);
-    let acquired =
-        acquire(&Git::new(git_path, empty), &url, git_ref, &layout.repos).map_err(|e| match e {
-            AcquireError::Url(u) => Failure::new(ErrorCode::Usage, u.to_string()),
-            other => internal(other.to_string()),
-        })?;
+    let git = Git::new(git_path, empty).with_fetch_timeout(fetch_timeout);
+    let acquired = acquire(&git, &url, git_ref, &layout.repos).map_err(acquire_failure)?;
     let root = acquired
         .dir
         .canonicalize()
@@ -125,4 +159,33 @@ fn open_remote(url: &str, git_ref: Option<&str>) -> Result<Opened, Failure> {
         origin: url.url.clone(),
         diagnostics: acquired.diagnostics,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_fetch_timeout_says_to_clone_locally_and_names_the_flag() {
+        let failure = acquire_failure(AcquireError::FetchTimeout {
+            url: "https://github.com/penpot/penpot".into(),
+            after: Duration::from_secs(600),
+        });
+        assert_eq!(failure.code, ErrorCode::Internal);
+        assert!(
+            failure.message.contains("did not finish in 600 s"),
+            "{}",
+            failure.message
+        );
+        assert!(
+            failure
+                .message
+                .contains("clone it yourself and run Al Dente on the local clone")
+        );
+        assert!(
+            failure
+                .message
+                .ends_with("(or allow more time with --fetch-timeout SECS)")
+        );
+    }
 }

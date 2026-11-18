@@ -25,7 +25,7 @@ pub struct ServeArgs {
     no_open: bool,
     /// Serve this snapshot file instead of analyzing a target, e.g. a
     /// synthetic one from `cargo run -p bench -- gen`.
-    #[arg(long, value_name = "FILE", conflicts_with_all = ["target", "git_ref"])]
+    #[arg(long, value_name = "FILE", conflicts_with_all = ["target", "git_ref", "fetch_timeout"])]
     snapshot: Option<PathBuf>,
 }
 

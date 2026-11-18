@@ -213,6 +213,8 @@ pub struct Git {
     /// is overridden) and whether local `file` transport is allowed.
     test_env: Vec<(OsString, OsString)>,
     allow_file: bool,
+    /// How long a fetch may take.
+    fetch_timeout: Duration,
 }
 
 /// Config passed with `-c` on every call.
@@ -231,8 +233,9 @@ const HARDENING: &[&str] = &[
     "advice.detachedHead=false",
 ];
 
-/// How long a fetch may take; other git calls get [`STEP_TIMEOUT`].
-const FETCH_TIMEOUT: Duration = Duration::from_secs(600);
+/// How long a fetch may take unless [`Git::with_fetch_timeout`] says
+/// otherwise; other git calls get [`STEP_TIMEOUT`].
+pub const DEFAULT_FETCH_TIMEOUT: Duration = Duration::from_secs(600);
 const STEP_TIMEOUT: Duration = Duration::from_secs(60);
 
 impl Git {
@@ -245,7 +248,17 @@ impl Git {
             empty,
             test_env: Vec::new(),
             allow_file: false,
+            fetch_timeout: DEFAULT_FETCH_TIMEOUT,
         }
+    }
+
+    /// The same git with another fetch time limit.
+    ///
+    /// Example: `Git::new(path, empty).with_fetch_timeout(Duration::from_secs(3600))`
+    /// lets a fetch run for an hour.
+    pub fn with_fetch_timeout(mut self, timeout: Duration) -> Git {
+        self.fetch_timeout = timeout;
+        self
     }
 
     /// A git command in `cwd`: inherited `GIT_*` variables removed, config
@@ -293,24 +306,57 @@ impl Git {
         step: &str,
         timeout: Duration,
     ) -> Result<(), AcquireError> {
-        let out = run_command(self.command(cwd, args), timeout).map_err(|e| match e {
-            RunError::Timeout(t) => AcquireError::Git {
-                step: step.to_owned(),
-                message: format!("timed out after {t:?}"),
-            },
-            other => AcquireError::Git {
-                step: step.to_owned(),
-                message: other.to_string(),
-            },
-        })?;
-        if out.status.success() {
-            Ok(())
-        } else {
-            Err(AcquireError::Git {
-                step: step.to_owned(),
-                message: out.stderr.trim().chars().take(2000).collect(),
-            })
+        let result = run_command(self.command(cwd, args), timeout);
+        finish(step, result, |t| AcquireError::Git {
+            step: step.to_owned(),
+            message: format!("timed out after {t:?}"),
+        })
+    }
+
+    /// Runs a fetch from `url` into the clone at `cwd` within the fetch time
+    /// limit; running out of time is [`AcquireError::FetchTimeout`], and what
+    /// the killed git left behind is removed at once rather than at the next
+    /// fetch. Call only while holding the clone's [`EntryLock`].
+    ///
+    /// Example: `fetch(dir, &["fetch", "-q", "--depth", "1", "--", url, "HEAD"], url)`.
+    fn fetch(&self, cwd: &Path, args: &[&str], url: &str) -> Result<(), AcquireError> {
+        let result = run_command(self.command(cwd, args), self.fetch_timeout);
+        if matches!(result, Err(RunError::Timeout(_))) {
+            // Best effort: the timeout is the error to report, and the next
+            // fetch clears anything left here anyway.
+            let _ = clear_leftovers(&cwd.join(".git"));
         }
+        finish("fetch", result, |after| AcquireError::FetchTimeout {
+            url: url.to_owned(),
+            after,
+        })
+    }
+}
+
+/// Turns a finished (or failed) git step into a result: a non-zero exit is
+/// [`AcquireError::Git`] with git's stderr, a timeout is `on_timeout`.
+///
+/// Example: a `fetch` that exited 128 with "fatal: …" gives
+/// `AcquireError::Git { step: "fetch", message: "fatal: …" }`.
+fn finish(
+    step: &str,
+    result: Result<crate::process::Captured, RunError>,
+    on_timeout: impl FnOnce(Duration) -> AcquireError,
+) -> Result<(), AcquireError> {
+    let out = result.map_err(|e| match e {
+        RunError::Timeout(t) => on_timeout(t),
+        other => AcquireError::Git {
+            step: step.to_owned(),
+            message: other.to_string(),
+        },
+    })?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(AcquireError::Git {
+            step: step.to_owned(),
+            message: out.stderr.trim().chars().take(2000).collect(),
+        })
     }
 }
 
@@ -323,6 +369,12 @@ pub enum AcquireError {
     Io { path: String, message: String },
     #[error("git {step} failed: {message}")]
     Git { step: String, message: String },
+    #[error(
+        "fetching {url} did not finish in {} s: the repository is too big to fetch remotely \
+         over this connection; clone it yourself and run Al Dente on the local clone",
+        after.as_secs()
+    )]
+    FetchTimeout { url: String, after: Duration },
 }
 
 /// A checked-out remote target.
@@ -379,14 +431,14 @@ fn fetch_into(
         message: e.to_string(),
     };
     let _held = EntryLock::acquire(dir).map_err(io)?;
-    clear_stale_git_locks(&dir.join(".git")).map_err(io)?;
+    clear_leftovers(&dir.join(".git")).map_err(io)?;
     if !dir.join(".git").is_dir() {
         fs::create_dir_all(dir).map_err(io)?;
         let template = format!("--template={}", git.empty.template.display());
         git.run(dir, &["init", "-q", &template], "init", STEP_TIMEOUT)?;
     }
     let target = r#ref.unwrap_or("HEAD");
-    git.run(
+    git.fetch(
         dir,
         &[
             "fetch",
@@ -399,8 +451,7 @@ fn fetch_into(
             url,
             target,
         ],
-        "fetch",
-        FETCH_TIMEOUT,
+        url,
     )?;
     git.run(
         dir,
@@ -433,13 +484,13 @@ fn deepen_from(git: &Git, dir: &Path, url: &str, commits: usize) -> Result<(), A
         message: e.to_string(),
     };
     let _held = EntryLock::acquire(dir).map_err(io)?;
-    clear_stale_git_locks(&dir.join(".git")).map_err(io)?;
+    clear_leftovers(&dir.join(".git")).map_err(io)?;
     let head = crate::local_git::head_rev(git, dir).ok_or_else(|| AcquireError::Git {
         step: "rev-parse".into(),
         message: "the clone has no HEAD".into(),
     })?;
     let depth = format!("--depth={}", commits.max(1));
-    git.run(
+    git.fetch(
         dir,
         &[
             "fetch",
@@ -451,8 +502,7 @@ fn deepen_from(git: &Git, dir: &Path, url: &str, commits: usize) -> Result<(), A
             url,
             &head,
         ],
-        "fetch",
-        FETCH_TIMEOUT,
+        url,
     )
 }
 
@@ -518,27 +568,45 @@ impl EntryLock {
     }
 }
 
-/// Removes every `*.lock` file under `dot_git`. Only call while holding the
-/// clone's [`EntryLock`]: then no git of ours is running in it, and any lock
-/// file is one a killed git (our timeout) left behind. Symlinks are neither
-/// followed nor removed.
+/// Removes what a killed git (our timeout) leaves in `dot_git`: every
+/// `*.lock` file, and the half-downloaded `tmp_*` files in `objects/pack`
+/// (git ignores them, but each failed fetch of a large repository leaves tens
+/// of megabytes). Only call while holding the clone's [`EntryLock`]: then no
+/// git of ours is running in it, so these files are all leftovers. Symlinks
+/// are neither followed nor removed.
 ///
-/// Example: a `.git` holding `shallow.lock` and `refs/heads/x.lock` has
-/// neither afterwards; `HEAD` and `config` are untouched.
-fn clear_stale_git_locks(dot_git: &Path) -> std::io::Result<()> {
-    let entries = match fs::read_dir(dot_git) {
+/// Example: a `.git` holding `shallow.lock`, `refs/heads/x.lock` and
+/// `objects/pack/tmp_pack_Ec99jR` has none of them afterwards; `HEAD`,
+/// `config` and `objects/pack/pack-*.pack` are untouched.
+fn clear_leftovers(dot_git: &Path) -> std::io::Result<()> {
+    clear_leftovers_in(dot_git, &dot_git.join("objects").join("pack"))
+}
+
+/// [`clear_leftovers`] for the directory `dir`; `pack_dir` is where `tmp_*`
+/// files are leftovers too.
+///
+/// Example: see [`clear_leftovers`].
+fn clear_leftovers_in(dir: &Path, pack_dir: &Path) -> std::io::Result<()> {
+    let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(e),
     };
     for entry in entries {
         let entry = entry?;
+        // `DirEntry::file_type` does not follow symlinks, so a symlink is
+        // neither a dir nor a file here and is left alone.
         let kind = entry.file_type()?;
         let path = entry.path();
         if kind.is_dir() {
-            clear_stale_git_locks(&path)?;
-        } else if kind.is_file() && path.extension().is_some_and(|e| e == "lock") {
-            fs::remove_file(&path)?;
+            clear_leftovers_in(&path, pack_dir)?;
+        } else if kind.is_file() {
+            let lock = path.extension().is_some_and(|e| e == "lock");
+            let partial_pack =
+                dir == pack_dir && entry.file_name().to_string_lossy().starts_with("tmp_");
+            if lock || partial_pack {
+                fs::remove_file(&path)?;
+            }
         }
     }
     Ok(())
@@ -829,6 +897,20 @@ mod tests {
         fs::remove_dir_all(base).unwrap();
     }
 
+    /// Every file under `dir`, recursively.
+    fn walk_files(dir: &Path) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                out.extend(walk_files(&path));
+            } else {
+                out.push(path);
+            }
+        }
+        out
+    }
+
     /// A one-commit repository to fetch from, at `base/src`.
     fn simple_src(base: &Path) -> PathBuf {
         let src = base.join("src");
@@ -865,6 +947,64 @@ mod tests {
         for lock in &stale {
             assert!(!lock.exists(), "{} still there", lock.display());
         }
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    /// A killed fetch also leaves its half-downloaded pack; it is removed,
+    /// and the real packs stay.
+    #[test]
+    fn partial_downloads_left_by_a_killed_git_are_removed() {
+        let base = scratch("stale-packs");
+        let src = simple_src(&base);
+        let url = src.to_str().unwrap();
+        let git = test_git(&base, Vec::new());
+        let dir = base.join("clone");
+        fetch_into(&git, url, &dir, None).unwrap();
+        let pack_dir = dir.join(".git").join("objects").join("pack");
+        fs::create_dir_all(&pack_dir).unwrap();
+        let real = pack_dir.join("pack-0000.keep-me");
+        fs::write(&real, "").unwrap();
+        let partial = [
+            pack_dir.join("tmp_pack_Ec99jR"),
+            pack_dir.join("tmp_idx_Ec99jR"),
+        ];
+        for p in &partial {
+            fs::write(p, "half a pack").unwrap();
+        }
+        fetch_into(&git, url, &dir, None).unwrap();
+        for p in &partial {
+            assert!(!p.exists(), "{} still there", p.display());
+        }
+        assert!(real.exists(), "a real pack file was removed");
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    /// A fetch that runs out of time says what to do instead.
+    #[test]
+    fn a_fetch_that_times_out_says_to_clone_it_locally() {
+        let base = scratch("fetch-timeout");
+        let src = simple_src(&base);
+        let git = test_git(&base, Vec::new()).with_fetch_timeout(Duration::ZERO);
+        let err = fetch_into(&git, src.to_str().unwrap(), &base.join("clone"), None).unwrap_err();
+        assert!(matches!(err, AcquireError::FetchTimeout { .. }), "{err:?}");
+        let message = err.to_string();
+        assert!(message.contains("too big to fetch remotely"), "{message}");
+        assert!(message.contains("clone it yourself"), "{message}");
+        assert!(
+            message.contains("run Al Dente on the local clone"),
+            "{message}"
+        );
+        // Nothing the killed git started is left. (With a zero limit git
+        // rarely gets far enough to leave anything; the penpot run on
+        // 2026-11-18 is what showed the files cleared after a real timeout.)
+        let leftovers: Vec<_> = walk_files(&base.join("clone").join(".git"))
+            .into_iter()
+            .filter(|p| {
+                let name = p.file_name().unwrap_or_default().to_string_lossy();
+                name.ends_with(".lock") || name.starts_with("tmp_")
+            })
+            .collect();
+        assert!(leftovers.is_empty(), "{leftovers:?}");
         fs::remove_dir_all(base).unwrap();
     }
 
