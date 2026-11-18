@@ -1,0 +1,56 @@
+{
+  "repository": "reitit",
+  "url": "https://github.com/metosin/reitit",
+  "commit": "1d2fc6735f53e2026fed98e92322a29f7a35c371",
+  "steps": [
+    {
+      "step": 1,
+      "title": "Land on the overview",
+      "ms": 299,
+      "screenshot": "reitit-1-overview.png",
+      "note": "37 units"
+    },
+    {
+      "step": 2,
+      "title": "Find resolve-routes by search",
+      "ms": 52,
+      "screenshot": "reitit-2-search.png",
+      "note": "1 results"
+    },
+    {
+      "step": 3,
+      "title": "See its neighborhood",
+      "ms": 197,
+      "screenshot": "reitit-3-neighborhood.png",
+      "note": "44 nodes listed"
+    },
+    {
+      "step": 4,
+      "title": "Prune to one unit (modules/reitit-core)",
+      "ms": 123,
+      "screenshot": "reitit-4-prune.png",
+      "note": "44 → 6 nodes listed"
+    },
+    {
+      "step": 5,
+      "title": "Crater it (forward)",
+      "ms": 435,
+      "screenshot": "reitit-5-crater.png",
+      "note": "108 nodes · ⇥ 97 boundary · 2 hubs not expanded"
+    },
+    {
+      "step": 6,
+      "title": "Open source",
+      "ms": 215,
+      "screenshot": "reitit-6-source.png",
+      "note": "modules/reitit-core/src/reitit/impl.cljc:135:1"
+    },
+    {
+      "step": 7,
+      "title": "Jump to the editor",
+      "ms": 164,
+      "screenshot": "reitit-7-editor.png",
+      "note": "editor started with [\"<clone>/modules/reitit-core/src/reitit/impl.cljc\",\"135\",\"1\"]"
+    }
+  ]
+}
