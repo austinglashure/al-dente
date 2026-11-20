@@ -19,9 +19,10 @@ import { EdgeSites } from './EdgeSites';
 import { SourcePanel } from './SourcePanel';
 import { HelpDialog } from './HelpDialog';
 import { TraceDialog } from './TraceDialog';
-import { applyPage, batched, collapse, nextOffset, remaining, type Attachable, type Expansions } from './expansion';
+import { remaining, type Attachable, type Expansions } from './expansion';
 import { FilterPanel } from './FilterPanel';
 import { NO_FILTERS, passes, type Filters } from './filters';
+import { useCanvasOps, type Crumb } from './useCanvasOps';
 import { useDirectoryTree } from './useDirectoryTree';
 import { useKeyboard } from './useKeyboard';
 import { useRepoInfo } from './useRepoInfo';
@@ -30,7 +31,7 @@ import { useWorkspace } from './useWorkspace';
 import type { Op } from './workspace';
 import { WorkspacePanel } from './WorkspacePanel';
 import { layout, layoutPending, layoutRuns } from './layout';
-import { dropNodes, edgeShown, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
+import { edgeShown, hidden, isAggregate, labelFor, newGraph, type HideOptions, type Levels } from './model';
 import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
 import type { GEdge, GNode, LibraryUsage, Payload } from './types';
@@ -38,12 +39,6 @@ import { dirMembers } from './tree';
 import { type Point } from './treePlace';
 import { refoldCanvas } from './refold';
 import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
-
-/** One level of the breadcrumb: its label and how to load its canvas. */
-interface Crumb {
-  label: string;
-  load: () => Promise<Payload>;
-}
 
 /** The app. */
 export function App() {
@@ -147,27 +142,22 @@ export function App() {
     };
   }, [api, collapsedRef]);
 
-  /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
-  const show = useCallback(
-    (crumb: Crumb, keep: Crumb[]): Promise<void> =>
-      crumb
-        .load()
-        .then((p) => {
-          batched(renderer.current, graph, () => {
-            graph.clear();
-            expansions.clear();
-            mergePayload(graph, p);
-          });
-          setCrumbs([...keep, crumb]);
-          setFirstShown(true);
-          setError(null);
-          relayout();
-          redraw();
-        })
-        .catch(fail),
-    [graph, expansions, setCrumbs, relayout, redraw, fail],
-  );
 
+
+  const { show, openOnCanvas, expandHere, collapseHere, drop, neighbors, focusOn } = useCanvasOps({
+    api,
+    graph,
+    renderer,
+    expansions,
+    crumbsRef,
+    setCrumbs,
+    setFirstShown,
+    setError,
+    fail,
+    relayout,
+    redraw,
+    edgeVisible,
+  });
 
   // Positions nodes had before a fold, so unfolding brings them back.
   const remembered = useRef(new Map<string, Point>());
@@ -217,105 +207,6 @@ export function App() {
     fail,
   );
 
-  /** Opens a unit (its namespaces) or a namespace (its functions, with the
-   *  namespaces it talks to as context) on a canvas of its own. */
-  const openOnCanvas = useCallback(
-    (id: string): Promise<void> => {
-      const n: GNode = graph.hasNode(id)
-        ? graph.getNodeAttribute(id, 'node')
-        : id.startsWith('dir:')
-          ? { id, kind: 'directory', name: id.slice('dir:'.length) }
-          : { id, kind: id.startsWith('unit:') ? 'unit' : 'namespace', name: id.split('//').pop() ?? id };
-      let load: () => Promise<Payload>;
-      if (n.kind === 'directory') {
-        load = () => api.dirGraph(id.slice('dir:'.length)).then((r) => r.data);
-      } else if (n.kind === 'unit') {
-        load = () => api.unitGraph(n.id).then((r) => r.data);
-      } else {
-        const context = graph.filterNodes((_id, a) => a.node.kind === 'namespace' || a.node.kind === 'external').map((id) => graph.getNodeAttribute(id, 'node'));
-        load = () =>
-          api.expand(n.id, context.map((c) => c.id)).then((p) => {
-            const ends = new Set(p.edges.flatMap((e) => [e.from, e.to]));
-            return { ...p, nodes: [...p.nodes, ...context.filter((c) => ends.has(c.id))] };
-          });
-      }
-      return show({ label: labelFor(n), load }, crumbsRef.current);
-    },
-    [api, graph, show],
-  );
-
-  // Aggregates with a page request in flight: a second click meanwhile is
-  // ignored instead of asking for the same page again.
-  const expanding = useRef(new Set<string>());
-
-  /** Expands an aggregate in place, or loads its next page if it is
-   *  expanded already; only the new nodes move. */
-  const expandHere = useCallback(
-    (id: string): Promise<void> => {
-      if (expanding.current.has(id)) return Promise.resolve();
-      if (!graph.hasNode(id)) {
-        return api
-          .expand(id, graph.nodes())
-          .then((p) => {
-            mergePayload(graph, p);
-            relayout();
-          })
-          .catch(fail);
-      }
-      expanding.current.add(id);
-      return api
-        .expandPage(id, graph.nodes(), nextOffset(expansions, id))
-        .then((p) => {
-          let added: string[] = [];
-          batched(renderer.current, graph, () => {
-            added = applyPage(graph, expansions, id, p);
-          });
-          layout(graph, redraw, edgeVisible, new Set(added));
-          redraw();
-        })
-        .catch(fail)
-        .finally(() => expanding.current.delete(id));
-    },
-    [api, graph, expansions, relayout, redraw, edgeVisible, fail],
-  );
-
-  /** Collapses an aggregate expanded in place back into one node. */
-  const collapseHere = useCallback(
-    (id: string) => {
-      batched(renderer.current, graph, () => collapse(graph, expansions, id));
-      redraw();
-    },
-    [graph, expansions, redraw],
-  );
-
-  /** Removes nodes from the canvas in one batch. */
-  const drop = useCallback(
-    (ids: string[]) => {
-      batched(renderer.current, graph, () => dropNodes(graph, ids));
-      redraw();
-    },
-    [graph, redraw],
-  );
-
-  const neighbors = useCallback(
-    (id: string) =>
-      api
-        .neighborhood(id)
-        .then((p) => {
-          mergePayload(graph, p, graph.hasNode(id) ? id : undefined);
-          relayout();
-        })
-        .catch(fail),
-    [api, graph, relayout, fail],
-  );
-
-  const focusOn = useCallback(
-    (id: string): Promise<void> => {
-      const label = graph.hasNode(id) ? labelFor(graph.getNodeAttribute(id, 'node')) : id;
-      return show({ label: `${label} (focus)`, load: () => api.neighborhood(id) }, crumbsRef.current);
-    },
-    [api, graph, show],
-  );
 
   /** Performs one workspace step on the canvas (the workspace logs it). */
   const apply = useCallback(
