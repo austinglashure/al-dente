@@ -126,12 +126,22 @@ test.describe('a large crater', () => {
   test('2,000 nodes lay out in a worker without freezing the page', async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto(server.url);
+    // Long tasks are counted only while the worker lays out (the layout status
+    // is on screen). The first draw afterwards is left out on purpose: without
+    // a GPU (headless CI) the browser reads the WebGL frame back to the CPU,
+    // one stall that depends on the machine, not on the worker.
     await page.evaluate(() => {
-      const w = window as unknown as { longest: number };
-      w.longest = 0;
+      const w = window as unknown as { tasks: [number, number][]; layout: { start?: number; end?: number } };
+      w.tasks = [];
+      w.layout = {};
       new PerformanceObserver((list) => {
-        for (const e of list.getEntries()) w.longest = Math.max(w.longest, e.duration);
+        for (const e of list.getEntries()) w.tasks.push([e.startTime, e.duration]);
       }).observe({ type: 'longtask', buffered: false });
+      new MutationObserver(() => {
+        const shown = document.querySelector('[data-testid="layout-status"]') !== null;
+        if (shown && w.layout.start === undefined) w.layout.start = performance.now();
+        if (!shown && w.layout.start !== undefined && w.layout.end === undefined) w.layout.end = performance.now();
+      }).observe(document.body, { childList: true, subtree: true });
     });
     await selectBySearch(page, 'f0', 'clj:.//big.n0/f0');
     await page.getByTestId('details').locator('[data-action="crater-forward"]').click();
@@ -143,7 +153,12 @@ test.describe('a large crater', () => {
     await expect(page.getByTestId('crater-summary')).toBeVisible({ timeout: 150_000 });
     // 2,000 functions plus the externals they call.
     expect(Number(await page.getByTestId('crater-view').getAttribute('data-nodes'))).toBeGreaterThanOrEqual(2000);
-    const longest = await page.evaluate(() => (window as unknown as { longest: number }).longest);
+    const longest = await page.evaluate(() => {
+      const w = window as unknown as { tasks: [number, number][]; layout: { start?: number; end?: number } };
+      const { start, end } = w.layout;
+      if (start === undefined || end === undefined) throw new Error('layout window not observed');
+      return Math.max(0, ...w.tasks.filter(([at]) => at >= start && at < end).map(([, d]) => d));
+    });
     expect(longest).toBeLessThan(1000);
   });
 });
