@@ -143,12 +143,12 @@ export function CraterView({ api, request, onClose, onSelect, nodeHidden, edgeSh
         <label>
           <input type="checkbox" checked={unlimited} data-testid="crater-unlimited" onChange={(e) => setUnlimited(e.target.checked)} /> unlimited
         </label>
-        <label title="Leave out nodes whose best path is weaker">
-          At least{' '}
+        <label title="Which edges the crater walks along. This changes which nodes are in it; the certainty checkboxes on the left only hide edges from the drawing.">
+          Follow{' '}
           <select data-testid="crater-certainty" value={minCertainty} onChange={(e) => setMinCertainty(e.target.value as CraterQuery['minCertainty'])}>
-            <option value="certain">certain</option>
-            <option value="likely">likely</option>
-            <option value="possible">possible</option>
+            <option value="certain">certain edges</option>
+            <option value="likely">certain and likely edges</option>
+            <option value="possible">all edges, possible too</option>
           </select>
         </label>
         <span className="crater-tabs" role="tablist">
