@@ -548,6 +548,55 @@ fn tree_and_tree_graph() {
 }
 
 #[test]
+fn rankings_give_every_namespace_its_size_coupling_and_centrality() {
+    let s = start("rankings");
+    let (status, _, body) = s.ok_get("/api/v1/rankings?level=namespace");
+    assert_eq!(status, 200, "{body}");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(env["schema"], "aldente/rankings/v1", "{env:#}");
+    let rows = env["data"]["rows"].as_array().unwrap();
+    let a = rows
+        .iter()
+        .find(|r| r["id"] == "clj:.//a")
+        .expect("namespace a");
+    assert_eq!(a["name"], "a");
+    let v = &a["values"];
+    // f on lines 3-6 and g on line 8 of src/a.clj.
+    assert_eq!(v["lines"], 8.0, "{v:#}");
+    assert_eq!(v["symbols"], 2.0);
+    for key in [
+        "callers",
+        "callees",
+        "calls_in",
+        "calls_out",
+        "instability",
+        "pagerank",
+        "pagerank_reverse",
+        "hub",
+        "authority",
+        "core",
+        "betweenness",
+        "closeness",
+    ] {
+        assert!(v[key].is_number(), "{key} missing: {v:#}");
+    }
+    let (_, _, body) = s.ok_get("/api/v1/rankings?level=symbol");
+    let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let f = env["data"]["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["id"] == "clj:.//a/f")
+        .expect("symbol f");
+    assert_eq!(f["values"]["lines"], 4.0);
+    assert!(
+        f["values"].get("instability").is_none(),
+        "instability is for namespaces and units"
+    );
+    assert_eq!(s.ok_get("/api/v1/rankings?level=bogus").0, 400);
+}
+
+#[test]
 fn graph_dir_keeps_the_namespaces_of_one_directory() {
     let s = start("dir");
     let ids = |path: &str| -> Vec<String> {

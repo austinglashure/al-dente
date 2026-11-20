@@ -16,6 +16,7 @@ pub mod pagerank;
 pub mod paths;
 pub mod projection;
 pub mod scc;
+pub mod sizes;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

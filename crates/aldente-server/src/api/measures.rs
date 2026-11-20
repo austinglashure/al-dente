@@ -3,7 +3,9 @@
 
 use aldente_analysis::measures::SecondOptions;
 use aldente_analysis::measures::cache;
-use aldente_model::measures::{CyclesReport, MetricsReport, ProjectionKind, ProjectionSpec};
+use aldente_model::measures::{
+    CyclesReport, MetricsReport, ProjectionKind, ProjectionSpec, RankingReport, RankingRow,
+};
 use aldente_model::{AggregationLevel, EdgeKind, ErrorCode, GraphPayload, NodeId};
 use axum::extract::{RawQuery, State};
 use axum::http::StatusCode;
@@ -56,6 +58,96 @@ pub async fn metrics(State(s): St, RawQuery(q): RawQuery) -> Response {
         Ok(r) => ok(&s, TAG, r),
         Err(e) => bad(TAG, &e.to_string()),
     }
+}
+
+/// `GET /rankings?level=`: every repository node of the level with its size,
+/// coupling and centrality, for the GUI's ranking list. Instability is given
+/// for namespaces and units only.
+///
+/// Example: for clj-mini at namespace level, `shop.core` has `lines`,
+/// `symbols`, `callers`, … in its `values`.
+pub async fn rankings(State(s): St, RawQuery(q): RawQuery) -> Response {
+    const TAG: &str = "rankings";
+    let p = Params::parse(q.as_deref());
+    let Some(lvl) = p
+        .get("level")
+        .map_or(Some(AggregationLevel::Namespace), token)
+    else {
+        return bad(TAG, "level must be symbol, namespace or unit");
+    };
+    let spec = ProjectionSpec {
+        level: lvl,
+        ..ProjectionSpec::default()
+    };
+    let g = &s.snapshot.graph;
+    let first = match cache::measures(g, &spec, &s.results) {
+        Ok((r, _)) => r,
+        Err(e) => return bad(TAG, &e.to_string()),
+    };
+    let second = match cache::second(g, &spec, SecondOptions::default(), &s.results) {
+        Ok((r, _)) => r,
+        Err(e) => return bad(TAG, &e.to_string()),
+    };
+    let coupling = match lvl {
+        AggregationLevel::Symbol => None,
+        _ => cache::coupling(g, &spec, &s.results).ok().map(|(r, _)| r),
+    };
+    let mut rows: std::collections::BTreeMap<NodeId, RankingRow> = first
+        .nodes
+        .iter()
+        .map(|m| {
+            let values = [
+                ("callers", f64::from(m.fan_in)),
+                ("callees", f64::from(m.fan_out)),
+                ("calls_in", m.fan_in_weighted),
+                ("calls_out", m.fan_out_weighted),
+                ("pagerank", m.pagerank),
+                ("pagerank_reverse", m.pagerank_reverse),
+                ("hub", m.hub),
+                ("authority", m.authority),
+                ("core", f64::from(m.core)),
+            ]
+            .into_iter()
+            .map(|(k, v)| (k.to_owned(), v))
+            .collect();
+            let name = g
+                .nodes
+                .get(&m.id)
+                .map_or_else(|| m.id.to_string(), |n| n.name.clone());
+            (
+                m.id.clone(),
+                RankingRow {
+                    id: m.id.clone(),
+                    name,
+                    values,
+                },
+            )
+        })
+        .collect();
+    let mut put = |id: &NodeId, key: &str, v: f64| {
+        if let Some(r) = rows.get_mut(id) {
+            r.values.insert(key.to_owned(), v);
+        }
+    };
+    for m in &second.nodes {
+        put(&m.id, "betweenness", m.betweenness);
+        put(&m.id, "closeness", m.closeness);
+    }
+    for c in coupling.iter().flat_map(|c| &c.modules) {
+        put(&c.id, "instability", c.instability);
+    }
+    for z in aldente_analysis::measures::sizes::sizes(g, lvl) {
+        put(&z.id, "lines", f64::from(z.lines));
+        put(&z.id, "symbols", f64::from(z.symbols));
+    }
+    ok(
+        &s,
+        TAG,
+        RankingReport {
+            level: lvl,
+            rows: rows.into_values().collect(),
+        },
+    )
 }
 
 /// `GET /coverage`: the static estimate (the CLI's `coverage`).

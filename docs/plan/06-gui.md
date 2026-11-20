@@ -21,6 +21,7 @@ Every response uses the CLI's JSON envelope and the same `data` shapes, so the s
 | `GET /search?q=&kind=&limit=` | ranked matches |
 | `POST /crater` | the crater for seeds, direction, depth, filters, optional trace |
 | `GET /metrics?level=&metric=` | measures for nodes on screen or top-N |
+| `GET /rankings?level=` | every repository node of a level with `lines`, `symbols`, `callers`, `callees`, `calls_in`, `calls_out`, `instability` (namespaces and units), PageRank both ways, hub, authority, core, betweenness and closeness, for the ranking list (WP5.7) |
 | `GET /overlay/coverage`, `/overlay/churn`, `/overlay/risk` | per-node scalar overlays |
 | `GET /libs`, `GET /lib?id=` | libraries and their usage sites |
 | `GET /vet`, `GET /surface`, `GET /deps`, `GET /fsm`, `GET /fsm?id=` | later-phase views |

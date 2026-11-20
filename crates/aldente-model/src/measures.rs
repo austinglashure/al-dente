@@ -113,6 +113,37 @@ pub struct NodeMeasures {
     pub component: Option<u32>,
 }
 
+/// Size of one node: lines to its last definition per file (summed over
+/// files) and how many symbols it defines.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct NodeSize {
+    pub id: NodeId,
+    pub lines: u32,
+    pub symbols: u32,
+}
+
+/// One node's measures for ranking, by measure key.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct RankingRow {
+    pub id: NodeId,
+    pub name: String,
+    /// `lines`, `symbols`, `callers`, `callees`, `calls_in`, `calls_out`,
+    /// `instability` (namespaces and units), `pagerank`, `pagerank_reverse`,
+    /// `hub`, `authority`, `core`, `betweenness`, `closeness`.
+    pub values: BTreeMap<String, f64>,
+}
+
+/// Every repository node of a level with the measures it can be ranked by.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(transform = crate::schema::all_keys_required)]
+pub struct RankingReport {
+    pub level: AggregationLevel,
+    /// Sorted by ID.
+    pub rows: Vec<RankingRow>,
+}
+
 /// An edge suggested for removal to break a cycle.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[schemars(transform = crate::schema::all_keys_required)]

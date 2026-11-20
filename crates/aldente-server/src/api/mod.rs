@@ -26,7 +26,7 @@ pub use graph::{
     tree_graph, unit_links,
 };
 pub use libs::{lib, libs};
-pub use measures::{churn, coverage, cycles, defaults, hotspots, metrics, subgraph};
+pub use measures::{churn, coverage, cycles, defaults, hotspots, metrics, rankings, subgraph};
 pub use open::open;
 
 type St = State<Arc<AppState>>;
