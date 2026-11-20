@@ -6,3 +6,17 @@
 /ui/test-results
 /ui/playwright-report
 .cpcache/
+
+# Editors and OS
+*~
+\#*#
+.#*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Clojure tooling caches (e.g. from fixture gen scripts)
+.clj-kondo/.cache/
+.lsp/
+.nrepl-port
