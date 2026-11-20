@@ -60,6 +60,14 @@ Update at the end of every session: tick finished work packages, add a dated not
 - [x] WP5.4 Details, source and links
 - [x] WP5.5 Service overview (penpot check set aside)
 - [ ] WP5.6 Milestone M5
+- [ ] WP5.7 UI overhaul from dogfooding (Austin, 2026-11-20; outside the plan's WP list, before M5's session)
+  - [x] Directory Open (only its namespaces and the calls between them); Copy ID removed
+  - [ ] Hover label always shows the hovered node's name (faded and zoomed-out nodes too)
+  - [ ] Collapsible lists in details
+  - [ ] One filter set that applies to whatever graph is on screen (no crater-only copies)
+  - [ ] Directory collapse and expand keep the layout (survivors stay put; members merge into the directory node)
+  - [ ] Directories in search
+  - [ ] Rankings list replaces Hotspots and the bottom Measures panel (open: CLI hotspots, hotspot score, new measures)
 
 ## Phase 6. Outside world (gate: Austin's review of plan document 10)
 - [ ] WP6.1 Rules engine
