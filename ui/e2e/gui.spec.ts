@@ -327,7 +327,7 @@ test.describe('requests', () => {
 });
 
 test.describe('slow reports wait for the first view', () => {
-  test('hotspots and coverage start after the graph arrives; measures only when their panel opens', async ({ page }) => {
+  test('coverage and rankings start after the graph arrives', async ({ page }) => {
     const server = await startServer('mono-mini');
     try {
       const order: string[] = [];
@@ -338,12 +338,9 @@ test.describe('slow reports wait for the first view', () => {
       await page.waitForTimeout(500);
       const at = (e: string) => order.indexOf(e);
       expect(at('done /api/v1/graph'), order.join('\n')).toBeGreaterThanOrEqual(0);
-      for (const slow of ['/api/v1/hotspots', '/api/v1/coverage']) {
+      for (const slow of ['/api/v1/coverage', '/api/v1/rankings']) {
         expect(at(`start ${slow}`), order.join('\n')).toBeGreaterThan(at('done /api/v1/graph'));
       }
-      expect(order.filter((e) => e.startsWith('start /api/v1/metrics'))).toHaveLength(0);
-      await page.getByTestId('measures-panel').locator('summary').click();
-      await expect.poll(() => order.filter((e) => e.startsWith('start /api/v1/metrics')).length).toBe(1);
     } finally {
       server.close();
     }
@@ -547,6 +544,39 @@ test.describe('directory tree', () => {
       await page.getByTestId('tree-expand-all').click();
       await expect(services).toHaveAttribute('aria-expanded', 'true');
       await expect(inTree(page, 'clj:libs/common//common.util')).toBeVisible();
+    } finally {
+      server.close();
+    }
+  });
+});
+
+test.describe('rankings', () => {
+  test('rank namespaces by a measure; a row selects its node; no hotspots or bottom measures panel', async ({ page }) => {
+    const server = await startServer('clj-mini');
+    try {
+      await page.goto(server.url);
+      await expect(listed(page, 'clj:.//shop.core')).toBeVisible();
+      await expect(page.getByTestId('hotspots')).toHaveCount(0);
+      await expect(page.getByTestId('measures-panel')).toHaveCount(0);
+
+      const panel = page.getByTestId('rankings');
+      await expect(panel.getByTestId('rank-level')).toHaveValue('namespace');
+      await panel.getByTestId('rank-by').selectOption('symbols');
+      await expect(panel.getByTestId('rank-about')).toContainText('definitions');
+      const rows = panel.locator('[data-testid="rank-row"]');
+      await expect(rows.first()).toBeVisible();
+      const values = await panel.locator('.rank-value').allTextContents();
+      const numbers = values.map(Number);
+      expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
+      // Lowest first.
+      await panel.getByTestId('rank-order').click();
+      const flipped = (await panel.locator('.rank-value').allTextContents()).map(Number);
+      expect(flipped).toEqual([...flipped].sort((a, b) => a - b));
+
+      const first = rows.first();
+      const id = await first.getAttribute('data-node-id');
+      await first.click();
+      await expect(page.getByTestId('details').locator('.id')).toHaveText(id ?? '');
     } finally {
       server.close();
     }

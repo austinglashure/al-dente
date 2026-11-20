@@ -8,8 +8,8 @@ import { libraryHighlight } from './crater';
 import { CraterView, type CraterRequest } from './CraterView';
 import { Details, type NodeFacts, type Tools } from './Details';
 import { GraphView } from './GraphView';
-import { CycleList, HotspotList } from './Hotspots';
-import { MeasuresTable } from './MeasuresTable';
+import { CycleList } from './Hotspots';
+import { RankingList } from './RankingList';
 import { OverlayControls, useReports, useStyler } from './Overlays';
 import type { Metric, OverlayKind } from './overlay';
 import { CanvasBar } from './CanvasBar';
@@ -94,7 +94,6 @@ export function App() {
   const [overlay, setOverlay] = useState<OverlayKind>('risk');
   const [sizeBy, setSizeBy] = useState<Metric | null>(null);
   const [colorBy, setColorBy] = useState<Metric | null>(null);
-  const [measureSel, setMeasureSel] = useState<Set<string>>(() => new Set());
   const collapsedRef = useRef(collapsed);
   // Read at load time, so the root views (and the effect that loads the
   // first one) do not change identity when these do.
@@ -130,7 +129,6 @@ export function App() {
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
   // Set once the first canvas is drawn; slow reports wait for it.
   const [firstShown, setFirstShown] = useState(false);
-  const [measuresOpen, setMeasuresOpen] = useState(false);
   const reports = useReports(api, overlay, wantMetrics || sizeBy !== null || colorBy !== null || filters.measures.length > 0, fail, firstShown);
   /** A node's value for a measure, for the filter panel's minimums. */
   const measureOf = useMemo(() => {
@@ -590,14 +588,10 @@ export function App() {
   );
   const libHighlight = useMemo(
     () =>
-      measureSel.size > 0
-        ? { nodes: new Set(graph.nodes().filter((id) => measureSel.has(id))), edges: new Set<string>() }
-        : libUsage
-          ? { nodes: libraryHighlight(libUsage, graph.nodes()), edges: new Set<string>() }
-          : null,
+      libUsage ? { nodes: libraryHighlight(libUsage, graph.nodes()), edges: new Set<string>() } : null,
     // `version` changes whenever the canvas does.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [libUsage, measureSel, graph, version],
+    [libUsage, graph, version],
   );
 
   /** What the coverage, hotspot and measure reports say about the selection. */
@@ -700,6 +694,9 @@ export function App() {
     .filterNodes((id) => !isHidden(id))
     .map((id) => graph.getNodeAttribute(id, 'node'))
     .sort((a, b) => a.kind.localeCompare(b.kind) || labelFor(a).localeCompare(labelFor(b)));
+  const visibleKey = visible.map((n) => n.id).join('\n');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const onCanvas = useMemo(() => new Set(visible.map((n) => n.id)), [visibleKey]);
   const styleOf = useStyler(reports, overlay, sizeBy, colorBy, visible.map((n) => n.id));
   const styledUntested = visible.filter((n) => {
     const tag = styleOf(n.id)?.tag;
@@ -779,7 +776,8 @@ export function App() {
           }
           views={
             <>
-              <HotspotList report={reports.hotspots} onFollow={follow} />
+              {/* Hotspots left the UI (Austin, 2026-11-20); HotspotList stays in Hotspots.tsx for a possible revisit. */}
+              <RankingList api={api} onCanvas={onCanvas} onFollow={follow} onError={fail} ready={firstShown} />
               <CycleList api={api} onShow={showCycle} onError={fail} />
             </>
           }
@@ -906,10 +904,6 @@ export function App() {
             testId="site-source"
           />
         )}
-        <details className="measures-panel" data-testid="measures-panel" onToggle={(e) => setMeasuresOpen(e.currentTarget.open)}>
-          <summary>Measures</summary>
-          <MeasuresTable api={api} selected={measureSel} onSelected={setMeasureSel} onFollow={follow} onError={fail} active={measuresOpen} />
-        </details>
       </aside>
       )}
       {helpOpen && <HelpDialog api={api} onClose={() => setHelpOpen(false)} />}

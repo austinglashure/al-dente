@@ -185,3 +185,9 @@ details.sites button { display: block; }
   border: 1px solid #ddd;
   border-radius: 4px;
 }
+.rank-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.rank-table th { text-align: left; font-weight: 600; }
+.rank-table td button { all: unset; cursor: pointer; color: #08519c; }
+.rank-table td button:focus-visible { outline: 2px solid #4292c6; }
+.rank-value { text-align: right; font-variant-numeric: tabular-nums; }
+.rank-controls select { max-width: 9rem; }

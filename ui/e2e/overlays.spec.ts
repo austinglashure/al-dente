@@ -34,31 +34,6 @@ test.describe('overlays, hotspots and measures', () => {
     await expect(canvas).toHaveAttribute('data-layout-runs', runs ?? '');
   });
 
-  test('opening a hotspot lands on its node', async ({ page }) => {
-    await page.goto(server.url);
-    await page.getByTestId('hotspots').locator('summary').click();
-    const finding = page.locator('[data-hotspot="clj:.//shop.core/checkout"]');
-    await finding.click();
-    await expect(page.getByTestId('details')).toContainText('checkout');
-    await expect(page.locator('[data-testid="node-list"] [data-node-id="clj:.//shop.core/checkout"]')).toBeVisible();
-  });
-
-  test('selecting rows in the measures table highlights their nodes', async ({ page }) => {
-    await page.goto(server.url);
-    await page.locator('[data-open="clj:.//shop.pricing"]').click();
-    await expect(page.locator('[data-testid="node-list"] [data-node-id="clj:.//shop.pricing/half-off"]')).toBeVisible();
-    await page.getByTestId('measures-panel').locator('summary').click();
-    // Namespace rows: all fit in view; shop.util and shop.core are on the canvas as context.
-    await page.getByTestId('measures-level').selectOption('namespace');
-    await page.locator('[data-row-id="clj:.//shop.util"]').click();
-    await expect(page.getByTestId('canvas')).toHaveAttribute('data-highlighted', '1');
-    await page.locator('[data-row-id="clj:.//shop.core"]').click({ modifiers: ['Shift'] });
-    await expect(page.getByTestId('canvas')).toHaveAttribute('data-highlighted', '2');
-    // Sorting by fan-in reorders the rows.
-    await page.locator('[data-sort="fan_in"]').click();
-    await expect(page.locator('[data-sort="fan_in"]')).toHaveAttribute('aria-pressed', 'true');
-  });
-
   test('cycles list says when there are none', async ({ page }) => {
     await page.goto(server.url);
     await page.getByTestId('cycles').locator('summary').click();

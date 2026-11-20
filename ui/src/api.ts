@@ -2,6 +2,7 @@
 // opened (`/?token=…`); it is kept in sessionStorage, removed from the
 // address bar, and sent as a header on every API call.
 
+import type { RankingReport, RankLevel } from './rankings';
 import type {
   BlindspotReport,
   Checklist,
@@ -156,6 +157,7 @@ export class Api {
   libs = () => this.json<LibrariesReport>('libs');
   lib = (id: string, by: 'namespace' | 'symbol' = 'namespace') => this.json<LibraryUsage>('lib', { id, by });
   metrics = (level: 'symbol' | 'namespace' | 'unit') => this.json<MetricsReport>('metrics', { level });
+  rankings = (level: RankLevel) => this.json<RankingReport>('rankings', { level });
   coverage = () => this.json<CoverageReport>('coverage');
   hotspots = () => this.json<HotspotsReport>('hotspots');
   /** The hotspot rules and analyzer defaults in use (for Help). */
