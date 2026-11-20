@@ -1,6 +1,8 @@
 // The right-hand panel: what is selected, the tools for it, and its
 // relations. Every repository string is rendered as React text.
 
+import { useSyncExternalStore, type ReactNode } from 'react';
+import { readFolded, writeFolded } from './folded';
 import { labelFor } from './model';
 import type { Child, Finding, GNode, Neighbor, ShowResult, Site, SymbolCoverage, UnitInfo, UnitLink, UnitLinks } from './types';
 
@@ -209,10 +211,7 @@ export function Details({
  *  Example: `<UnitLinkList title="Uses" verb="uses" list={links.uses} … />`. */
 function UnitLinkList({ title, verb, list, testid, onFollow }: { title: string; verb: string; list: UnitLink[]; testid: string; onFollow: (id: string) => void }) {
   return (
-    <>
-      <h3>
-        {title} ({list.length})
-      </h3>
+    <Section id={testid} title={`${title} (${list.length})`}>
       <ul className="neighbors" data-testid={testid}>
         {list.map((l) => (
           <li key={l.unit}>
@@ -230,7 +229,7 @@ function UnitLinkList({ title, verb, list, testid, onFollow }: { title: string; 
           </li>
         ))}
       </ul>
-    </>
+    </Section>
   );
 }
 
@@ -271,8 +270,7 @@ function UnitFacts({ u }: { u: UnitInfo }) {
  *  Example: a namespace lists its functions. */
 function Children({ title, noun, list, tools }: { title: string; noun: string; list: Child[]; tools: Tools }) {
   return (
-    <>
-      <h3 title={noun}>{title}</h3>
+    <Section id="children" title={title} hint={noun}>
       <ul className="neighbors">
         {list.map((c) => (
           <li key={c.id}>
@@ -283,7 +281,7 @@ function Children({ title, noun, list, tools }: { title: string; noun: string; l
           </li>
         ))}
       </ul>
-    </>
+    </Section>
   );
 }
 
@@ -299,10 +297,7 @@ function NeighborList({ title, list, testid, onFollow, onSite }: { title: string
     else groups.push({ label, items: [x] });
   }
   return (
-    <>
-      <h3>
-        {title} ({list.length})
-      </h3>
+    <Section id={testid} title={`${title} (${list.length})`}>
       {groups.map((g) => (
         <div key={g.label} className="neighbor-group" data-group={g.label}>
           <h4 className={`muted cert-${g.items[0]?.certainty ?? 'none'}`}>
@@ -335,7 +330,7 @@ function NeighborList({ title, list, testid, onFollow, onSite }: { title: string
           </ul>
         </div>
       ))}
-    </>
+    </Section>
   );
 }
 
@@ -346,8 +341,7 @@ function Facts({ facts, onFollow }: { facts: NodeFacts; onFollow: (id: string) =
   return (
     <>
       {coverage && (
-        <>
-          <h3>Tests that reach it ({coverage.test_count})</h3>
+        <Section id="tests" title={`Tests that reach it (${coverage.test_count})`}>
           <p className="muted" data-testid="coverage-status">
             {coverage.status}
             {coverage.distance !== null ? `, ${coverage.distance} call${coverage.distance === 1 ? '' : 's'} from the nearest test` : ''}
@@ -361,9 +355,9 @@ function Facts({ facts, onFollow }: { facts: NodeFacts; onFollow: (id: string) =
               </li>
             ))}
           </ul>
-        </>
+        </Section>
       )}
-      <h3>Measures</h3>
+      <Section id="measures" title="Measures">
       {measures === null ? (
         <button type="button" className="small" data-action="load-measures" onClick={facts.onLoadMeasures}>
           Load measures
@@ -378,9 +372,9 @@ function Facts({ facts, onFollow }: { facts: NodeFacts; onFollow: (id: string) =
           ))}
         </dl>
       )}
+      </Section>
       {findings.length > 0 && (
-        <>
-          <h3>Findings ({findings.length})</h3>
+        <Section id="findings" title={`Findings (${findings.length})`}>
           <ul className="neighbors" data-testid="node-findings">
             {findings.map((f) => (
               <li key={`${f.kind}|${f.subject}`}>
@@ -391,8 +385,56 @@ function Facts({ facts, onFollow }: { facts: NodeFacts; onFollow: (id: string) =
               </li>
             ))}
           </ul>
-        </>
+        </Section>
       )}
     </>
+  );
+}
+
+// Folded sections, shared by every Section and remembered per browser.
+let folded: Set<string> | null = null;
+const listeners = new Set<() => void>();
+/** The browser's localStorage, or null where reading it throws. */
+function store(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+function currentFolded(): Set<string> {
+  if (folded === null) {
+    const s = store();
+    folded = s ? readFolded(s) : new Set();
+  }
+  return folded;
+}
+function toggleFolded(id: string) {
+  const next = new Set(currentFolded());
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  folded = next;
+  const s = store();
+  if (s) writeFolded(s, next);
+  for (const l of listeners) l();
+}
+function subscribe(l: () => void) {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+
+/** A details section whose heading folds and unfolds its body.
+ *  Example: `<Section id="caller" title="Callers (3)">…</Section>`. */
+function Section({ id, title, hint, children }: { id: string; title: string; hint?: string; children: ReactNode }) {
+  const isFolded = useSyncExternalStore(subscribe, () => currentFolded().has(id));
+  return (
+    <div className="section" data-section={id}>
+      <h3 title={hint}>
+        <button type="button" className="section-toggle" data-testid="section-toggle" data-section={id} aria-expanded={!isFolded} onClick={() => toggleFolded(id)}>
+          <span aria-hidden="true">{isFolded ? '▸' : '▾'}</span> {title}
+        </button>
+      </h3>
+      {!isFolded && children}
+    </div>
   );
 }

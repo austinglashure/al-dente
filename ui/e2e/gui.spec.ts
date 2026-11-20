@@ -401,6 +401,34 @@ test.describe('source', () => {
   });
 });
 
+test.describe('details sections', () => {
+  test('a list folds, and stays folded for the next node', async ({ page }) => {
+    const server = await startServer('clj-mini');
+    try {
+      await page.goto(server.url);
+      await listed(page, 'clj:.//shop.pricing').click();
+      const details = page.getByTestId('details');
+      const price = details.locator('[data-testid="child"][data-node-id="clj:.//shop.pricing/price"]');
+      await expect(price).toBeVisible();
+      const toggle = details.locator('[data-testid="section-toggle"][data-section="children"]');
+      await toggle.click();
+      await expect(price).toBeHidden();
+      // Another namespace: its contents start folded too.
+      await listed(page, 'clj:.//shop.core').click();
+      await expect(details.locator('h2')).toHaveText('shop.core');
+      await expect(details.locator('[data-testid="child"]').first()).toBeHidden();
+      // And after a reload.
+      await page.reload();
+      await listed(page, 'clj:.//shop.pricing').click();
+      await expect(price).toBeHidden();
+      await toggle.click();
+      await expect(price).toBeVisible();
+    } finally {
+      server.close();
+    }
+  });
+});
+
 test.describe('directory tree', () => {
   test('open a directory: only its namespaces and the calls between them', async ({ page }) => {
     const server = await startServer('mono-mini');
