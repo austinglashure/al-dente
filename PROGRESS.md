@@ -62,7 +62,7 @@ Update at the end of every session: tick finished work packages, add a dated not
 - [ ] WP5.6 Milestone M5
 - [ ] WP5.7 UI overhaul from dogfooding (Austin, 2026-11-20; outside the plan's WP list, before M5's session)
   - [x] Directory Open (only its namespaces and the calls between them); Copy ID removed
-  - [ ] Hover label always shows the hovered node's name (faded and zoomed-out nodes too)
+  - [x] Hover label always shows the hovered node's name (faded and zoomed-out nodes too; `ui/src/nodeLabel.ts`, unit-tested; the canvas drawing itself is checked by hand)
   - [ ] Collapsible lists in details
   - [ ] One filter set that applies to whatever graph is on screen (no crater-only copies)
   - [ ] Directory collapse and expand keep the layout (survivors stay put; members merge into the directory node)

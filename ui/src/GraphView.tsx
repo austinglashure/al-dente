@@ -6,6 +6,7 @@ import type Graph from 'graphology';
 import Sigma from 'sigma';
 import { inBox, normalize, type Point } from './boxSelect';
 import { edgeHiddenAtZoom, labelHiddenAtZoom, zoomLevel } from './expansion';
+import { shownLabel } from './nodeLabel';
 import type { EdgeAttrs, NodeAttrs } from './model';
 import type { NodeStyle } from './overlay';
 
@@ -93,6 +94,8 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
   });
   // The semantic zoom level; the reducers read it, and crossing a level redraws.
   const zoom = useRef<0 | 1 | 2>(0);
+  // The node under the cursor; its label is never blanked.
+  const hovered = useRef<string | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -112,12 +115,10 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
           ...attrs,
           ...(st?.color ? { color: st.color } : {}),
           ...(st?.size ? { size: st.size } : {}),
-          ...(st?.mark ? { label: `${st.mark}${attrs.label}` } : {}),
-          ...(attrs.pinned ? { label: `📌 ${attrs.label}` } : {}),
-          ...(quiet ? { label: '' } : {}),
+          label: shownLabel(attrs.label ?? '', { quiet, faded, hovered: id === hovered.current, mark: st?.mark, pinned: attrs.pinned }),
           hidden: h.isHidden(id),
           highlighted: id === h.selected || ((h.highlight?.strongNodes ?? h.highlight?.nodes)?.has(id) ?? false),
-          ...(faded ? { color: FADED_NODE, label: '' } : {}),
+          ...(faded ? { color: FADED_NODE } : {}),
         };
       },
       edgeReducer: (key, attrs) => {
@@ -149,8 +150,21 @@ export function GraphView<N extends NodeAttrs, E extends EdgeAttrs>({
       handlers.current.onDoubleClick(e.node);
     });
     s.on('clickStage', () => handlers.current.onDeselect());
-    s.on('enterNode', ({ node }) => handlers.current.onHover?.(node));
-    s.on('leaveNode', () => handlers.current.onHover?.(null));
+    // Re-run the reducer for the one node so its label is back before Sigma
+    // draws the hover.
+    const relabel = (node: string) => {
+      if (graph.hasNode(node)) s.refresh({ partialGraph: { nodes: [node] }, skipIndexation: true });
+    };
+    s.on('enterNode', ({ node }) => {
+      hovered.current = node;
+      relabel(node);
+      handlers.current.onHover?.(node);
+    });
+    s.on('leaveNode', ({ node }) => {
+      hovered.current = null;
+      relabel(node);
+      handlers.current.onHover?.(null);
+    });
     // Shift-drag draws a selection box instead of moving the camera.
     const box = boxSelect(container.current, (a, b) => {
       const rect = normalize(a, b);
