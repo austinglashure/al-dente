@@ -22,7 +22,9 @@ import { TraceDialog } from './TraceDialog';
 import { applyPage, batched, collapse, nextOffset, remaining, type Attachable, type Expansions } from './expansion';
 import { FilterPanel } from './FilterPanel';
 import { NO_FILTERS, passes, type Filters } from './filters';
+import { useDirectoryTree } from './useDirectoryTree';
 import { useKeyboard } from './useKeyboard';
+import { useRepoInfo } from './useRepoInfo';
 import { useSelection } from './useSelection';
 import { useWorkspace } from './useWorkspace';
 import type { Op } from './workspace';
@@ -31,9 +33,10 @@ import { layout, layoutPending, layoutRuns } from './layout';
 import { dropNodes, edgeShown, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
-import type { BlindSpot, GEdge, GNode, LibrarySummary, LibraryUsage, Payload, TreeDir, UnitInfo } from './types';
+import type { GEdge, GNode, LibraryUsage, Payload } from './types';
 import { dirMembers } from './tree';
-import { placeTreeNodes, type Point } from './treePlace';
+import { type Point } from './treePlace';
+import { refoldCanvas } from './refold';
 import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
@@ -58,36 +61,26 @@ export function App() {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   // Nodes marked by box select, for Hide and Keep only.
   const [marked, setMarked] = useState<Set<string>>(() => new Set());
-  const [units, setUnits] = useState<Map<string, UnitInfo>>(new Map());
   const [wantMetrics, setWantMetrics] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
   const [notice, setNotice] = useState<string | null>(null);
   const [hide, setHide] = useState<HideOptions>({ hideTests: false, hideExternals: true, hideInterop: false, hideCore: false });
   const [panels, setPanels] = usePanels();
-  const [spots, setSpots] = useState<BlindSpot[]>([]);
   const [levels, setLevels] = useState<Levels>({ certain: true, likely: true, possible: true });
   const [initialPrefs] = useState(loadViewPrefs);
   const [view, setView] = useState<'units' | 'namespaces'>(initialPrefs.view);
   const [top, setTop] = useState(initialPrefs.top);
   useEffect(() => saveViewPrefs({ view, top }), [view, top]);
-  const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
-  const [tree, setTree] = useState<TreeDir | null>(null);
-  // The tree as of now, for callbacks that run before a re-render (a
-  // directory picked from search hands its tree over and selects at once).
-  const treeRef = useRef(tree);
-  useEffect(() => {
-    if (tree) treeRef.current = tree;
-  }, [tree]);
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const { units, namespaceCount, spots, libs } = useRepoInfo(api, fail);
+  const { tree, treeRef, collapsed, setCollapsed, collapsedRef, toggleDir, adoptTree } = useDirectoryTree(api, view, fail);
   const [crater, setCrater] = useState<CraterRequest | null>(null);
   const [traceOpen, setTraceOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [libs, setLibs] = useState<LibrarySummary[]>([]);
   const [libUsage, setLibUsage] = useState<LibraryUsage | null>(null);
   const [overlay, setOverlay] = useState<OverlayKind>('risk');
   const [sizeBy, setSizeBy] = useState<Metric | null>(null);
   const [colorBy, setColorBy] = useState<Metric | null>(null);
-  const collapsedRef = useRef(collapsed);
   // Read at load time, so the root views (and the effect that loads the
   // first one) do not change identity when these do.
   const topRef = useRef(top);
@@ -95,8 +88,7 @@ export function App() {
   useLayoutEffect(() => {
     topRef.current = top;
     namespaceCountRef.current = namespaceCount;
-    collapsedRef.current = collapsed;
-  }, [top, namespaceCount, collapsed]);
+  }, [top, namespaceCount]);
 
   // End-to-end tests read node positions from here.
   useEffect(() => {
@@ -119,7 +111,6 @@ export function App() {
   const expansions = useMemo<Expansions>(() => new Map(), []);
   // The canvas renderer, detached while a batch of changes is applied.
   const renderer = useRef<Attachable | null>(null);
-  const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
   // Set once the first canvas is drawn; slow reports wait for it.
   const [firstShown, setFirstShown] = useState(false);
   const reports = useReports(api, overlay, wantMetrics || sizeBy !== null || colorBy !== null || filters.measures.length > 0, fail, firstShown);
@@ -154,7 +145,7 @@ export function App() {
           }),
       } as Crumb,
     };
-  }, [api]);
+  }, [api, collapsedRef]);
 
   /** Replaces the canvas with `load`'s payload and makes it the last crumb. */
   const show = useCallback(
@@ -177,23 +168,6 @@ export function App() {
     [graph, expansions, setCrumbs, relayout, redraw, fail],
   );
 
-  useEffect(() => {
-    api
-      .snapshot()
-      .then((s) => {
-        setUnits(new Map(s.units.map((u) => [u.id, u])));
-        setNamespaceCount(s.summary.nodes?.namespace ?? null);
-      })
-      .catch(fail);
-    api
-      .blindspots()
-      .then((r) => setSpots(r.blindspots))
-      .catch(fail);
-    api
-      .libs()
-      .then((r) => setLibs(r.libraries))
-      .catch(fail);
-  }, [api, fail]);
 
   // Positions nodes had before a fold, so unfolding brings them back.
   const remembered = useRef(new Map<string, Point>());
@@ -206,20 +180,7 @@ export function App() {
       roots.namespaces
         .load()
         .then((p) => {
-          const before = new Map<string, Point>();
-          graph.forEachNode((id, a) => before.set(id, { x: a.x, y: a.y }));
-          for (const [id, xy] of before) remembered.current.set(id, xy);
-          const membersOf = (dir: string) => (tree ? dirMembers(tree, dir) : new Set<string>());
-          const placed = placeTreeNodes(p.nodes.map((n) => n.id), before, remembered.current, membersOf);
-          batched(renderer.current, graph, () => {
-            graph.clear();
-            expansions.clear();
-            mergePayload(graph, p);
-            graph.forEachNode((id) => {
-              const xy = placed.get(id);
-              if (xy) graph.mergeNodeAttributes(id, xy);
-            });
-          });
+          refoldCanvas(graph, renderer.current, expansions, p, (dir) => (tree ? dirMembers(tree, dir) : new Set<string>()), remembered.current);
           setError(null);
           redraw();
         })
@@ -247,20 +208,6 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsed]);
 
-  // The tree is loaded the first time the namespace view is shown.
-  useEffect(() => {
-    if (view === 'namespaces' && tree === null) api.tree().then(setTree).catch(fail);
-  }, [view, tree, api, fail]);
-
-  /** Folds or unfolds one directory of the tree. */
-  const toggleDir = useCallback((id: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
 
 
   const { selected, details, source, siteView, edgeSel, editorNote, unitLinks, select, deselect, showSite, selectEdge, setEdgeSel, setEditorNote } = useSelection(
@@ -642,8 +589,7 @@ export function App() {
           onSelect={select}
           onFollow={follow}
           onPickDir={(id, t) => {
-            treeRef.current = treeRef.current ?? t;
-            setTree((prev) => prev ?? t);
+            adoptTree(t);
             select(id);
           }}
           onOpen={open}
