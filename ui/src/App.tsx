@@ -22,15 +22,17 @@ import { TraceDialog } from './TraceDialog';
 import { applyPage, batched, collapse, nextOffset, remaining, type Attachable, type Expansions } from './expansion';
 import { FilterPanel } from './FilterPanel';
 import { NO_FILTERS, passes, type Filters } from './filters';
+import { useKeyboard } from './useKeyboard';
+import { useSelection } from './useSelection';
 import { useWorkspace } from './useWorkspace';
 import type { Op } from './workspace';
 import { WorkspacePanel } from './WorkspacePanel';
 import { layout, layoutPending, layoutRuns } from './layout';
-import { dropNodes, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
+import { dropNodes, edgeShown, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
-import type { BlindSpot, GEdge, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo, UnitLinks } from './types';
-import { dirChildren, dirMembers, findDir } from './tree';
+import type { BlindSpot, GEdge, GNode, LibrarySummary, LibraryUsage, Payload, TreeDir, UnitInfo } from './types';
+import { dirMembers } from './tree';
 import { placeTreeNodes, type Point } from './treePlace';
 import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
@@ -57,16 +59,7 @@ export function App() {
   // Nodes marked by box select, for Hide and Keep only.
   const [marked, setMarked] = useState<Set<string>>(() => new Set());
   const [units, setUnits] = useState<Map<string, UnitInfo>>(new Map());
-  const [selected, setSelected] = useState<string | null>(null);
-  const [details, setDetails] = useState<ShowResult | null>(null);
-  const [source, setSource] = useState<{ text: string; first: number } | null>(null);
-  // A call site's line in context, an edge's sites, and what "Open in
-  // editor" did last.
-  const [siteView, setSiteView] = useState<{ file: string; line: number; text: string; first: number } | null>(null);
-  const [edgeSel, setEdgeSel] = useState<string | null>(null);
-  const [editorNote, setEditorNote] = useState<string | null>(null);
   const [wantMetrics, setWantMetrics] = useState(false);
-  const [unitLinks, setUnitLinks] = useState<UnitLinks | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [hide, setHide] = useState<HideOptions>({ hideTests: false, hideExternals: true, hideInterop: false, hideCore: false });
@@ -270,62 +263,12 @@ export function App() {
   }, []);
 
 
-  const select = useCallback(
-    (id: string) => {
-      setSelected(id);
-      setDetails(null);
-      setSource(null);
-      setSiteView(null);
-      setEdgeSel(null);
-      setEditorNote(null);
-      setUnitLinks(null);
-      if (id.startsWith('unit:')) api.unitLinks(id).then(setUnitLinks).catch(fail);
-      if (id.startsWith('dir:')) {
-        // Directories are not stored: describe one from the tree and the
-        // edges on the canvas.
-        const node: GNode = graph.hasNode(id)
-          ? graph.getNodeAttribute(id, 'node')
-          : { id, kind: 'directory', name: (treeRef.current && findDir(treeRef.current, id)?.path) ?? id };
-        const neighbor = (key: string, other: string): Neighbor => {
-          const e = graph.getEdgeAttribute(key, 'edge');
-          const o = graph.hasNode(other) ? graph.getNodeAttribute(other, 'node') : null;
-          return { id: other, name: o ? labelFor(o) : other, kind: e.kind, certainty: e.certainty ?? null, reason: e.reason ?? null, sites: e.sites ?? [], count: e.count ?? null };
-        };
-        const has = graph.hasNode(id);
-        setDetails({
-          node,
-          callers: has ? graph.inEdges(id).map((k) => neighbor(k, graph.source(k))) : [],
-          callees: has ? graph.outEdges(id).map((k) => neighbor(k, graph.target(k))) : [],
-          children: treeRef.current ? dirChildren(treeRef.current, id) : [],
-        });
-        return;
-      }
-      api.node(id).then(setDetails).catch(fail);
-      if (hasSource(id)) {
-        api
-          .sourceAt(id)
-          .then(setSource)
-          .catch(() => setSource({ text: '', first: 1 }));
-      }
-    },
-    [api, fail, graph],
+  const { selected, details, source, siteView, edgeSel, editorNote, unitLinks, select, deselect, showSite, selectEdge, setEdgeSel, setEditorNote } = useSelection(
+    api,
+    graph,
+    treeRef,
+    fail,
   );
-
-  const deselect = useCallback(() => {
-    setSelected(null);
-    setDetails(null);
-    setSource(null);
-    setSiteView(null);
-    setEdgeSel(null);
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') deselect();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [deselect]);
 
   /** Opens a unit (its namespaces) or a namespace (its functions, with the
    *  namespaces it talks to as context) on a canvas of its own. */
@@ -521,14 +464,6 @@ export function App() {
   );
 
   /** Shows a call site's line in context. */
-  const showSite = useCallback(
-    (site: { file: string; line: number }) =>
-      void api
-        .siteSource(site.file, site.line)
-        .then((r) => setSiteView({ file: site.file, line: site.line, ...r }))
-        .catch(fail),
-    [api, fail],
-  );
 
   /** Every other node of the same kind and subkind on the canvas. */
   const othersLike = useCallback(
@@ -606,52 +541,8 @@ export function App() {
     };
   }, [details, reports]);
 
-  // Keyboard navigation (06-gui): ← caller, → callee (strongest first), e
-  // expand or collapse, h hide, f focus, c crater, / search. Not while typing.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
-      if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === '/') {
-        e.preventDefault();
-        document.querySelector<HTMLInputElement>('[data-testid="search"]')?.focus();
-        return;
-      }
-      const d = details;
-      if (!d) return;
-      const id = d.node.id;
-      const go = (list: Neighbor[]) => {
-        const next = list[0];
-        if (next) follow(next.id);
-      };
-      switch (e.key) {
-        case 'ArrowLeft':
-          go(d.callers);
-          break;
-        case 'ArrowRight':
-          go(d.callees);
-          break;
-        case 'e':
-          if (isAggregate(d.node)) void run({ op: expansions.has(id) ? 'collapse' : 'expand', id });
-          break;
-        case 'h':
-          deselect();
-          void run({ op: 'hide', ids: [id] });
-          break;
-        case 'f':
-          void run({ op: 'focus', id });
-          break;
-        case 'c':
-          openCrater(d.node, 'forward');
-          break;
-        default:
-          return;
-      }
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [details, follow, run, expansions, deselect, openCrater]);
+  const isExpanded = useCallback((id: string) => expansions.has(id), [expansions]);
+  useKeyboard({ details, follow, run, isExpanded, deselect, openCrater });
 
   const onDoubleClick = useCallback(
     (id: string) => {
@@ -844,10 +735,7 @@ export function App() {
           visibleEdges={visibleEdges}
           onSelect={select}
           onDoubleClick={onDoubleClick}
-          onEdgeClick={(key) => {
-            setEdgeSel(key);
-            setSiteView(null);
-          }}
+          onEdgeClick={selectEdge}
           onDeselect={deselect}
           highlight={marked.size > 0 ? { nodes: marked, edges: new Set<string>() } : libHighlight}
           styleOf={styleOf}
