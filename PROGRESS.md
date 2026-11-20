@@ -65,7 +65,7 @@ Update at the end of every session: tick finished work packages, add a dated not
   - [x] Hover label always shows the hovered node's name (faded and zoomed-out nodes too; `ui/src/nodeLabel.ts`, unit-tested; the canvas drawing itself is checked by hand)
   - [x] Collapsible lists in details (every section; folded state remembered per browser, `ui/src/folded.ts`)
   - [x] One filter set that applies to whatever graph is on screen: the crater follows the left panel (hide toggles, kinds and flags, measure minimums, certainty); its own "Hide Clojure core" is gone. Seeds are always drawn. Since "Hide external libraries" is on by default, craters now open with externals hidden. The crater's traversal control stays, renamed "Follow: certain edges / certain and likely edges / all edges" (it changes which nodes are in the crater; the left panel only hides edges). Externals stay hidden by default in craters too (Austin).
-  - [ ] Directory collapse and expand keep the layout (survivors stay put; members merge into the directory node)
+  - [x] Directory collapse and expand keep the layout: no relayout; survivors keep their place, a folded directory sits at the centre of what it replaced, unfolded members return to their remembered places or next to their directory (`ui/src/treePlace.ts`, `tree.tsx` `dirMembers`). Camera unchanged. No merge animation (nodes jump); Top changes and folds while drilled in still reload the map as before.
   - [ ] Directories in search
   - [ ] Rankings list replaces Hotspots and the bottom Measures panel (open: CLI hotspots, hotspot score, new measures)
 

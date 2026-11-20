@@ -15,6 +15,24 @@ export function findDir(root: TreeDir, id: string): TreeDir | null {
   return null;
 }
 
+/** Every ID inside a directory: its sub-directories and the namespaces of
+ *  its files, at any depth.
+ *  Example: `dirMembers(root, 'dir:services')` holds `dir:services/orders`
+ *  and `clj:services/orders//orders.core`. */
+export function dirMembers(root: TreeDir, id: string): Set<string> {
+  const out = new Set<string>();
+  const walk = (d: TreeDir) => {
+    for (const f of d.files) for (const ns of f.namespaces) out.add(ns);
+    for (const sub of d.dirs) {
+      if (sub.id) out.add(sub.id);
+      walk(sub);
+    }
+  };
+  const d = findDir(root, id);
+  if (d) walk(d);
+  return out;
+}
+
 /** The ids of the top-level rows (what "collapse all" collapses).
  *  Example: `['dir:libs/common/src/common', 'dir:services']`. */
 export function topDirIds(root: TreeDir): string[] {

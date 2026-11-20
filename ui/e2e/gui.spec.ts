@@ -430,6 +430,47 @@ test.describe('details sections', () => {
 });
 
 test.describe('directory tree', () => {
+  test('folding a directory keeps every other node where it was', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      await page.goto(server.url);
+      await page.getByTestId('view-namespaces').click();
+      await expect(inTree(page, 'clj:services/orders//orders.core')).toBeVisible();
+      const positions = () =>
+        page.evaluate(() => {
+          const g = (window as unknown as { aldenteCanvas: { forEachNode: (f: (id: string, a: { x: number; y: number }) => void) => void } }).aldenteCanvas;
+          const out: Record<string, [number, number]> = {};
+          g.forEachNode((id, a) => (out[id] = [a.x, a.y]));
+          return out;
+        });
+      // Let the first layout settle.
+      let before = await positions();
+      await expect.poll(async () => {
+        const now = await positions();
+        const same = JSON.stringify(now) === JSON.stringify(before);
+        before = now;
+        return same;
+      }, { intervals: [500], timeout: 20_000 }).toBe(true);
+      const services = Object.keys(before).filter((id) => id.startsWith('clj:services/'));
+      expect(services.length).toBeGreaterThan(1);
+
+      await page.locator('[data-testid="tree-toggle"][data-dir="dir:services"]').click();
+      await expect.poll(async () => Object.keys(await positions()).includes('dir:services')).toBe(true);
+      await page.waitForTimeout(1000);
+      const after = await positions();
+      for (const [id, xy] of Object.entries(before)) {
+        if (id.startsWith('clj:services/') || id.startsWith('dir:services')) continue;
+        expect(after[id], id).toEqual(xy);
+      }
+      const cx = services.reduce((s, id) => s + (before[id]?.[0] ?? 0), 0) / services.length;
+      const cy = services.reduce((s, id) => s + (before[id]?.[1] ?? 0), 0) / services.length;
+      expect(after['dir:services']?.[0]).toBeCloseTo(cx, 3);
+      expect(after['dir:services']?.[1]).toBeCloseTo(cy, 3);
+    } finally {
+      server.close();
+    }
+  });
+
   test('open a directory: only its namespaces and the calls between them', async ({ page }) => {
     const server = await startServer('mono-mini');
     try {

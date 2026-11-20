@@ -30,7 +30,8 @@ import { dropNodes, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePa
 import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
 import type { BlindSpot, GEdge, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo, UnitLinks } from './types';
-import { dirChildren, findDir } from './tree';
+import { dirChildren, dirMembers, findDir } from './tree';
+import { placeTreeNodes, type Point } from './treePlace';
 import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
 /** One level of the breadcrumb: its label and how to load its canvas. */
@@ -197,17 +198,57 @@ export function App() {
       .catch(fail);
   }, [api, fail]);
 
-  // A new Top value or a folded/unfolded directory reloads the namespace
-  // map; not on the first render, which the first-view effect loads.
+  // Positions nodes had before a fold, so unfolding brings them back.
+  const remembered = useRef(new Map<string, Point>());
+  /** Reloads the namespace map after a fold or unfold without moving the
+   *  picture: nodes that stay keep their place, a folded directory sits at
+   *  the centre of what it replaced, and unfolded members return where they
+   *  were. No layout runs. */
+  const refold = useCallback(
+    (): Promise<void> =>
+      roots.namespaces
+        .load()
+        .then((p) => {
+          const before = new Map<string, Point>();
+          graph.forEachNode((id, a) => before.set(id, { x: a.x, y: a.y }));
+          for (const [id, xy] of before) remembered.current.set(id, xy);
+          const membersOf = (dir: string) => (tree ? dirMembers(tree, dir) : new Set<string>());
+          const placed = placeTreeNodes(p.nodes.map((n) => n.id), before, remembered.current, membersOf);
+          batched(renderer.current, graph, () => {
+            graph.clear();
+            expansions.clear();
+            mergePayload(graph, p);
+            graph.forEachNode((id) => {
+              const xy = placed.get(id);
+              if (xy) graph.mergeNodeAttributes(id, xy);
+            });
+          });
+          setError(null);
+          redraw();
+        })
+        .catch(fail),
+    [roots, graph, tree, expansions, redraw, fail],
+  );
+  // A new Top value reloads the namespace map; a folded or unfolded
+  // directory refolds it in place. Neither on the first render, which the
+  // first-view effect loads.
   const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) return;
+    if (view === 'namespaces') void show(roots.namespaces, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [top]);
   useEffect(() => {
     if (!mounted.current) {
       mounted.current = true;
       return;
     }
-    if (view === 'namespaces') void show(roots.namespaces, []);
+    if (view !== 'namespaces') return;
+    // Drilled into something: go back to the map, as before.
+    if (crumbsRef.current.length > 1) void show(roots.namespaces, []);
+    else void refold();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [top, collapsed]);
+  }, [collapsed]);
 
   // The tree is loaded the first time the namespace view is shown.
   useEffect(() => {
