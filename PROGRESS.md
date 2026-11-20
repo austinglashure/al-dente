@@ -64,7 +64,7 @@ Update at the end of every session: tick finished work packages, add a dated not
   - [x] Directory Open (only its namespaces and the calls between them); Copy ID removed
   - [x] Hover label always shows the hovered node's name (faded and zoomed-out nodes too; `ui/src/nodeLabel.ts`, unit-tested; the canvas drawing itself is checked by hand)
   - [x] Collapsible lists in details (every section; folded state remembered per browser, `ui/src/folded.ts`)
-  - [ ] One filter set that applies to whatever graph is on screen (no crater-only copies)
+  - [x] One filter set that applies to whatever graph is on screen: the crater follows the left panel (hide toggles, kinds and flags, measure minimums, certainty); its own "Hide Clojure core" is gone. Seeds are always drawn. Since "Hide external libraries" is on by default, craters now open with externals hidden. The crater's "At least" certainty stays: it limits the traversal, not the drawing.
   - [ ] Directory collapse and expand keep the layout (survivors stay put; members merge into the directory node)
   - [ ] Directories in search
   - [ ] Rankings list replaces Hotspots and the bottom Measures panel (open: CLI hotspots, hotspot score, new measures)

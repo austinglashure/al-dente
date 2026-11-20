@@ -22,7 +22,8 @@ export interface Highlight {
 interface Props<N extends NodeAttrs, E extends EdgeAttrs> {
   graph: Graph<N, E>;
   /** Bumped whenever the graph or the selection changes, to redraw. */
-  version: number;
+  /** Changes whenever what is drawn changes; a redraw follows. */
+  version: number | string;
   selected: string | null;
   isHidden: (id: string) => boolean;
   /** Whether an edge (by key) is hidden by the certainty toggles. */

@@ -8,8 +8,7 @@ import type { Api, CraterQuery } from './api';
 import { allPaths, checklistCsv, checklistMarkdown, checklistRows, craterCanvas, type CraterGraph, type PathSlice } from './crater';
 import { elkLayout } from './elkLayout';
 import { GraphView, type Highlight } from './GraphView';
-import { isCore } from './model';
-import type { CraterResult } from './types';
+import type { CraterResult, GEdge, GNode } from './types';
 
 /** What a crater is seeded from. */
 export type CraterRequest = { kind: 'seeds'; ids: string[]; label: string; direction: CraterQuery['direction'] } | { kind: 'trace'; text: string; label: string };
@@ -19,8 +18,12 @@ interface Props {
   request: CraterRequest;
   onClose: () => void;
   onSelect: (id: string) => void;
-  /** Whether "Hide Clojure core" starts checked (the main view's setting). */
-  hideCoreInitially?: boolean;
+  /** The main view's filters (left panel): whether a node is hidden. */
+  nodeHidden: (n: GNode) => boolean;
+  /** The main view's certainty toggles: whether an edge is drawn. */
+  edgeShown: (e: GEdge) => boolean;
+  /** Changes whenever those filters change, to redraw. */
+  filterVersion: string;
 }
 
 type Status = { kind: 'loading' } | { kind: 'layout'; nodes: number } | { kind: 'ready' } | { kind: 'error'; message: string };
@@ -40,11 +43,10 @@ function download(name: string, type: string, text: string): void {
 
 /** The crater view.
  *  Example: `<CraterView api={api} request={{kind: 'seeds', ids: [id], label, direction: 'forward'}} … />`. */
-export function CraterView({ api, request, onClose, onSelect, hideCoreInitially = false }: Props) {
+export function CraterView({ api, request, onClose, onSelect, nodeHidden, edgeShown, filterVersion }: Props) {
   const [direction, setDirection] = useState<CraterQuery['direction']>(request.kind === 'seeds' ? request.direction : 'reverse');
   const [depth, setDepth] = useState(6);
   const [unlimited, setUnlimited] = useState(false);
-  const [hideCore, setHideCore] = useState(hideCoreInitially);
   const [minCertainty, setMinCertainty] = useState<CraterQuery['minCertainty']>('likely');
   const [result, setResult] = useState<CraterResult | null>(null);
   const [graph, setGraph] = useState<CraterGraph | null>(null);
@@ -106,17 +108,20 @@ export function CraterView({ api, request, onClose, onSelect, hideCoreInitially 
     },
     [onSelect],
   );
-  // Core nodes stay laid out; hiding them only stops drawing them and their edges.
+  // Filtered nodes stay laid out; hiding them only stops drawing them and
+  // their edges. Seeds are always drawn.
   const isHidden = useCallback(
-    (id: string) => hideCore && graph !== null && graph.hasNode(id) && isCore(graph.getNodeAttribute(id, 'node')),
-    [graph, hideCore],
+    (id: string) => graph !== null && graph.hasNode(id) && graph.getNodeAttribute(id, 'role') !== 'seed' && nodeHidden(graph.getNodeAttribute(id, 'node')),
+    [graph, nodeHidden],
   );
-  const hiddenCount = graph && hideCore ? graph.filterNodes((_id, a) => isCore(a.node)).length : 0;
+  const isEdgeHidden = useCallback((key: string) => graph !== null && graph.hasEdge(key) && !edgeShown(graph.getEdgeAttribute(key, 'edge')), [graph, edgeShown]);
+  const hiddenCount = graph ? graph.filterNodes((id) => isHidden(id)).length : 0;
+  const visibleEdges = graph ? graph.filterEdges((key, _a, from, to) => !isEdgeHidden(key) && !isHidden(from) && !isHidden(to)).length : 0;
   const pinnedCount = graph ? graph.filterNodes((_id, a) => a.role === 'pinned').length : 0;
   const busy = status.kind === 'loading' || status.kind === 'layout';
 
   return (
-    <div className="crater-view" data-testid="crater-view" data-direction={direction} data-nodes={graph?.order ?? 0} data-pinned={pinnedCount} data-hidden={hiddenCount}>
+    <div className="crater-view" data-testid="crater-view" data-direction={direction} data-nodes={graph?.order ?? 0} data-pinned={pinnedCount} data-hidden={hiddenCount} data-visible-edges={visibleEdges}>
       <div className="crater-bar">
         <button type="button" data-testid="crater-close" onClick={onClose} title="Back to the graph">
           ◀ Back
@@ -137,9 +142,6 @@ export function CraterView({ api, request, onClose, onSelect, hideCoreInitially 
         </label>
         <label>
           <input type="checkbox" checked={unlimited} data-testid="crater-unlimited" onChange={(e) => setUnlimited(e.target.checked)} /> unlimited
-        </label>
-        <label title="clojure.core and cljs.core: let, or, map, str, …">
-          <input type="checkbox" checked={hideCore} data-testid="crater-hide-core" onChange={(e) => setHideCore(e.target.checked)} /> Hide Clojure core
         </label>
         <label title="Leave out nodes whose best path is weaker">
           At least{' '}
@@ -177,11 +179,11 @@ export function CraterView({ api, request, onClose, onSelect, hideCoreInitially 
         {tab === 'graph' && graph && (
           <GraphView
             graph={graph}
-            version={hideCore ? 1 : 0}
+            version={filterVersion}
             selected={selected}
             isHidden={isHidden}
-            isEdgeHidden={() => false}
-            visibleEdges={graph.size}
+            isEdgeHidden={isEdgeHidden}
+            visibleEdges={visibleEdges}
             onSelect={select}
             onDoubleClick={select}
             onDeselect={() => setSelected(null)}

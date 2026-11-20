@@ -27,28 +27,33 @@ test.describe('hide Clojure core', () => {
   });
 });
 
-test.describe('hide Clojure core in the crater view', () => {
+test.describe('one filter set for every view', () => {
   let server: Server;
   test.beforeAll(async () => {
     server = await startServer('clj-mini');
   });
   test.afterAll(() => server.close());
 
-  test('hides core nodes and starts from the main view setting', async ({ page }) => {
+  test('the left panel filters apply to the crater on screen', async ({ page }) => {
     await page.goto(server.url);
+    // The main view hides external libraries by default; so does the crater.
+    await page.getByTestId('hide-externals').uncheck();
     await page.locator('[data-open="clj:.//shop.core"]').click();
     await listed(page, 'clj:.//shop.core/checkout').click();
     await page.getByTestId('details').locator('[data-action="crater-forward"]').click();
     const view = page.getByTestId('crater-view');
     await expect(page.getByTestId('crater-summary')).toBeVisible();
     await expect(view).toHaveAttribute('data-hidden', '0');
-    await page.getByTestId('crater-hide-core').check();
-    // checkout's forward crater reaches let, format, swap!, str, … in clojure.core and cljs.core.
-    expect(Number(await view.getAttribute('data-hidden'))).toBeGreaterThan(3);
-    await page.getByTestId('crater-close').click();
-
+    // No second, crater-only copy of the toggle.
+    await expect(page.getByTestId('crater-hide-core')).toHaveCount(0);
     await page.getByTestId('hide-core').check();
-    await page.getByTestId('details').locator('[data-action="crater-forward"]').click();
-    await expect(page.getByTestId('crater-hide-core')).toBeChecked();
+    // checkout's forward crater reaches let, format, swap!, str, … in clojure.core and cljs.core.
+    await expect.poll(async () => Number(await view.getAttribute('data-hidden'))).toBeGreaterThan(3);
+    await page.getByTestId('hide-core').uncheck();
+    await expect(view).toHaveAttribute('data-hidden', '0');
+    // Certainty toggles hide edges in the crater too.
+    const edges = Number(await view.getAttribute('data-visible-edges'));
+    await page.getByTestId('show-certain').uncheck();
+    await expect.poll(async () => Number(await view.getAttribute('data-visible-edges'))).toBeLessThan(edges);
   });
 });

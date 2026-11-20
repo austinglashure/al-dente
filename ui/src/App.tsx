@@ -29,7 +29,7 @@ import { layout, layoutPending, layoutRuns } from './layout';
 import { dropNodes, edgeShown, hasSource, hidden, isAggregate, labelFor, mergePayload, newGraph, type HideOptions, type Levels } from './model';
 import { metricValues, nodeMeasures } from './overlay';
 import { Splitter, usePanels } from './panels';
-import type { BlindSpot, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo, UnitLinks } from './types';
+import type { BlindSpot, GEdge, GNode, LibrarySummary, LibraryUsage, Neighbor, Payload, ShowResult, TreeDir, UnitInfo, UnitLinks } from './types';
 import { dirChildren, findDir } from './tree';
 import { loadViewPrefs, saveViewPrefs } from './viewPrefs';
 
@@ -632,6 +632,9 @@ export function App() {
   );
 
   const isEdgeHidden = useCallback((key: string) => !edgeVisible(key), [edgeVisible]);
+  // The same filters, for whatever other graph is on screen (the crater).
+  const craterNodeHidden = useCallback((n: GNode) => hidden(n, hide) || !passes(n, filters, measureOf), [hide, filters, measureOf]);
+  const craterEdgeShown = useCallback((e: GEdge) => edgeShown(e, levels), [levels]);
   const counts = { certain: 0, likely: 0, possible: 0 };
   let visibleEdges = 0;
   graph.forEachEdge((key, a) => {
@@ -733,7 +736,16 @@ export function App() {
       {panels.leftOpen && <Splitter side="left" width={panels.left} onResize={(left) => setPanels({ left })} />}
       <main className="center">
         {crater ? (
-          <CraterView key={JSON.stringify(crater)} api={api} request={crater} onClose={() => setCrater(null)} onSelect={select} hideCoreInitially={!!hide.hideCore} />
+          <CraterView
+            key={JSON.stringify(crater)}
+            api={api}
+            request={crater}
+            onClose={() => setCrater(null)}
+            onSelect={select}
+            nodeHidden={craterNodeHidden}
+            edgeShown={craterEdgeShown}
+            filterVersion={JSON.stringify([hide, filters, levels])}
+          />
         ) : (
         <>
         <CanvasBar
