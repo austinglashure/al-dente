@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use aldente_graph::query::{self, Filter, Resolution};
-use aldente_model::{Certainty, EdgeKind, Envelope, ErrorCode, NodeId};
+use aldente_model::{Certainty, EdgeKind, Envelope, ErrorCode, NodeId, RepoPath};
 use axum::extract::State;
 use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
@@ -157,5 +157,6 @@ fn filter_from(p: &Params) -> Filter {
             .unwrap_or_default(),
         unit: p.get("unit").and_then(|u| u.parse().ok()),
         repo_only: p.get("scope") == Some("repo"),
+        dir: p.get("dir").and_then(|d| RepoPath::parse(d).ok()),
     }
 }

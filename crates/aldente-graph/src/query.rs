@@ -7,7 +7,7 @@ use std::str::FromStr;
 use aldente_model::query::{Child, Neighbor};
 use aldente_model::{
     Aggregation, AggregationLevel, Certainty, Edge, EdgeKind, GraphPayload, Node, NodeId, NodeKind,
-    SymbolFlag, SymbolSubkind,
+    RepoPath, SymbolFlag, SymbolSubkind,
 };
 
 use crate::build::Graph;
@@ -490,6 +490,9 @@ pub struct Filter {
     /// Keep only repository code and holes: drop externals, platforms and
     /// libraries and the edges that touch them (the GUI's global map).
     pub repo_only: bool,
+    /// Keep only nodes whose source file lies in this directory, and the
+    /// edges between them (the GUI's "open a directory").
+    pub dir: Option<RepoPath>,
 }
 
 /// Applies `filter` to a payload.
@@ -518,6 +521,11 @@ pub fn filter(graph: &Graph, payload: GraphPayload, filter: &Filter) -> GraphPay
             )
         };
         nodes.retain(|n| !outside(n.kind));
+        let kept: BTreeSet<&NodeId> = nodes.iter().map(|n| &n.id).collect();
+        edges.retain(|e| kept.contains(&e.from) && kept.contains(&e.to));
+    }
+    if let Some(dir) = &filter.dir {
+        nodes.retain(|n| n.loc.as_ref().is_some_and(|l| l.file.starts_with(dir)));
         let kept: BTreeSet<&NodeId> = nodes.iter().map(|n| &n.id).collect();
         edges.retain(|e| kept.contains(&e.from) && kept.contains(&e.to));
     }
@@ -550,9 +558,13 @@ pub fn fit(
     let start = order.iter().position(|l| *l == level).unwrap_or(1);
     let mut last = GraphPayload::default();
     for l in &order[start..] {
-        // Without a unit filter the node count is known before copying the
+        // Without a unit or directory filter the node count is known before copying the
         // level (2,000,000 edges at symbol level take a while to copy).
-        if *l != AggregationLevel::Unit && f.unit.is_none() && too_many_nodes(graph, cache, *l, f) {
+        if *l != AggregationLevel::Unit
+            && f.unit.is_none()
+            && f.dir.is_none()
+            && too_many_nodes(graph, cache, *l, f)
+        {
             continue;
         }
         let mut p = filter(graph, cache.payload(graph, *l).into_owned(), f);
@@ -1098,6 +1110,60 @@ mod tests {
         assert!(ids(&Pattern::regex("CHARGE").unwrap()).is_empty());
         assert_eq!(ids(&Pattern::regex("(?i)^CHARGE!$").unwrap()).len(), 2);
         assert!(Pattern::regex("(unclosed").is_err());
+    }
+
+    #[test]
+    fn dir_filter_keeps_namespaces_under_the_directory_and_edges_between_them() {
+        let at = |id: &str, file: &str| {
+            let mut n = node(id);
+            n.loc = Some(aldente_model::Location {
+                file: RepoPath::parse(file).unwrap(),
+                line: 1,
+                col: 1,
+                end_line: 1,
+                end_col: 1,
+            });
+            n
+        };
+        let mut g = Graph::default();
+        for n in [
+            at("clj:.//x.a", "src/x/a.clj"),
+            at("clj:.//x.sub.b", "src/x/sub/b.clj"),
+            at("clj:.//xy.c", "src/xy/c.clj"),
+            node("ext:clj//clojure.string"),
+        ] {
+            g.nodes.insert(n.id.clone(), n);
+        }
+        let calls = |a, b| edge(a, b, EdgeKind::Calls, Some(Certainty::Certain));
+        let p = GraphPayload {
+            nodes: g.nodes.values().cloned().collect(),
+            edges: vec![
+                calls("clj:.//x.a", "clj:.//x.sub.b"),
+                calls("clj:.//x.a", "clj:.//xy.c"),
+                calls("clj:.//x.sub.b", "ext:clj//clojure.string"),
+            ],
+            truncated: false,
+            aggregated: None,
+        };
+        let only = |dir: &str| {
+            let f = Filter {
+                dir: Some(RepoPath::parse(dir).unwrap()),
+                ..Filter::default()
+            };
+            let out = filter(&g, p.clone(), &f);
+            let ids: Vec<String> = out.nodes.iter().map(|n| n.id.to_string()).collect();
+            (ids, out.edges.len())
+        };
+        // `src/xy` shares the prefix `src/x` as text but is not inside it.
+        assert_eq!(
+            only("src/x"),
+            (
+                vec!["clj:.//x.a".to_owned(), "clj:.//x.sub.b".to_owned()],
+                1
+            )
+        );
+        assert_eq!(only("src/x/sub"), (vec!["clj:.//x.sub.b".to_owned()], 0));
+        assert_eq!(only(".").0.len(), 3, "the root holds every located node");
     }
 
     #[test]

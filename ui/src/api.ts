@@ -128,6 +128,8 @@ export class Api {
    *  directory one node, at most the `top` busiest nodes. */
   treeGraph = (collapsed: string[], top: number) => this.envelope<Payload>('tree/graph', { collapsed, top });
   unitGraph = (unit: string) => this.envelope<Payload>('graph', { level: 'namespace', unit });
+  /** The namespaces whose files lie in `dir` (a repository path) and the calls between them. */
+  dirGraph = (dir: string) => this.envelope<Payload>('graph', { level: 'namespace', dir });
   neighborhood = (id: string) => this.json<Payload>('neighborhood', { id, depth: 1 });
   expand = (id: string, visible: string[]) => this.json<Payload>('expand', { id, visible });
   /** One page of an aggregate's children; the visible IDs go in the body

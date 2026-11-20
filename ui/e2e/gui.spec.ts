@@ -402,6 +402,29 @@ test.describe('source', () => {
 });
 
 test.describe('directory tree', () => {
+  test('open a directory: only its namespaces and the calls between them', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      await page.goto(server.url);
+      await page.getByTestId('view-namespaces').click();
+      const services = page.locator('[data-testid="tree-toggle"][data-dir="dir:services"]');
+      await services.click();
+      await expect(services).toHaveAttribute('aria-expanded', 'false');
+      await inTree(page, 'dir:services').click();
+      const details = page.getByTestId('details');
+      await details.locator('[data-action="keep-only"]').click();
+      await details.locator('[data-action="open"]').click();
+      await expect(page.getByTestId('breadcrumb')).toContainText('services/');
+      await expect(listed(page, 'clj:services/orders//orders.core')).toBeVisible();
+      await expect(listed(page, 'clj:services/billing//billing.core')).toBeVisible();
+      // Nothing from outside the directory, and no directory nodes.
+      await expect(listed(page, 'clj:libs/common//common.util')).toHaveCount(0);
+      await expect(page.locator('[data-testid="node-list"] [data-node-id^="dir:"]')).toHaveCount(0);
+    } finally {
+      server.close();
+    }
+  });
+
   test('collapsing a directory folds the graph to it; expand all and collapse all', async ({ page }) => {
     const server = await startServer('mono-mini');
     try {
@@ -426,7 +449,7 @@ test.describe('directory tree', () => {
       await expect(details.locator('[data-testid="callee"][data-node-id="clj:libs/common//common.util"]')).toHaveCount(2);
 
       // Double-clicking a collapsed directory on the canvas expands it (via the tools here).
-      await details.locator('[data-action="open"]').click();
+      await details.locator('[data-action="unfold"]').click();
       await expect(services).toHaveAttribute('aria-expanded', 'true');
       await expect(inTree(page, 'clj:services/orders//orders.core')).toBeVisible();
 

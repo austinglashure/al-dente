@@ -286,9 +286,15 @@ export function App() {
    *  namespaces it talks to as context) on a canvas of its own. */
   const openOnCanvas = useCallback(
     (id: string): Promise<void> => {
-      const n: GNode = graph.hasNode(id) ? graph.getNodeAttribute(id, 'node') : { id, kind: id.startsWith('unit:') ? 'unit' : 'namespace', name: id.split('//').pop() ?? id };
+      const n: GNode = graph.hasNode(id)
+        ? graph.getNodeAttribute(id, 'node')
+        : id.startsWith('dir:')
+          ? { id, kind: 'directory', name: id.slice('dir:'.length) }
+          : { id, kind: id.startsWith('unit:') ? 'unit' : 'namespace', name: id.split('//').pop() ?? id };
       let load: () => Promise<Payload>;
-      if (n.kind === 'unit') {
+      if (n.kind === 'directory') {
+        load = () => api.dirGraph(id.slice('dir:'.length)).then((r) => r.data);
+      } else if (n.kind === 'unit') {
         load = () => api.unitGraph(n.id).then((r) => r.data);
       } else {
         const context = graph.filterNodes((_id, a) => a.node.kind === 'namespace' || a.node.kind === 'external').map((id) => graph.getNodeAttribute(id, 'node'));
@@ -456,13 +462,9 @@ export function App() {
 
   const open = useCallback(
     (n: GNode) => {
-      if (n.kind === 'directory') {
-        toggleDir(n.id);
-        return;
-      }
       void run({ op: 'open', id: n.id }).then(() => select(n.id));
     },
-    [run, select, toggleDir],
+    [run, select],
   );
 
   const follow = useCallback(
@@ -498,6 +500,7 @@ export function App() {
 
   const tools: Tools = {
     open,
+    unfold: toggleDir,
     expandHere: (id) => void run({ op: 'expand', id }),
     collapse: (id) => void run({ op: 'collapse', id }),
     neighbors: (id) => void run({ op: 'neighbors', id }),
@@ -612,11 +615,11 @@ export function App() {
   const onDoubleClick = useCallback(
     (id: string) => {
       const n = graph.hasNode(id) ? graph.getNodeAttribute(id, 'node') : null;
-      if (n?.kind === 'directory') open(n);
+      if (n?.kind === 'directory') toggleDir(n.id);
       else if (n && isAggregate(n)) void run({ op: expansions.has(id) ? 'collapse' : 'expand', id });
       else void run({ op: 'neighbors', id });
     },
-    [graph, expansions, open, run],
+    [graph, expansions, toggleDir, run],
   );
 
   const isHidden = useCallback(

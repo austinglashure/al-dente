@@ -548,6 +548,27 @@ fn tree_and_tree_graph() {
 }
 
 #[test]
+fn graph_dir_keeps_the_namespaces_of_one_directory() {
+    let s = start("dir");
+    let ids = |path: &str| -> Vec<String> {
+        let (_, _, body) = s.ok_get(path);
+        let env: serde_json::Value = serde_json::from_str(&body).unwrap();
+        env["data"]["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| n["id"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    assert_eq!(ids("/api/v1/graph?level=namespace&dir=src"), ["clj:.//a"]);
+    assert!(ids("/api/v1/graph?level=namespace&dir=test").is_empty());
+    for bad in ["..", "/etc", "src/../..", "a//b"] {
+        let (status, _, _) = s.ok_get(&format!("/api/v1/graph?level=namespace&dir={bad}"));
+        assert_eq!(status, 400, "dir={bad} is not a repository path");
+    }
+}
+
+#[test]
 fn graph_top_keeps_the_level_and_the_busiest_nodes() {
     let s = start("top");
     let (_, _, body) = s.ok_get("/api/v1/graph?level=symbol&top=1");

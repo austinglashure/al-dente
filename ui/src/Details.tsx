@@ -6,7 +6,10 @@ import type { Child, Finding, GNode, Neighbor, ShowResult, Site, SymbolCoverage,
 
 /** Actions the panel offers; which ones appear depends on the node kind. */
 export interface Tools {
+  /** Shows only what is inside a unit, namespace or directory. */
   open: (n: GNode) => void;
+  /** Folds or unfolds a directory in the tree (and the tree graph). */
+  unfold: (id: string) => void;
   /** Expands an aggregate in place, or loads its next page. */
   expandHere: (id: string) => void;
   /** Collapses an aggregate expanded in place. */
@@ -95,8 +98,13 @@ export function Details({
       </p>
       <div className="tools">
         {aggregate && (
-          <button type="button" data-action="open" onClick={() => tools.open(n)} title={directory ? 'Unfold this directory in the tree and the graph' : 'Show only this on the canvas'}>
-            {directory ? 'Expand' : 'Open'}
+          <button type="button" data-action="open" onClick={() => tools.open(n)} title={directory ? 'Show only the namespaces in this directory and the calls between them' : 'Show only this on the canvas'}>
+            Open
+          </button>
+        )}
+        {directory && (
+          <button type="button" data-action="unfold" onClick={() => tools.unfold(n.id)} title="Unfold this directory in the tree and the graph">
+            Expand
           </button>
         )}
         {aggregate && !directory && expansion === null && (
@@ -145,9 +153,6 @@ export function Details({
         </button>
         <button type="button" data-action="keep-only" onClick={() => tools.keepOnly(n.id)} title="Remove everything else (keeps box-selected nodes too)">
           Keep only
-        </button>
-        <button type="button" data-action="copy" onClick={() => void navigator.clipboard?.writeText(n.id)} title="Copy the full ID">
-          Copy ID
         </button>
       </div>
       <p className="id">{n.id}</p>

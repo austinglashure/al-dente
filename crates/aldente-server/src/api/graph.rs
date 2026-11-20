@@ -34,6 +34,15 @@ pub async fn snapshot(State(s): St) -> Response {
 /// Example: `?level=namespace` for clj-mini gives 13 namespaces and externals.
 pub async fn graph(State(s): St, RawQuery(q): RawQuery) -> Response {
     let p = Params::parse(q.as_deref());
+    if p.get("dir").is_some() && filter_from(&p).dir.is_none() {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "graph",
+            ErrorCode::Usage,
+            "dir must be a repository path like src/app",
+            None,
+        );
+    }
     let default = if s.snapshot.units.len() > 1 {
         AggregationLevel::Unit
     } else {
