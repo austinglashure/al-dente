@@ -66,8 +66,8 @@ Update at the end of every session: tick finished work packages, add a dated not
   - [x] Collapsible lists in details (every section; folded state remembered per browser, `ui/src/folded.ts`)
   - [x] One filter set that applies to whatever graph is on screen: the crater follows the left panel (hide toggles, kinds and flags, measure minimums, certainty); its own "Hide Clojure core" is gone. Seeds are always drawn. Since "Hide external libraries" is on by default, craters now open with externals hidden. The crater's traversal control stays, renamed "Follow: certain edges / certain and likely edges / all edges" (it changes which nodes are in the crater; the left panel only hides edges). Externals stay hidden by default in craters too (Austin).
   - [x] Directory collapse and expand keep the layout: no relayout; survivors keep their place, a folded directory sits at the centre of what it replaced, unfolded members return to their remembered places or next to their directory (`ui/src/treePlace.ts`, `tree.tsx` `dirMembers`). Camera unchanged. No merge animation (nodes jump); Top changes and folds while drilled in still reload the map as before.
-  - [ ] Directories in search
-  - [ ] Rankings list replaces Hotspots and the bottom Measures panel (open: CLI hotspots, hotspot score, new measures)
+  - [x] Directories in search: matched by path from the tree on the client (`matchDirs`), listed before the server's matches; the `/search` contract is unchanged. Picking one selects it (details offer Open).
+  - [ ] Rankings list replaces Hotspots and the bottom Measures panel. Austin: Hotspots leaves the UI but its code stays (server, CLI `aldente hotspots`, `Hotspots.tsx`) for a possible revisit; no hotspot score in the rankings; new measures OK (lines, symbol count, distinct caller/callee namespaces, instability).
 
 ## Phase 6. Outside world (gate: Austin's review of plan document 10)
 - [ ] WP6.1 Rules engine

@@ -2,7 +2,7 @@
 // and the graph shows the code at whatever level the tree is open to.
 // Every repository string is rendered as React text.
 
-import type { Child, TreeDir, TreeFile } from './types';
+import type { Child, GNode, TreeDir, TreeFile } from './types';
 
 /** The row with this `dir:` id.
  *  Example: `findDir(root, 'dir:services/orders')?.label` is `'orders'`. */
@@ -31,6 +31,28 @@ export function dirMembers(root: TreeDir, id: string): Set<string> {
   const d = findDir(root, id);
   if (d) walk(d);
   return out;
+}
+
+/** Directories whose path contains `query` (ignoring case) as search
+ *  results: those whose own name matches first, then shorter paths.
+ *  Example: `matchDirs(root, 'orders')` gives `[{id: 'dir:services/orders', kind: 'directory', name: 'services/orders'}]`. */
+export function matchDirs(root: TreeDir, query: string, limit = 10): GNode[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const all: TreeDir[] = [];
+  const walk = (d: TreeDir) => {
+    for (const sub of d.dirs) {
+      all.push(sub);
+      walk(sub);
+    }
+  };
+  walk(root);
+  const own = (d: TreeDir) => ((d.path.split('/').pop() ?? '').toLowerCase().includes(q) ? 0 : 1);
+  return all
+    .filter((d) => d.id !== null && d.path.toLowerCase().includes(q))
+    .sort((a, b) => own(a) - own(b) || a.path.length - b.path.length || a.path.localeCompare(b.path))
+    .slice(0, limit)
+    .map((d) => ({ id: d.id ?? '', kind: 'directory', name: d.path }));
 }
 
 /** The ids of the top-level rows (what "collapse all" collapses).

@@ -79,6 +79,12 @@ export function App() {
   useEffect(() => saveViewPrefs({ view, top }), [view, top]);
   const [namespaceCount, setNamespaceCount] = useState<number | null>(null);
   const [tree, setTree] = useState<TreeDir | null>(null);
+  // The tree as of now, for callbacks that run before a re-render (a
+  // directory picked from search hands its tree over and selects at once).
+  const treeRef = useRef(tree);
+  useEffect(() => {
+    if (tree) treeRef.current = tree;
+  }, [tree]);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [crater, setCrater] = useState<CraterRequest | null>(null);
   const [traceOpen, setTraceOpen] = useState(false);
@@ -281,7 +287,7 @@ export function App() {
         // edges on the canvas.
         const node: GNode = graph.hasNode(id)
           ? graph.getNodeAttribute(id, 'node')
-          : { id, kind: 'directory', name: (tree && findDir(tree, id)?.label) ?? id };
+          : { id, kind: 'directory', name: (treeRef.current && findDir(treeRef.current, id)?.path) ?? id };
         const neighbor = (key: string, other: string): Neighbor => {
           const e = graph.getEdgeAttribute(key, 'edge');
           const o = graph.hasNode(other) ? graph.getNodeAttribute(other, 'node') : null;
@@ -292,7 +298,7 @@ export function App() {
           node,
           callers: has ? graph.inEdges(id).map((k) => neighbor(k, graph.source(k))) : [],
           callees: has ? graph.outEdges(id).map((k) => neighbor(k, graph.target(k))) : [],
-          children: tree ? dirChildren(tree, id) : [],
+          children: treeRef.current ? dirChildren(treeRef.current, id) : [],
         });
         return;
       }
@@ -304,7 +310,7 @@ export function App() {
           .catch(() => setSource({ text: '', first: 1 }));
       }
     },
-    [api, fail, graph, tree],
+    [api, fail, graph],
   );
 
   const deselect = useCallback(() => {
@@ -747,6 +753,11 @@ export function App() {
           selected={selected}
           onSelect={select}
           onFollow={follow}
+          onPickDir={(id, t) => {
+            treeRef.current = treeRef.current ?? t;
+            setTree((prev) => prev ?? t);
+            select(id);
+          }}
           onOpen={open}
           overlays={
             <OverlayControls overlay={overlay} onOverlay={setOverlay} sizeBy={sizeBy} onSizeBy={setSizeBy} colorBy={colorBy} onColorBy={setColorBy} />

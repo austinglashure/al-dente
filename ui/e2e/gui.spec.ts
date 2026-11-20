@@ -430,6 +430,25 @@ test.describe('details sections', () => {
 });
 
 test.describe('directory tree', () => {
+  test('search finds a directory; selecting it offers Open', async ({ page }) => {
+    const server = await startServer('mono-mini');
+    try {
+      await page.goto(server.url);
+      await page.getByTestId('search').fill('orders');
+      await page.getByTestId('search').press('Enter');
+      const hit = page.locator('[data-testid="results"] [data-node-id="dir:services/orders"]');
+      await expect(hit).toBeVisible();
+      await hit.click();
+      const details = page.getByTestId('details');
+      await expect(details.locator('h2')).toHaveText('services/orders/');
+      await details.locator('[data-action="open"]').click();
+      await expect(listed(page, 'clj:services/orders//orders.core')).toBeVisible();
+      await expect(listed(page, 'clj:services/billing//billing.core')).toHaveCount(0);
+    } finally {
+      server.close();
+    }
+  });
+
   test('folding a directory keeps every other node where it was', async ({ page }) => {
     const server = await startServer('mono-mini');
     try {

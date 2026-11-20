@@ -7,7 +7,7 @@ import { useState, type ReactNode } from 'react';
 import type { Api } from './api';
 import { LibraryList } from './Libraries';
 import { certaintyColor, isAggregate, labelFor, type HideOptions, type Levels } from './model';
-import { TreeView, topDirIds } from './tree';
+import { TreeView, matchDirs, topDirIds } from './tree';
 import type { BlindSpot, GNode, LibrarySummary, TreeDir } from './types';
 
 /** The hide toggles, in display order, with their labels. */
@@ -46,6 +46,8 @@ interface Props {
   selected: string | null;
   onSelect: (id: string) => void;
   onFollow: (id: string) => void;
+  /** A directory picked from the search results, with the tree it came from. */
+  onPickDir: (id: string, tree: TreeDir) => void;
   onOpen: (n: GNode) => void;
   /** Overlay controls, under the certainty legend. */
   overlays?: ReactNode;
@@ -60,7 +62,7 @@ interface Props {
 export function LeftPanel(p: Props) {
   return (
     <aside className="left">
-      <SearchBox api={p.api} onError={p.onError} onFollow={p.onFollow} />
+      <SearchBox api={p.api} onError={p.onError} onFollow={p.onFollow} onPickDir={p.onPickDir} />
       {p.workspace}
       {HIDE_TOGGLES.map((t) => (
         <label key={t.key} title={t.title}>
@@ -108,18 +110,26 @@ export function LeftPanel(p: Props) {
   );
 }
 
-/** Search by name; clicking a match follows it onto the canvas.
+/** Search by name; clicking a match follows it onto the canvas. Directories
+ *  (from the tree, matched by path) come first; picking one selects it.
  *  Example: typing `checkout` and Enter lists `shop.core/checkout`. */
-function SearchBox({ api, onError, onFollow }: { api: Api; onError: (e: unknown) => void; onFollow: (id: string) => void }) {
+function SearchBox({ api, onError, onFollow, onPickDir }: { api: Api; onError: (e: unknown) => void; onFollow: (id: string) => void; onPickDir: (id: string, tree: TreeDir) => void }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GNode[]>([]);
+  const [tree, setTree] = useState<TreeDir | null>(null);
   const run = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
-    api
-      .search(query)
-      .then((r) => setResults(r.matches))
+    Promise.all([api.search(query), tree ? Promise.resolve(tree) : api.tree()])
+      .then(([r, t]) => {
+        setTree(t);
+        setResults([...matchDirs(t, query), ...r.matches]);
+      })
       .catch(onError);
+  };
+  const pick = (n: GNode) => {
+    if (n.kind === 'directory' && tree) onPickDir(n.id, tree);
+    else onFollow(n.id);
   };
   return (
     <>
@@ -130,8 +140,8 @@ function SearchBox({ api, onError, onFollow }: { api: Api; onError: (e: unknown)
         <ul className="results" data-testid="results">
           {results.map((n) => (
             <li key={n.id}>
-              <button type="button" data-node-id={n.id} onClick={() => onFollow(n.id)} title={n.id}>
-                {n.name} <span className="muted">{n.namespace ?? n.kind}</span>
+              <button type="button" data-node-id={n.id} onClick={() => pick(n)} title={n.id}>
+                {n.kind === 'directory' ? `${n.name}/` : n.name} <span className="muted">{n.namespace ?? n.kind}</span>
               </button>
             </li>
           ))}

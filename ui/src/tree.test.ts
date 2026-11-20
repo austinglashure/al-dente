@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allDirIds, dirChildren, findDir, topDirIds } from './tree';
+import { allDirIds, dirChildren, dirMembers, findDir, matchDirs, topDirIds } from './tree';
 import type { TreeDir } from './types';
 
 const root: TreeDir = {
@@ -39,5 +39,23 @@ describe('tree helpers', () => {
     expect(dirChildren(root, 'dir:libs/common/src/common')).toEqual([
       { id: 'clj:libs/common//common.util', name: 'util.clj', kind: 'namespace', subkind: null },
     ]);
+  });
+});
+
+describe('dirMembers and matchDirs', () => {
+  it('lists every sub-directory and namespace inside a directory', () => {
+    expect(dirMembers(root, 'dir:services')).toEqual(new Set(['dir:services/orders']));
+    expect(dirMembers(root, 'dir:libs/common/src/common')).toEqual(new Set(['clj:libs/common//common.util']));
+    expect(dirMembers(root, 'dir:nope')).toEqual(new Set());
+  });
+
+  it('finds directories by path, ignoring case, best match first', () => {
+    const ids = (q: string) => matchDirs(root, q).map((n) => n.id);
+    expect(ids('ORDERS')).toEqual(['dir:services/orders']);
+    // A name match beats a match further up the path.
+    expect(ids('common')).toEqual(['dir:libs/common/src/common']);
+    expect(ids('serv')).toEqual(['dir:services', 'dir:services/orders']);
+    expect(ids('zzz')).toEqual([]);
+    expect(matchDirs(root, 'services')[0]).toMatchObject({ kind: 'directory', name: 'services' });
   });
 });
