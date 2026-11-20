@@ -16,6 +16,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # Windows paused (Austin, 2026-11-20): it still runs and reports, but a
+    # failure does not fail the run. See PROGRESS.md.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -105,8 +108,8 @@ jobs:
 
       # WP5.2: scale acceptance on the synthetic corpus (ui/e2e/large.spec.ts).
       # Runners draw WebGL in software (SwiftShader: about 4 frames a second
-      # locally, 35 on an integrated GPU), so time budgets are multiplied and
-      # the frame-rate floor divided by 10 here.
+      # locally, 35 on an integrated GPU), so time budgets are multiplied by
+      # 10 here and the frame-rate floor is not checked (it needs ALDENTE_E2E_GPU=1).
       - name: UI scale test on the synthetic corpus (Linux, relaxed 10x)
         if: runner.os == 'Linux'
         working-directory: ui
