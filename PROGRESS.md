@@ -2,7 +2,7 @@
 
 Update at the end of every session: tick finished work packages, add a dated note. Notes are for the next session: what was decided, what surprised you, what is half done.
 
-**Current:** Phase 5 in progress; WP5.1–WP5.5 done (WP5.5's penpot check set aside by Austin on 2026-11-18). WP5.6: walkthrough recorded on reitit; waiting on Austin's thirty-minute session on his own repository. Phase 0, Phase 1 and Phase 2 (WP2.1–WP2.10) are done locally. "CI green on all three systems" is unverified until the repo is pushed to GitHub.
+**Current:** Phase 5 in progress; WP5.1–WP5.5 done (WP5.5's penpot check set aside by Austin on 2026-11-18). WP5.6: walkthrough recorded on reitit; waiting on Austin's thirty-minute session on his own repository. Phase 0, Phase 1 and Phase 2 (WP2.1–WP2.10) are done locally. CI is green on Linux and macOS (run 44720664131, 2026-11-20); Windows is paused and non-blocking (see the 2026-11-20 notes).
 
 ## Phase 0. Foundations
 - [x] WP0.1 Workspace, license, CI
