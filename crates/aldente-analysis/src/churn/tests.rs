@@ -12,7 +12,8 @@ use aldente_model::churn::HistoryDepth;
 use super::*;
 
 fn plain_git(cwd: &Path, args: &[&str], time: u32) {
-    let empty = cwd.join("..").join("empty-gitconfig");
+    // `parent()`, not `join("..")`: on Windows `canonicalize` gives `\\?\` paths, where `..` is not resolved and git cannot open the file.
+    let empty = cwd.parent().unwrap().join("empty-gitconfig");
     fs::write(&empty, "").unwrap();
     let stamp = format!("{} +0000", 1_700_000_000 + time * 86_400);
     let out = Command::new("git")

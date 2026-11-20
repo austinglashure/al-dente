@@ -368,7 +368,8 @@ mod tests {
     }
 
     fn plain_git(cwd: &Path, args: &[&str]) {
-        let empty = cwd.join("..").join("empty-gitconfig");
+        // `parent()`, not `join("..")`: on Windows `canonicalize` gives `\\?\` paths, where `..` is not resolved and git cannot open the file.
+        let empty = cwd.parent().unwrap().join("empty-gitconfig");
         std::fs::write(&empty, "").unwrap();
         let out = std::process::Command::new("git")
             .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])

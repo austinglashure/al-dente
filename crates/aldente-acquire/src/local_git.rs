@@ -203,7 +203,8 @@ mod tests {
     use std::process::Command;
 
     fn plain_git(cwd: &Path, args: &[&str]) {
-        let empty = cwd.join("..").join("empty-gitconfig");
+        // `parent()`, not `join("..")`: on Windows `canonicalize` gives `\\?\` paths, where `..` is not resolved and git cannot open the file.
+        let empty = cwd.parent().unwrap().join("empty-gitconfig");
         fs::write(&empty, "").unwrap();
         let out = Command::new("git")
             .args([

@@ -684,7 +684,8 @@ mod tests {
 
     /// Plain git for building test repositories, isolated from the user's config.
     fn plain_git(cwd: &Path, args: &[&str], env: &[(OsString, OsString)]) -> std::process::Output {
-        let empty = cwd.join("..").join("empty-config");
+        // `parent()`, not `join("..")`: on Windows `canonicalize` gives `\\?\` paths, where `..` is not resolved and git cannot open the file.
+        let empty = cwd.parent().unwrap().join("empty-config");
         fs::write(&empty, "").unwrap();
         let out = Command::new("git")
             .args([
